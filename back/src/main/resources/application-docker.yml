@@ -1,0 +1,14 @@
+spring:
+  datasource:
+    url: jdbc:mariadb://mariadb:3306/${DB_NAME:ruxpress}
+    driver-class-name: org.mariadb.jdbc.Driver
+    username: ${DB_USERNAME:ruxpress}
+    password: ${DB_PASSWORD:ruxpress}
+  jpa:
+    database-platform: org.hibernate.dialect.MariaDBDialect
+    hibernate:
+      ddl-auto: validate
+
+logging:
+  level:
+    com.ruxpress: INFO

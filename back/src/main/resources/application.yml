@@ -1,0 +1,21 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: ruxpress-back
+  profiles:
+    active: local
+  jpa:
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+  messages:
+    basename: messages/messages
+    encoding: UTF-8
+
+app:
+  jwt:
+    secret: ${JWT_SECRET:defaultLocalSecretKeyForDevelopmentOnlyDoNotUseInProduction1234567890}
+    expiration: ${JWT_EXPIRATION:86400000}

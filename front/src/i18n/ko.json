@@ -1,0 +1,15 @@
+{
+  "app.title": "RuxPress - 한러 구매대행",
+  "nav.home": "홈",
+  "nav.example": "연결 테스트",
+  "example.title": "백엔드 연결 테스트",
+  "example.hello": "인사 API 호출",
+  "example.time": "서버 시간 조회",
+  "example.echo": "Echo 테스트",
+  "example.echo.placeholder": "전송할 메시지를 입력하세요",
+  "example.echo.send": "전송",
+  "example.response": "응답",
+  "example.loading": "로딩 중...",
+  "example.error": "오류가 발생했습니다",
+  "common.language": "언어"
+}

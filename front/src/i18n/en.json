@@ -1,0 +1,15 @@
+{
+  "app.title": "RuxPress - Korea-Russia Purchasing Service",
+  "nav.home": "Home",
+  "nav.example": "Connection Test",
+  "example.title": "Backend Connection Test",
+  "example.hello": "Call Hello API",
+  "example.time": "Server Time",
+  "example.echo": "Echo Test",
+  "example.echo.placeholder": "Enter a message to send",
+  "example.echo.send": "Send",
+  "example.response": "Response",
+  "example.loading": "Loading...",
+  "example.error": "An error occurred",
+  "common.language": "Language"
+}

@@ -1,0 +1,20 @@
+services:
+  backend:
+    build:
+      context: ./back
+      dockerfile: Dockerfile
+    container_name: ruxpress-back
+    ports:
+      - "8080:8080"
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./front
+      dockerfile: Dockerfile
+    container_name: ruxpress-front
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    restart: unless-stopped

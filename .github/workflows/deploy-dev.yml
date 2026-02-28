@@ -1,0 +1,24 @@
+name: Deploy Dev
+
+on:
+  push:
+    branches:
+      - development
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy via SSH to dev
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.SSH_HOST_DEV }}
+          username: ${{ secrets.SSH_USER_DEV }}
+          key: ${{ secrets.SSH_PRIVATE_KEY_DEV }}
+          script: |
+            set -e
+            cd /svc/RuxPress
+            git remote set-url origin https://${{ secrets.GH_TOKEN }}@github.com/${{ github.repository }}.git
+            git pull origin development
+            ./script/rebuild.sh
+
