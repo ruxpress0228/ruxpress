@@ -1,0 +1,15 @@
+{
+  "app.title": "RuxPress - Сервис покупок Корея-Россия",
+  "nav.home": "Главная",
+  "nav.example": "Тест соединения",
+  "example.title": "Тест соединения с сервером",
+  "example.hello": "Вызов API приветствия",
+  "example.time": "Время сервера",
+  "example.echo": "Тест Echo",
+  "example.echo.placeholder": "Введите сообщение для отправки",
+  "example.echo.send": "Отправить",
+  "example.response": "Ответ",
+  "example.loading": "Загрузка...",
+  "example.error": "Произошла ошибка",
+  "common.language": "Язык"
+}

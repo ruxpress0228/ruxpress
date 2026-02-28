@@ -1,0 +1,15 @@
+spring:
+  datasource:
+    url: jdbc:mariadb://${DB_HOST}:${DB_PORT:3306}/${DB_NAME}
+    driver-class-name: org.mariadb.jdbc.Driver
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+  jpa:
+    database-platform: org.hibernate.dialect.MariaDBDialect
+    hibernate:
+      ddl-auto: none
+
+logging:
+  level:
+    root: WARN
+    com.ruxpress: INFO
