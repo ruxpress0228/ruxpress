@@ -1,5 +1,6 @@
+import { useState, useRef } from "react";
 import { useNavigate } from "react-router";
-import { Upload } from "lucide-react";
+import { Upload, X } from "lucide-react";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import { Label } from "../../components/ui/label";
@@ -7,65 +8,139 @@ import { Textarea } from "../../components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../components/ui/select";
 import { toast } from "sonner";
+import { api } from "../../utils/api";
+import { unwrap } from "../../utils/exception";
+import { useTranslation } from "../../hooks/useTranslation";
+import type { InquiryCategory } from "../../types";
+
+const MAX_FILES = 5;
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+
+function getCategoryOptions(t: (key: string) => string): { value: InquiryCategory; label: string }[] {
+  return [
+    { value: "ORDER", label: t("inquiry.category.order") },
+    { value: "SHIPPING", label: t("inquiry.category.shipping") },
+    { value: "PAYMENT", label: t("inquiry.category.payment") },
+    { value: "ETC", label: t("inquiry.category.etc") },
+  ];
+}
 
 export default function InquiryForm() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [category, setCategory] = useState<InquiryCategory | "">("");
+  const [title, setTitle] = useState("");
+  const [content, setContent] = useState("");
+  const [files, setFiles] = useState<File[]>([]);
+  const [submitting, setSubmitting] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const categoryOptions = getCategoryOptions(t);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selected = Array.from(e.target.files || []);
+    const valid: File[] = [];
+    for (const file of selected) {
+      if (file.size > MAX_FILE_SIZE) {
+        toast.error(t("inquiry.form.toastFileSizeExceeded"));
+        continue;
+      }
+      valid.push(file);
+    }
+    const combined = [...files, ...valid].slice(0, MAX_FILES);
+    if (combined.length > MAX_FILES) {
+      toast.error(t("inquiry.form.toastMaxFiles"));
+    }
+    setFiles(combined.slice(0, MAX_FILES));
+    e.target.value = "";
+  };
+
+  const removeFile = (index: number) => {
+    setFiles((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    toast.success("문의가 등록되었습니다");
-    navigate("/inquiry");
+    if (!category) {
+      toast.error(t("inquiry.form.toastSelectCategory"));
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const formData = new FormData();
+      formData.append(
+        "inquiry",
+        new Blob([JSON.stringify({ category, title, content })], ({ type: "application/json" }) as BlobPropertyBag)
+      );
+      files.forEach((file) => formData.append("files", file));
+      const response = await (api.upload)<{ id: number }>("/v1/inquiries", formData);
+      const data = unwrap(response);
+      toast.success(t("inquiry.form.toastSuccess"));
+      navigate(`/inquiry/${data.id}`);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : t("inquiry.form.toastError");
+      toast.error(message);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
     <div className="max-w-3xl mx-auto">
       <div className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-900">1:1 문의 작성</h1>
+        <h1 className="text-3xl font-bold text-gray-900">{t("inquiry.form.title")}</h1>
         <p className="text-gray-600 mt-2">
-          궁금하신 점을 자세히 적어주시면 빠르게 답변드리겠습니다
+          {t("inquiry.form.subtitle")}
         </p>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
         <Card>
           <CardHeader>
-            <CardTitle>문의 내용</CardTitle>
+            <CardTitle>{t("inquiry.form.cardTitle")}</CardTitle>
             <CardDescription>
-              문의 유형을 선택하고 내용을 작성해주세요
+              {t("inquiry.form.cardDescription")}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="category">문의 유형 *</Label>
-              <Select required>
+              <Label htmlFor="category">{t("inquiry.form.categoryLabel")}</Label>
+              <Select required value={category} onValueChange={(v) => setCategory(v as InquiryCategory)}>
                 <SelectTrigger>
-                  <SelectValue placeholder="유형을 선택하세요" />
+                  <SelectValue placeholder={t("inquiry.form.categoryPlaceholder")} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="ORDER">주문</SelectItem>
-                  <SelectItem value="SHIPPING">배송</SelectItem>
-                  <SelectItem value="PAYMENT">결제</SelectItem>
-                  <SelectItem value="ETC">기타</SelectItem>
+                  {categoryOptions.map((opt) => (
+                    <SelectItem key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="title">제목 *</Label>
+              <Label htmlFor="title">{t("inquiry.form.titleLabel")}</Label>
               <Input
                 id="title"
-                placeholder="문의 제목을 입력하세요"
+                placeholder={t("inquiry.form.titlePlaceholder")}
                 required
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                maxLength={200}
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="content">내용 *</Label>
+              <Label htmlFor="content">{t("inquiry.form.contentLabel")}</Label>
               <Textarea
                 id="content"
-                placeholder="문의 내용을 자세히 입력해주세요"
+                placeholder={t("inquiry.form.contentPlaceholder")}
                 rows={8}
                 required
+                value={content}
+                onChange={(e) => setContent(e.target.value)}
+                maxLength={5000}
               />
             </div>
           </CardContent>
@@ -73,21 +148,55 @@ export default function InquiryForm() {
 
         <Card>
           <CardHeader>
-            <CardTitle>파일 첨부</CardTitle>
+            <CardTitle>{t("inquiry.form.attachmentsTitle")}</CardTitle>
             <CardDescription>
-              최대 5개, 파일당 최대 10MB
+              {t("inquiry.form.attachmentsDesc")}
             </CardDescription>
           </CardHeader>
-          <CardContent>
-            <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-blue-500 cursor-pointer transition-colors">
+          <CardContent className="space-y-4">
+            <div
+              className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-blue-500 cursor-pointer transition-colors"
+              onClick={() => fileInputRef.current?.click()}
+            >
+              <input
+                ref={fileInputRef}
+                type="file"
+                multiple
+                className="hidden"
+                onChange={handleFileChange}
+              />
               <Upload className="w-12 h-12 mx-auto text-gray-400 mb-2" />
               <p className="text-sm text-gray-600">
-                클릭하거나 파일을 드래그하여 업로드
+                {t("inquiry.form.uploadHint")}
               </p>
               <p className="text-xs text-gray-500 mt-1">
-                이미지, PDF, 문서 파일 등을 첨부할 수 있습니다
+                {t("inquiry.form.uploadHintDetail")}
               </p>
             </div>
+            {files.length > 0 && (
+              <ul className="space-y-2">
+                {files.map((file, index) => (
+                  <li
+                    key={`${file.name}-${index}`}
+                    className="flex items-center justify-between text-sm bg-gray-50 rounded px-3 py-2"
+                  >
+                    <span className="truncate flex-1">{file.name}</span>
+                    <span className="text-gray-500 ml-2">
+                      {(file.size / 1024).toFixed(1)} KB
+                    </span>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="ml-2 h-8 w-8"
+                      onClick={() => removeFile(index)}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </li>
+                ))}
+              </ul>
+            )}
           </CardContent>
         </Card>
 
@@ -98,11 +207,12 @@ export default function InquiryForm() {
             size="lg"
             className="flex-1"
             onClick={() => navigate(-1)}
+            disabled={submitting}
           >
-            취소
+            {t("inquiry.form.cancel")}
           </Button>
-          <Button type="submit" size="lg" className="flex-1">
-            문의 등록
+          <Button type="submit" size="lg" className="flex-1" disabled={submitting}>
+            {submitting ? t("inquiry.form.submitting") : t("inquiry.form.submit")}
           </Button>
         </div>
       </form>

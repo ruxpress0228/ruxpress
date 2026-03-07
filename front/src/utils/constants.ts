@@ -6,4 +6,5 @@ export type Locale = (typeof LOCALES)[number];
 export const STORAGE_KEYS = {
   TOKEN: 'ruxpress_token',
   LOCALE: 'ruxpress_locale',
+  USER_ID: 'ruxpress_user_id',
 } as const;

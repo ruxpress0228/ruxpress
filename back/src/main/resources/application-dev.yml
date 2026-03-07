@@ -9,6 +9,11 @@ spring:
     hibernate:
       ddl-auto: validate
 
+storage:
+  type: local
+  local:
+    upload-dir: ./uploads
+
 logging:
   level:
     com.ruxpress: INFO

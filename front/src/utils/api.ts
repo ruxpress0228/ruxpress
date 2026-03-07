@@ -16,6 +16,22 @@ function getHeaders(): Record<string, string> {
     headers['Accept-Language'] = locale;
   }
 
+  const userId = localStorage.getItem(STORAGE_KEYS.USER_ID);
+  if (userId) {
+    headers['X-User-Id'] = userId;
+  }
+
+  return headers;
+}
+
+function getHeadersForUpload(): Record<string, string> {
+  const headers: Record<string, string> = {};
+  const token = localStorage.getItem(STORAGE_KEYS.TOKEN);
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+  const locale = localStorage.getItem(STORAGE_KEYS.LOCALE);
+  if (locale) headers['Accept-Language'] = locale;
+  const userId = localStorage.getItem(STORAGE_KEYS.USER_ID);
+  if (userId) headers['X-User-Id'] = userId;
   return headers;
 }
 
@@ -59,5 +75,27 @@ export const api = {
 
   delete<T>(path: string): Promise<ApiResponse<T>> {
     return request<T>(path, { method: 'DELETE' });
+  },
+
+  upload<T>(path: string, formData: FormData): Promise<ApiResponse<T>> {
+    return fetch(`${API_BASE}${path}`, {
+      method: 'POST',
+      body: formData,
+      headers: getHeadersForUpload(),
+    }).then((res) => res.json());
+  },
+
+  async downloadAttachment(attachmentId: number, filename: string): Promise<void> {
+    const res = await fetch(`${API_BASE}/v1/inquiries/attachments/${attachmentId}/download`, {
+      headers: getHeadersForUpload(),
+    });
+    if (!res.ok) throw new Error('Download failed');
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename || 'download';
+    a.click();
+    URL.revokeObjectURL(url);
   },
 };
