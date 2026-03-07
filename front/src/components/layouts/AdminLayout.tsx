@@ -11,12 +11,13 @@ import {
 } from "lucide-react";
 import { Button } from "../ui/button";
 import { Sidebar, SidebarContent, SidebarHeader, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarProvider, SidebarTrigger } from "../ui/sidebar";
+import { useTranslation } from "../../hooks/useTranslation";
 
 export default function AdminLayout() {
   const location = useLocation();
+  const { t } = useTranslation();
   const isActive = (path: string) => location.pathname === path;
 
-  // Redirect to admin login if on admin root
   if (location.pathname === "/admin") {
     const isLoggedIn = true; // TODO: Replace with actual auth check
     if (!isLoggedIn && location.pathname === "/admin") {
@@ -24,24 +25,22 @@ export default function AdminLayout() {
     }
   }
 
-  // Don't show sidebar on login page
   if (location.pathname === "/admin/login") {
     return <Outlet />;
   }
 
   const navigation = [
-    { name: "대시보드", path: "/admin", icon: LayoutDashboard },
-    { name: "구매 요청 관리", path: "/admin/purchase-requests", icon: ShoppingCart },
-    { name: "문의 관리", path: "/admin/inquiries", icon: MessageSquare },
-    { name: "공지사항 관리", path: "/admin/notices", icon: FileText },
-    { name: "환율 설정", path: "/admin/exchange-rate", icon: TrendingUp },
-    { name: "회원 관리", path: "/admin/users", icon: Users },
+    { nameKey: "nav.admin.dashboard", path: "/admin", icon: LayoutDashboard },
+    { nameKey: "nav.admin.purchaseRequests", path: "/admin/purchase-requests", icon: ShoppingCart },
+    { nameKey: "nav.admin.inquiries", path: "/admin/inquiries", icon: MessageSquare },
+    { nameKey: "nav.admin.notices", path: "/admin/notices", icon: FileText },
+    { nameKey: "nav.admin.exchangeRate", path: "/admin/exchange-rate", icon: TrendingUp },
+    { nameKey: "nav.admin.users", path: "/admin/users", icon: Users },
   ];
 
   return (
     <SidebarProvider>
       <div className="min-h-screen flex w-full bg-gray-50">
-        {/* Sidebar */}
         <Sidebar>
           <SidebarHeader className="border-b border-gray-200 p-4">
             <div className="flex items-center space-x-2">
@@ -50,7 +49,7 @@ export default function AdminLayout() {
               </div>
               <div>
                 <h2 className="font-bold text-gray-900">Ruxpress</h2>
-                <p className="text-xs text-gray-500">관리자</p>
+                <p className="text-xs text-gray-500">{t("nav.admin.label")}</p>
               </div>
             </div>
           </SidebarHeader>
@@ -63,7 +62,7 @@ export default function AdminLayout() {
                     <SidebarMenuButton asChild isActive={isActive(item.path)}>
                       <Link to={item.path}>
                         <Icon className="w-4 h-4" />
-                        <span>{item.name}</span>
+                        <span>{t(item.nameKey)}</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
@@ -73,15 +72,13 @@ export default function AdminLayout() {
             <div className="mt-auto p-4 border-t border-gray-200">
               <Button variant="ghost" className="w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50">
                 <LogOut className="w-4 h-4 mr-2" />
-                로그아웃
+                {t("nav.admin.logout")}
               </Button>
             </div>
           </SidebarContent>
         </Sidebar>
 
-        {/* Main Content */}
         <div className="flex-1 flex flex-col">
-          {/* Header */}
           <header className="bg-white border-b border-gray-200 h-16 flex items-center px-6 sticky top-0 z-40">
             <SidebarTrigger>
               <Button variant="ghost" size="icon">
@@ -90,13 +87,12 @@ export default function AdminLayout() {
             </SidebarTrigger>
             <div className="ml-auto flex items-center space-x-4">
               <div className="text-right">
-                <p className="text-sm font-medium text-gray-900">관리자</p>
+                <p className="text-sm font-medium text-gray-900">{t("nav.admin.label")}</p>
                 <p className="text-xs text-gray-500">admin@ruxpress.com</p>
               </div>
             </div>
           </header>
 
-          {/* Content */}
           <main className="flex-1 p-6 overflow-auto">
             <Outlet />
           </main>
