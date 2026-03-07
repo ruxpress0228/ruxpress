@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link } from "react-router";
+import { Link, useNavigate } from "react-router";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import { Label } from "../../components/ui/label";
@@ -7,27 +7,81 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../..
 import { Separator } from "../../components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../components/ui/tabs";
 import { toast } from "sonner";
+import { api } from "../../utils/api";
 
 export default function Signup() {
+  const navigate = useNavigate();
+  const [email, setEmail] = useState("");
   const [emailVerified, setEmailVerified] = useState(false);
   const [phoneVerified, setPhoneVerified] = useState(false);
   const [emailCode, setEmailCode] = useState("");
   const [phoneCode, setPhoneCode] = useState("");
+  const [password, setPassword] = useState("");
+  const [passwordConfirm, setPasswordConfirm] = useState("");
+  const [nickname, setNickname] = useState("");
+  const [emailSending, setEmailSending] = useState(false);
+  const [emailVerifying, setEmailVerifying] = useState(false);
+  const [signupLoading, setSignupLoading] = useState(false);
 
-  const sendEmailVerification = () => {
-    toast.success("인증 메일이 발송되었습니다");
+  const sendEmailVerification = async () => {
+    console.log("[Signup] 인증 클릭됨, email:", email);
+    const trimmed = email.trim();
+    if (!trimmed) {
+      console.warn("[Signup] 이메일 없음, 토스트 표시");
+      toast.error("이메일을 입력하세요");
+      return;
+    }
+    console.log("[Signup] API 호출 시작:", "/v1/users/email/send-verification", { email: trimmed });
+    setEmailSending(true);
+    try {
+      const res = await api.post<unknown>("/v1/users/email/send-verification", { email: trimmed });
+      console.log("[Signup] API 응답:", res);
+      if (res.code === 200) {
+        toast.success(res.message ?? "인증 메일이 발송되었습니다");
+      } else {
+        toast.error(res.message ?? "발송에 실패했습니다");
+      }
+    } catch (err) {
+      console.error("[Signup] 인증 메일 발송 실패:", err);
+      toast.error("인증 메일 발송에 실패했습니다");
+    } finally {
+      setEmailSending(false);
+    }
   };
 
   const sendPhoneVerification = () => {
     toast.success("인증번호가 발송되었습니다");
   };
 
-  const verifyEmailCode = () => {
-    if (emailCode === "123456") {
-      setEmailVerified(true);
-      toast.success("이메일이 인증되었습니다");
-    } else {
-      toast.error("인증번호가 올바르지 않습니다");
+  const verifyEmailCode = async () => {
+    console.log("[Signup] 인증번호 확인 클릭됨, email:", email, "code:", emailCode);
+    const trimmedEmail = email.trim();
+    if (!trimmedEmail) {
+      toast.error("이메일을 입력하세요");
+      return;
+    }
+    if (!emailCode || emailCode.length !== 6) {
+      toast.error("인증번호 6자리를 입력하세요");
+      return;
+    }
+    setEmailVerifying(true);
+    try {
+      const res = await api.post<unknown>("/v1/users/email/verify", {
+        email: trimmedEmail,
+        code: emailCode,
+      });
+      console.log("[Signup] verify API 응답:", res);
+      if (res.code === 200) {
+        setEmailVerified(true);
+        toast.success(res.message ?? "이메일이 인증되었습니다");
+      } else {
+        toast.error(res.message ?? "인증번호가 올바르지 않습니다");
+      }
+    } catch (err) {
+      console.error("[Signup] 인증 확인 실패:", err);
+      toast.error("인증에 실패했습니다");
+    } finally {
+      setEmailVerifying(false);
     }
   };
 
@@ -37,6 +91,45 @@ export default function Signup() {
       toast.success("휴대폰이 인증되었습니다");
     } else {
       toast.error("인증번호가 올바르지 않습니다");
+    }
+  };
+
+  const submitEmailSignup = async () => {
+    const trimmedEmail = email.trim();
+    if (!trimmedEmail) {
+      toast.error("이메일을 입력하세요");
+      return;
+    }
+    if (!password || password.length < 8) {
+      toast.error("비밀번호는 8자 이상 입력하세요");
+      return;
+    }
+    if (password !== passwordConfirm) {
+      toast.error("비밀번호가 일치하지 않습니다");
+      return;
+    }
+    const trimmedNickname = nickname.trim();
+    if (!trimmedNickname) {
+      toast.error("닉네임을 입력하세요");
+      return;
+    }
+    setSignupLoading(true);
+    try {
+      const res = await api.post<unknown>("/v1/users/signup", {
+        email: trimmedEmail,
+        password,
+        nickname: trimmedNickname,
+      });
+      if (res.code === 200) {
+        toast.success(res.message ?? "회원가입이 완료되었습니다");
+        navigate("/login");
+      } else {
+        toast.error(res.message ?? "가입에 실패했습니다");
+      }
+    } catch {
+      toast.error("가입에 실패했습니다");
+    } finally {
+      setSignupLoading(false);
     }
   };
 
@@ -71,11 +164,13 @@ export default function Signup() {
                     type="email"
                     placeholder="email@example.com"
                     className="flex-1"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
                     disabled={emailVerified}
                   />
                   {!emailVerified && (
-                    <Button variant="outline" onClick={sendEmailVerification}>
-                      인증
+                    <Button variant="outline" onClick={sendEmailVerification} disabled={emailSending}>
+                      {emailSending ? "발송중..." : "인증"}
                     </Button>
                   )}
                 </div>
@@ -92,7 +187,9 @@ export default function Signup() {
                       onChange={(e) => setEmailCode(e.target.value)}
                       className="flex-1"
                     />
-                    <Button onClick={verifyEmailCode}>확인</Button>
+                    <Button onClick={verifyEmailCode} disabled={emailVerifying}>
+                      {emailVerifying ? "확인중..." : "확인"}
+                    </Button>
                   </div>
                   <p className="text-xs text-gray-500">
                     인증번호 유효시간: 10분
@@ -107,7 +204,9 @@ export default function Signup() {
                     <Input
                       id="password"
                       type="password"
-                      placeholder="8자 이상 입력"
+                      placeholder="8자 이상 (영문, 숫자, 특수문자)"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
                     />
                   </div>
                   <div className="space-y-2">
@@ -116,6 +215,8 @@ export default function Signup() {
                       id="password-confirm"
                       type="password"
                       placeholder="비밀번호 재입력"
+                      value={passwordConfirm}
+                      onChange={(e) => setPasswordConfirm(e.target.value)}
                     />
                   </div>
                   <div className="space-y-2">
@@ -123,10 +224,12 @@ export default function Signup() {
                     <Input
                       id="nickname"
                       placeholder="닉네임을 입력하세요"
+                      value={nickname}
+                      onChange={(e) => setNickname(e.target.value)}
                     />
                   </div>
-                  <Button className="w-full" size="lg">
-                    가입하기
+                  <Button className="w-full" size="lg" onClick={submitEmailSignup} disabled={signupLoading}>
+                    {signupLoading ? "가입 중..." : "가입하기"}
                   </Button>
                 </>
               )}

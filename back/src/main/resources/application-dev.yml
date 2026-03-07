@@ -1,9 +1,20 @@
 spring:
+  mail:
+    host: ${MAIL_HOST:}
+    port: ${MAIL_PORT:}
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
   datasource:
-    url: jdbc:mariadb://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:ruxpress}
+    url: jdbc:mariadb://${DB_HOST:}:${DB_PORT:}/${DB_NAME:}
     driver-class-name: org.mariadb.jdbc.Driver
-    username: ${DB_USERNAME:ruxpress}
-    password: ${DB_PASSWORD:ruxpress}
+    username: ${DB_USERNAME:}
+    password: ${DB_PASSWORD:}
   jpa:
     database-platform: org.hibernate.dialect.MariaDBDialect
     hibernate:

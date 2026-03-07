@@ -1,11 +1,62 @@
-import { Link } from "react-router";
+import { useState } from "react";
+import { Link, useNavigate } from "react-router";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import { Label } from "../../components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../components/ui/card";
 import { Separator } from "../../components/ui/separator";
+import { toast } from "sonner";
+import { api } from "../../utils/api";
+import { STORAGE_KEYS } from "../../utils/constants";
+
+interface LoginResponse {
+  token: string;
+  userId: number;
+  email: string;
+  nickname: string;
+}
 
 export default function Login() {
+  const navigate = useNavigate();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const handleLogin = async (e?: React.MouseEvent) => {
+    e?.preventDefault();
+    console.log("[Login] 로그인 클릭됨", { email: email?.slice(0, 5) + "...", hasPassword: !!password });
+    const trimmedEmail = email.trim();
+    if (!trimmedEmail) {
+      toast.error("이메일을 입력하세요");
+      return;
+    }
+    if (!password) {
+      toast.error("비밀번호를 입력하세요");
+      return;
+    }
+    setLoading(true);
+    console.log("[Login] API 호출 시작");
+    try {
+      const res = await api.post<LoginResponse>("/v1/users/login", {
+        email: trimmedEmail,
+        password,
+      });
+      console.log("[Login] API 응답", res);
+      if (res.code === 200 && res.data?.token) {
+        localStorage.setItem(STORAGE_KEYS.TOKEN, res.data.token);
+        toast.success(res.message ?? "로그인되었습니다");
+        navigate("/");
+      } else {
+        toast.error(res.message ?? "로그인에 실패했습니다");
+      }
+    } catch (err) {
+      console.error("[Login] 로그인 실패", err);
+      toast.error("로그인에 실패했습니다");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-[80vh] flex items-center justify-center">
       <Card className="w-full max-w-md">
@@ -27,6 +78,8 @@ export default function Login() {
               id="email"
               type="email"
               placeholder="email@example.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
             />
           </div>
           <div className="space-y-2">
@@ -40,10 +93,12 @@ export default function Login() {
               id="password"
               type="password"
               placeholder="••••••••"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
             />
           </div>
-          <Button className="w-full" size="lg">
-            로그인
+          <Button type="button" className="w-full" size="lg" onClick={handleLogin} disabled={loading}>
+            {loading ? "로그인 중..." : "로그인"}
           </Button>
 
           <div className="relative">

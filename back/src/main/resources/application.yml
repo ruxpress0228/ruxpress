@@ -24,6 +24,10 @@ spring:
     encoding: UTF-8
 
 app:
+  mail:
+    from: ${MAIL_FROM:}
+    verification:
+      subject: ${MAIL_VERIFICATION_SUBJECT:}
   jwt:
-    secret: ${JWT_SECRET:defaultLocalSecretKeyForDevelopmentOnlyDoNotUseInProduction1234567890}
-    expiration: ${JWT_EXPIRATION:86400000}
+    secret: ${JWT_SECRET:}
+    expiration: ${JWT_EXPIRATION:}
