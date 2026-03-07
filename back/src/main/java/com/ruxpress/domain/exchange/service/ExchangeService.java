@@ -30,10 +30,9 @@ public class ExchangeService {
     private final CbrApiClient cbrApiClient;
 
     /**
-     * Runs every 1 minute (after previous run completes). Fetches from CBR and saves only if rate changed.
-     * Initial delay 10s to allow DB to be ready.
+     * 1시간마다 CBR에서 환율 조회. 기동 10초 후 첫 실행, 이후 1시간 간격. 값이 바뀐 경우에만 저장.
      */
-    @Scheduled(initialDelay = 10_000, fixedDelay = 60_000)
+    @Scheduled(initialDelay = 10_000, fixedDelay = 3_600_000)
     @Transactional
     public void fetchAndSave() {
         Optional<BigDecimal> optRate = cbrApiClient.fetchKrwPerRub();
