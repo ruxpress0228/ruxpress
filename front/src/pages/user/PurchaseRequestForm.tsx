@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
 import { Plus, X, Upload } from "lucide-react";
 import { Button } from "../../components/ui/button";
@@ -8,13 +8,21 @@ import { Textarea } from "../../components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../components/ui/card";
 import { Badge } from "../../components/ui/badge";
 import { toast } from "sonner";
-import { currentExchangeRate } from "../../data/mockData";
+import { getCurrentExchangeRate } from "../../utils/api";
+import type { ExchangeRate } from "../../types";
 
 export default function PurchaseRequestForm() {
   const navigate = useNavigate();
+  const [currentExchangeRate, setCurrentExchangeRate] = useState<ExchangeRate | null>(null);
   const [urls, setUrls] = useState<Array<{ url: string; shop: string }>>([{ url: "", shop: "" }]);
   const [options, setOptions] = useState<Array<{ name: string; value: string }>>([]);
-  const [priceRub, setPriceRub] = useState<number>(0);
+  const [priceKrw, setPriceKrw] = useState<number>(0);
+
+  useEffect(() => {
+    getCurrentExchangeRate()
+      .then(setCurrentExchangeRate)
+      .catch(() => setCurrentExchangeRate(null));
+  }, []);
 
   const addUrl = () => {
     setUrls([...urls, { url: "", shop: "" }]);
@@ -45,13 +53,22 @@ export default function PurchaseRequestForm() {
   };
 
   const calculateTotal = () => {
-    const priceKrw = priceRub * currentExchangeRate.rate;
-    const feeRate = 0.12; // 12% fee
-    const fee = priceKrw * feeRate;
+    const rate = currentExchangeRate ? Number(currentExchangeRate.rate) : 0;
+    const round2 = (n: number) => Math.round(n * 100) / 100;
+    // 사용자 입력: 한국 상품 가격(KRW). 수수료 12% 적용 후 RUB로 표시
+    const feeRate = 0.12;
+    const feeKrw = priceKrw * feeRate;
+    const totalKrw = priceKrw + feeKrw;
+    const priceRub = rate > 0 ? priceKrw / rate : 0;
+    const feeRub = rate > 0 ? feeKrw / rate : 0;
+    const totalRub = rate > 0 ? totalKrw / rate : 0;
     return {
-      priceKrw: Math.round(priceKrw),
-      fee: Math.round(fee),
-      total: Math.round(priceKrw + fee)
+      priceKrw: round2(priceKrw),
+      feeKrw: round2(feeKrw),
+      totalKrw: round2(totalKrw),
+      priceRub: round2(priceRub),
+      feeRub: round2(feeRub),
+      totalRub: round2(totalRub)
     };
   };
 
@@ -78,15 +95,15 @@ export default function PurchaseRequestForm() {
           <CardHeader>
             <CardTitle>상품 정보</CardTitle>
             <CardDescription>
-              러시아 쇼핑몰의 상품 정보를 입력해주세요
+              한국 굿즈(상품)의 가격을 원화로 입력해주세요
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="productName">상품명 *</Label>
+                <Label htmlFor="productName">상품명 *</Label>
               <Input
                 id="productName"
-                placeholder="예: Wildberries 겨울 코트"
+                placeholder="한국 굿즈(상품) 이름"
                 required
               />
             </div>
@@ -102,7 +119,7 @@ export default function PurchaseRequestForm() {
               {urls.map((url, index) => (
                 <div key={index} className="flex space-x-2">
                   <Input
-                    placeholder="쇼핑몰 이름 (예: Wildberries)"
+                    placeholder="쇼핑몰 이름"
                     value={url.shop}
                     onChange={(e) => updateUrl(index, 'shop', e.target.value)}
                     className="w-1/3"
@@ -127,7 +144,7 @@ export default function PurchaseRequestForm() {
                 </div>
               ))}
               <p className="text-xs text-gray-500">
-                지원 쇼핑몰: Wildberries, Ozon, Yandex Market 등
+                한국 쇼핑몰·굿즈 상품 링크를 입력해주세요
               </p>
             </div>
 
@@ -143,17 +160,18 @@ export default function PurchaseRequestForm() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="priceRub">상품 가격 (RUB) *</Label>
+                <Label htmlFor="priceKrw">상품 가격 (KRW) *</Label>
                 <Input
-                  id="priceRub"
+                  id="priceKrw"
                   type="number"
                   min="0"
                   step="0.01"
                   placeholder="0.00"
-                  value={priceRub || ""}
-                  onChange={(e) => setPriceRub(parseFloat(e.target.value) || 0)}
+                  value={priceKrw || ""}
+                  onChange={(e) => setPriceKrw(parseFloat(e.target.value) || 0)}
                   required
                 />
+                <p className="text-xs text-gray-500">한국 상품의 원화 가격을 입력하세요</p>
               </div>
             </div>
 
@@ -235,29 +253,35 @@ export default function PurchaseRequestForm() {
           <CardHeader>
             <CardTitle>예상 금액</CardTitle>
             <CardDescription>
-              <Badge variant="secondary" className="mr-2">
-                환율: 1 RUB = {currentExchangeRate.rate.toFixed(2)} KRW
-              </Badge>
-              <span className="text-xs">
-                ({new Date(currentExchangeRate.fetchedAt).toLocaleDateString('ko-KR')} 기준)
-              </span>
+              {currentExchangeRate ? (
+                <>
+                  <Badge variant="secondary" className="mr-2">
+                    환율: 1 RUB = {Number(currentExchangeRate.rate).toFixed(2)} KRW
+                  </Badge>
+                  <span className="text-xs">
+                    ({new Date(currentExchangeRate.fetchedAt).toLocaleDateString("ko-KR")} 기준) · 결제 금액은 루블(RUB)로 표시됩니다
+                  </span>
+                </>
+              ) : (
+                <span className="text-gray-500">환율 정보를 불러오는 중...</span>
+              )}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="flex justify-between text-sm">
               <span className="text-gray-600">상품 가격</span>
               <span className="font-medium">
-                {priceRub.toLocaleString()} RUB ≈ ₩{totals.priceKrw.toLocaleString()}
+                ₩{totals.priceKrw.toLocaleString("ko-KR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ≈ {totals.priceRub.toLocaleString("ko-KR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} RUB
               </span>
             </div>
             <div className="flex justify-between text-sm">
               <span className="text-gray-600">수수료 (12%)</span>
-              <span className="font-medium">₩{totals.fee.toLocaleString()}</span>
+              <span className="font-medium">{totals.feeRub.toLocaleString("ko-KR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} RUB</span>
             </div>
             <div className="border-t pt-3 flex justify-between">
               <span className="font-semibold text-lg">총 예상 금액</span>
               <span className="font-bold text-xl text-blue-600">
-                ₩{totals.total.toLocaleString()}
+                {totals.totalRub.toLocaleString("ko-KR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} RUB
               </span>
             </div>
             <p className="text-xs text-gray-500">

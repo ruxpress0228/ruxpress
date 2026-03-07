@@ -1,13 +1,27 @@
+import { useState, useEffect } from "react";
 import { Link } from "react-router";
-import { ShoppingCart, MessageSquare, FileText, TrendingUp, ArrowRight } from "lucide-react";
+import { ShoppingCart, MessageSquare, FileText, TrendingUp, ArrowRight, Calculator } from "lucide-react";
 import { Button } from "../../components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../components/ui/card";
 import { Badge } from "../../components/ui/badge";
-import { mockNotices, currentExchangeRate, mockPurchaseRequests } from "../../data/mockData";
+import { Input } from "../../components/ui/input";
+import { Label } from "../../components/ui/label";
+import { mockNotices, mockPurchaseRequests } from "../../data/mockData";
+import { getCurrentExchangeRate } from "../../utils/api";
+import type { ExchangeRate } from "../../types";
 
 export default function Home() {
+  const [currentExchangeRate, setCurrentExchangeRate] = useState<ExchangeRate | null>(null);
+  const [converterRub, setConverterRub] = useState<string>("");
+  const [converterKrw, setConverterKrw] = useState<string>("");
   const recentNotices = mockNotices.filter(n => n.status === 'PUBLISHED').slice(0, 3);
   const myRequests = mockPurchaseRequests.slice(0, 3);
+
+  useEffect(() => {
+    getCurrentExchangeRate()
+      .then(setCurrentExchangeRate)
+      .catch(() => setCurrentExchangeRate(null));
+  }, []);
 
   return (
     <div className="space-y-8">
@@ -36,20 +50,114 @@ export default function Home() {
               <TrendingUp className="w-5 h-5 text-blue-600" />
               <CardTitle>현재 환율</CardTitle>
             </div>
-            <Badge variant="secondary">
-              {new Date(currentExchangeRate.fetchedAt).toLocaleDateString('ko-KR')} 기준
-            </Badge>
+            {currentExchangeRate?.fetchedAt && (
+              <Badge variant="secondary">
+                {new Date(currentExchangeRate.fetchedAt).toLocaleDateString("ko-KR")} 기준
+              </Badge>
+            )}
           </div>
         </CardHeader>
         <CardContent>
-          <div className="flex items-baseline space-x-2">
-            <span className="text-3xl font-bold text-gray-900">
-              1 RUB = {currentExchangeRate.rate.toFixed(2)} KRW
-            </span>
-          </div>
-          <p className="text-sm text-gray-500 mt-2">
-            환율은 매일 자동으로 업데이트됩니다
-          </p>
+          {currentExchangeRate ? (
+            <>
+              <div className="flex items-baseline space-x-2">
+                <span className="text-3xl font-bold text-gray-900">
+                  1 RUB = {Number(currentExchangeRate.rate).toFixed(2)} KRW
+                </span>
+              </div>
+              <p className="text-sm text-gray-500 mt-2">
+                환율은 자동으로 업데이트됩니다
+              </p>
+
+              {/* 환율 계산기: 한국 ↔ 러시아 */}
+              <div className="mt-6 pt-6 border-t border-gray-200">
+                <div className="flex items-center gap-2 mb-3">
+                  <Calculator className="w-4 h-4 text-blue-600" />
+                  <span className="font-medium text-gray-900">환율 계산</span>
+                </div>
+
+                {/* 한국 → 러시아: KRW → RUB */}
+                <div className="flex flex-col sm:flex-row sm:items-end gap-4">
+                  <div className="flex-1 space-y-2">
+                    <Label htmlFor="home-converter-krw-input">한국 → 러시아 · 금액 (원화 KRW)</Label>
+                    <Input
+                      id="home-converter-krw-input"
+                      type="number"
+                      min="0"
+                      step="1"
+                      placeholder=""
+                      value={converterKrw}
+                      onChange={(e) => setConverterKrw(e.target.value)}
+                      className="text-lg"
+                    />
+                  </div>
+                  <div className="flex items-center justify-center sm:justify-start text-gray-400">
+                    <span className="text-xl">→</span>
+                  </div>
+                  <div className="flex-1 space-y-2">
+                    <Label htmlFor="home-converter-rub-result">루블 (RUB)</Label>
+                    <Input
+                      id="home-converter-rub-result"
+                      readOnly
+                      className="text-lg font-semibold bg-gray-50"
+                      value={
+                        converterKrw !== "" && !Number.isNaN(Number(converterKrw)) && Number(currentExchangeRate.rate) > 0
+                          ? (Math.round((Number(converterKrw) / Number(currentExchangeRate.rate)) * 100) / 100).toLocaleString("ko-KR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                          : ""
+                      }
+                      placeholder="입력 시 자동 계산"
+                    />
+                  </div>
+                </div>
+                {converterKrw !== "" && !Number.isNaN(Number(converterKrw)) && Number(converterKrw) > 0 && Number(currentExchangeRate.rate) > 0 && (
+                  <p className="text-sm text-gray-500 mt-2">
+                    ₩{Number(converterKrw).toLocaleString()}원 = 약 {(Math.round((Number(converterKrw) / Number(currentExchangeRate.rate)) * 100) / 100).toLocaleString("ko-KR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} RUB
+                  </p>
+                )}
+
+                {/* 러시아 → 한국: RUB → KRW */}
+                <div className="flex flex-col sm:flex-row sm:items-end gap-4 mt-6">
+                  <div className="flex-1 space-y-2">
+                    <Label htmlFor="home-converter-rub">러시아 → 한국 · 금액 (루블 RUB)</Label>
+                    <Input
+                      id="home-converter-rub"
+                      type="number"
+                      min="0"
+                      step="1"
+                      placeholder=""
+                      value={converterRub}
+                      onChange={(e) => setConverterRub(e.target.value)}
+                      className="text-lg"
+                    />
+                  </div>
+                  <div className="flex items-center justify-center sm:justify-start text-gray-400">
+                    <span className="text-xl">→</span>
+                  </div>
+                  <div className="flex-1 space-y-2">
+                    <Label htmlFor="home-converter-krw">원화 (KRW)</Label>
+                    <Input
+                      id="home-converter-krw"
+                      readOnly
+                      className="text-lg font-semibold bg-gray-50"
+                      value={
+                        converterRub !== "" && !Number.isNaN(Number(converterRub))
+                          ? `₩${(Math.round(Number(converterRub) * Number(currentExchangeRate.rate) * 100) / 100).toLocaleString("ko-KR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                          : ""
+                      }
+                      placeholder="입력 시 자동 계산"
+                    />
+                  </div>
+                </div>
+                {converterRub !== "" && !Number.isNaN(Number(converterRub)) && Number(converterRub) > 0 && (
+                  <p className="text-sm text-gray-500 mt-2">
+                    {Number(converterRub).toLocaleString()} RUB = 약 ₩{(Math.round(Number(converterRub) * Number(currentExchangeRate.rate) * 100) / 100).toLocaleString("ko-KR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}원
+                  </p>
+                )}
+              </div>
+            </>
+          ) : (
+            <p className="text-gray-500">환율 정보를 불러오는 중...</p>
+          )}
         </CardContent>
       </Card>
 

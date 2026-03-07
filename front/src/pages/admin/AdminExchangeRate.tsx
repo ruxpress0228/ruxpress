@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { TrendingUp, RefreshCw, Edit } from "lucide-react";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
@@ -8,30 +8,99 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Label } from "../../components/ui/label";
 import { Badge } from "../../components/ui/badge";
 import { toast } from "sonner";
-import { mockExchangeRates, currentExchangeRate } from "../../data/mockData";
+import {
+  getCurrentExchangeRate,
+  getExchangeRateHistory,
+  triggerExchangeRateFetch,
+  setManualExchangeRate,
+} from "../../utils/api";
+import type { ExchangeRate } from "../../types";
+
+function formatFetchedAt(dateStr: string) {
+  return new Date(dateStr).toLocaleDateString("ko-KR", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
 
 export default function AdminExchangeRate() {
+  const [currentRate, setCurrentRate] = useState<ExchangeRate | null>(null);
+  const [history, setHistory] = useState<ExchangeRate[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [fetching, setFetching] = useState(false);
   const [newRate, setNewRate] = useState("");
   const [isManualDialogOpen, setIsManualDialogOpen] = useState(false);
   const [feeRate, setFeeRate] = useState("12");
 
-  const fetchExchangeRate = () => {
-    toast.success("환율이 업데이트되었습니다");
+  const loadData = async () => {
+    try {
+      setLoading(true);
+      const [current, historyRes] = await Promise.all([
+        getCurrentExchangeRate(),
+        getExchangeRateHistory(0, 20),
+      ]);
+      setCurrentRate(current);
+      setHistory(historyRes.content ?? []);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "환율 정보를 불러오지 못했습니다";
+      toast.error(msg);
+      setCurrentRate(null);
+      setHistory([]);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const updateManualRate = () => {
-    if (!newRate || parseFloat(newRate) <= 0) {
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const fetchExchangeRate = async () => {
+    try {
+      setFetching(true);
+      await triggerExchangeRateFetch();
+      await loadData();
+      toast.success("환율이 업데이트되었습니다");
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "환율 갱신에 실패했습니다";
+      toast.error(msg);
+    } finally {
+      setFetching(false);
+    }
+  };
+
+  const updateManualRate = async () => {
+    const num = parseFloat(newRate);
+    if (!newRate || isNaN(num) || num <= 0) {
       toast.error("올바른 환율을 입력해주세요");
       return;
     }
-    toast.success("환율이 수동으로 설정되었습니다");
-    setIsManualDialogOpen(false);
-    setNewRate("");
+    try {
+      await setManualExchangeRate(num);
+      await loadData();
+      toast.success("환율이 수동으로 설정되었습니다");
+      setIsManualDialogOpen(false);
+      setNewRate("");
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "수동 환율 설정에 실패했습니다";
+      toast.error(msg);
+    }
   };
 
   const updateFeeRate = () => {
     toast.success("수수료율이 업데이트되었습니다");
   };
+
+  if (loading && !currentRate) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <p className="text-gray-500">환율 정보를 불러오는 중...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -50,18 +119,14 @@ export default function AdminExchangeRate() {
                 <span>현재 적용 환율</span>
               </CardTitle>
               <CardDescription>
-                {new Date(currentExchangeRate.fetchedAt).toLocaleDateString('ko-KR', {
-                  year: 'numeric',
-                  month: 'long',
-                  day: 'numeric',
-                  hour: '2-digit',
-                  minute: '2-digit'
-                })} 기준
+                {currentRate?.fetchedAt
+                  ? formatFetchedAt(currentRate.fetchedAt) + " 기준"
+                  : "—"}
               </CardDescription>
             </div>
             <div className="flex space-x-2">
-              <Button onClick={fetchExchangeRate}>
-                <RefreshCw className="w-4 h-4 mr-2" />
+              <Button onClick={fetchExchangeRate} disabled={fetching}>
+                <RefreshCw className={`w-4 h-4 mr-2 ${fetching ? "animate-spin" : ""}`} />
                 API 갱신
               </Button>
               <Dialog open={isManualDialogOpen} onOpenChange={setIsManualDialogOpen}>
@@ -105,14 +170,18 @@ export default function AdminExchangeRate() {
           </div>
         </CardHeader>
         <CardContent>
-          <div className="flex items-baseline space-x-2">
-            <span className="text-4xl font-bold text-gray-900">
-              1 RUB = {currentExchangeRate.rate.toFixed(2)} KRW
-            </span>
-            <Badge variant={currentExchangeRate.source === 'API' ? 'default' : 'secondary'}>
-              {currentExchangeRate.source === 'API' ? 'API 자동' : '수동 입력'}
-            </Badge>
-          </div>
+          {currentRate ? (
+            <div className="flex items-baseline space-x-2">
+              <span className="text-4xl font-bold text-gray-900">
+                1 RUB = {Number(currentRate.rate).toFixed(2)} KRW
+              </span>
+              <Badge variant={currentRate.source === "API" ? "default" : "secondary"}>
+                {currentRate.source === "API" ? "API 자동" : "수동 입력"}
+              </Badge>
+            </div>
+          ) : (
+            <p className="text-gray-500">환율 정보가 없습니다. API 갱신을 실행해주세요.</p>
+          )}
         </CardContent>
       </Card>
 
@@ -148,7 +217,7 @@ export default function AdminExchangeRate() {
               <strong>현재 설정:</strong> {feeRate}%
             </p>
             <p className="text-sm text-blue-700 mt-1">
-              예시: 100,000원 상품 → 수수료 {(100000 * parseFloat(feeRate) / 100).toLocaleString()}원
+              예시: 100,000원 상품 → 수수료 {(100000 * parseFloat(feeRate || "0") / 100).toLocaleString()}원
             </p>
           </div>
         </CardContent>
@@ -174,37 +243,39 @@ export default function AdminExchangeRate() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {mockExchangeRates.map((rate) => (
-                <TableRow key={rate.id}>
-                  <TableCell className="font-medium">
-                    1 RUB = {rate.rate.toFixed(2)} KRW
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={rate.source === 'API' ? 'default' : 'secondary'}>
-                      {rate.source === 'API' ? 'API' : '수동'}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    {rate.isCurrent ? (
-                      <Badge variant="default">현재 적용중</Badge>
-                    ) : (
-                      <Badge variant="outline">이전</Badge>
-                    )}
-                  </TableCell>
-                  <TableCell className="text-sm text-gray-500">
-                    {new Date(rate.fetchedAt).toLocaleDateString('ko-KR', {
-                      year: 'numeric',
-                      month: 'long',
-                      day: 'numeric',
-                      hour: '2-digit',
-                      minute: '2-digit'
-                    })}
-                  </TableCell>
-                  <TableCell className="text-sm text-gray-500">
-                    {new Date(rate.createdAt).toLocaleDateString('ko-KR')}
+              {history.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={5} className="text-center text-gray-500 py-8">
+                    히스토리가 없습니다
                   </TableCell>
                 </TableRow>
-              ))}
+              ) : (
+                history.map((rate) => (
+                  <TableRow key={rate.id}>
+                    <TableCell className="font-medium">
+                      1 RUB = {Number(rate.rate).toFixed(2)} KRW
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={rate.source === "API" ? "default" : "secondary"}>
+                        {rate.source === "API" ? "API" : "수동"}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      {rate.isCurrent ? (
+                        <Badge variant="default">현재 적용중</Badge>
+                      ) : (
+                        <Badge variant="outline">이전</Badge>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-sm text-gray-500">
+                      {rate.fetchedAt ? formatFetchedAt(rate.fetchedAt) : "—"}
+                    </TableCell>
+                    <TableCell className="text-sm text-gray-500">
+                      {rate.createdAt ? new Date(rate.createdAt).toLocaleDateString("ko-KR") : "—"}
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
             </TableBody>
           </Table>
         </CardContent>

@@ -6,6 +6,9 @@ spring:
     name: ruxpress-back
   profiles:
     active: local
+  task:
+    scheduling:
+      enabled: true
   jpa:
     properties:
       hibernate:
