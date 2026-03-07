@@ -8,9 +8,12 @@ import { Input } from "../../components/ui/input";
 import { Label } from "../../components/ui/label";
 import { mockNotices, mockPurchaseRequests } from "../../data/mockData";
 import { getCurrentExchangeRate } from "../../utils/api";
+import { useTranslation } from "../../hooks/useTranslation";
+import { formatDate, formatNumber } from "../../utils/format";
 import type { ExchangeRate } from "../../types";
 
 export default function Home() {
+  const { t, locale } = useTranslation();
   const [currentExchangeRate, setCurrentExchangeRate] = useState<ExchangeRate | null>(null);
   const [converterRub, setConverterRub] = useState<string>("");
   const [converterKrw, setConverterKrw] = useState<string>("");
@@ -23,20 +26,21 @@ export default function Home() {
       .catch(() => setCurrentExchangeRate(null));
   }, []);
 
+  const numOpt = { minimumFractionDigits: 2, maximumFractionDigits: 2 };
+
   return (
     <div className="space-y-8">
       {/* Hero Section */}
       <div className="bg-gradient-to-r from-blue-600 to-blue-400 rounded-2xl p-8 md:p-12 text-white">
         <h1 className="text-3xl md:text-4xl font-bold mb-4">
-          러시아 상품, 간편하게 구매하세요
+          {t('home.hero.title')}
         </h1>
         <p className="text-lg md:text-xl text-blue-50 mb-6">
-          Wildberries, Ozon 등 러시아 주요 쇼핑몰의 상품을<br />
-          안전하고 빠르게 한국으로 배송해드립니다
+          {t('home.hero.subtitle')}
         </p>
         <Link to="/purchase/new">
           <Button size="lg" variant="secondary" className="font-semibold">
-            구매 요청하기
+            {t('home.hero.cta')}
             <ArrowRight className="w-5 h-5 ml-2" />
           </Button>
         </Link>
@@ -48,11 +52,11 @@ export default function Home() {
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
               <TrendingUp className="w-5 h-5 text-blue-600" />
-              <CardTitle>현재 환율</CardTitle>
+              <CardTitle>{t('home.exchange.title')}</CardTitle>
             </div>
             {currentExchangeRate?.fetchedAt && (
               <Badge variant="secondary">
-                {new Date(currentExchangeRate.fetchedAt).toLocaleDateString("ko-KR")} 기준
+                {formatDate(currentExchangeRate.fetchedAt, locale)} {t('home.exchange.asOf')}
               </Badge>
             )}
           </div>
@@ -66,20 +70,18 @@ export default function Home() {
                 </span>
               </div>
               <p className="text-sm text-gray-500 mt-2">
-                환율은 자동으로 업데이트됩니다
+                {t('home.exchange.autoUpdate')}
               </p>
 
-              {/* 환율 계산기: 한국 ↔ 러시아 */}
               <div className="mt-6 pt-6 border-t border-gray-200">
                 <div className="flex items-center gap-2 mb-3">
                   <Calculator className="w-4 h-4 text-blue-600" />
-                  <span className="font-medium text-gray-900">환율 계산</span>
+                  <span className="font-medium text-gray-900">{t('home.exchange.calcTitle')}</span>
                 </div>
 
-                {/* 한국 → 러시아: KRW → RUB */}
                 <div className="flex flex-col sm:flex-row sm:items-end gap-4">
                   <div className="flex-1 space-y-2">
-                    <Label htmlFor="home-converter-krw-input">한국 → 러시아 · 금액 (원화 KRW)</Label>
+                    <Label htmlFor="home-converter-krw-input">{t('home.exchange.krwToRub')}</Label>
                     <Input
                       id="home-converter-krw-input"
                       type="number"
@@ -95,30 +97,29 @@ export default function Home() {
                     <span className="text-xl">→</span>
                   </div>
                   <div className="flex-1 space-y-2">
-                    <Label htmlFor="home-converter-rub-result">루블 (RUB)</Label>
+                    <Label htmlFor="home-converter-rub-result">{t('home.exchange.rub')}</Label>
                     <Input
                       id="home-converter-rub-result"
                       readOnly
                       className="text-lg font-semibold bg-gray-50"
                       value={
                         converterKrw !== "" && !Number.isNaN(Number(converterKrw)) && Number(currentExchangeRate.rate) > 0
-                          ? (Math.round((Number(converterKrw) / Number(currentExchangeRate.rate)) * 100) / 100).toLocaleString("ko-KR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                          ? formatNumber(Math.round((Number(converterKrw) / Number(currentExchangeRate.rate)) * 100) / 100, locale, numOpt)
                           : ""
                       }
-                      placeholder="입력 시 자동 계산"
+                      placeholder={t('home.exchange.placeholder')}
                     />
                   </div>
                 </div>
                 {converterKrw !== "" && !Number.isNaN(Number(converterKrw)) && Number(converterKrw) > 0 && Number(currentExchangeRate.rate) > 0 && (
                   <p className="text-sm text-gray-500 mt-2">
-                    ₩{Number(converterKrw).toLocaleString()}원 = 약 {(Math.round((Number(converterKrw) / Number(currentExchangeRate.rate)) * 100) / 100).toLocaleString("ko-KR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} RUB
+                    ₩{formatNumber(Number(converterKrw), locale)} = {formatNumber(Math.round((Number(converterKrw) / Number(currentExchangeRate.rate)) * 100) / 100, locale, numOpt)} RUB
                   </p>
                 )}
 
-                {/* 러시아 → 한국: RUB → KRW */}
                 <div className="flex flex-col sm:flex-row sm:items-end gap-4 mt-6">
                   <div className="flex-1 space-y-2">
-                    <Label htmlFor="home-converter-rub">러시아 → 한국 · 금액 (루블 RUB)</Label>
+                    <Label htmlFor="home-converter-rub">{t('home.exchange.rubToKrw')}</Label>
                     <Input
                       id="home-converter-rub"
                       type="number"
@@ -134,29 +135,29 @@ export default function Home() {
                     <span className="text-xl">→</span>
                   </div>
                   <div className="flex-1 space-y-2">
-                    <Label htmlFor="home-converter-krw">원화 (KRW)</Label>
+                    <Label htmlFor="home-converter-krw">{t('home.exchange.krw')}</Label>
                     <Input
                       id="home-converter-krw"
                       readOnly
                       className="text-lg font-semibold bg-gray-50"
                       value={
                         converterRub !== "" && !Number.isNaN(Number(converterRub))
-                          ? `₩${(Math.round(Number(converterRub) * Number(currentExchangeRate.rate) * 100) / 100).toLocaleString("ko-KR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                          ? `₩${formatNumber(Math.round(Number(converterRub) * Number(currentExchangeRate.rate) * 100) / 100, locale, numOpt)}`
                           : ""
                       }
-                      placeholder="입력 시 자동 계산"
+                      placeholder={t('home.exchange.placeholder')}
                     />
                   </div>
                 </div>
                 {converterRub !== "" && !Number.isNaN(Number(converterRub)) && Number(converterRub) > 0 && (
                   <p className="text-sm text-gray-500 mt-2">
-                    {Number(converterRub).toLocaleString()} RUB = 약 ₩{(Math.round(Number(converterRub) * Number(currentExchangeRate.rate) * 100) / 100).toLocaleString("ko-KR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}원
+                    {formatNumber(Number(converterRub), locale)} RUB = ₩{formatNumber(Math.round(Number(converterRub) * Number(currentExchangeRate.rate) * 100) / 100, locale, numOpt)}
                   </p>
                 )}
               </div>
             </>
           ) : (
-            <p className="text-gray-500">환율 정보를 불러오는 중...</p>
+            <p className="text-gray-500">{t('home.exchange.loading')}</p>
           )}
         </CardContent>
       </Card>
@@ -167,9 +168,9 @@ export default function Home() {
           <Card className="hover:shadow-lg transition-shadow cursor-pointer border-2 hover:border-blue-500">
             <CardHeader>
               <ShoppingCart className="w-8 h-8 text-blue-600 mb-2" />
-              <CardTitle>구매 요청</CardTitle>
+              <CardTitle>{t('home.quick.purchase.title')}</CardTitle>
               <CardDescription>
-                원하는 상품의 URL을 입력하여 구매 요청을 시작하세요
+                {t('home.quick.purchase.desc')}
               </CardDescription>
             </CardHeader>
           </Card>
@@ -179,9 +180,9 @@ export default function Home() {
           <Card className="hover:shadow-lg transition-shadow cursor-pointer border-2 hover:border-green-500">
             <CardHeader>
               <MessageSquare className="w-8 h-8 text-green-600 mb-2" />
-              <CardTitle>1:1 문의</CardTitle>
+              <CardTitle>{t('home.quick.inquiry.title')}</CardTitle>
               <CardDescription>
-                궁금한 점이 있으신가요? 언제든지 문의해주세요
+                {t('home.quick.inquiry.desc')}
               </CardDescription>
             </CardHeader>
           </Card>
@@ -191,9 +192,9 @@ export default function Home() {
           <Card className="hover:shadow-lg transition-shadow cursor-pointer border-2 hover:border-purple-500">
             <CardHeader>
               <FileText className="w-8 h-8 text-purple-600 mb-2" />
-              <CardTitle>공지사항</CardTitle>
+              <CardTitle>{t('home.quick.notice.title')}</CardTitle>
               <CardDescription>
-                서비스 관련 최신 소식을 확인하세요
+                {t('home.quick.notice.desc')}
               </CardDescription>
             </CardHeader>
           </Card>
@@ -204,10 +205,10 @@ export default function Home() {
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
-            <CardTitle>최근 구매 요청</CardTitle>
+            <CardTitle>{t('home.recentRequests.title')}</CardTitle>
             <Link to="/purchase">
               <Button variant="ghost" size="sm">
-                전체보기
+                {t('home.recentRequests.viewAll')}
                 <ArrowRight className="w-4 h-4 ml-1" />
               </Button>
             </Link>
@@ -231,18 +232,18 @@ export default function Home() {
                         request.status === 'PURCHASING' ? 'secondary' :
                         'outline'
                       }>
-                        {request.status === 'REVIEWING' && '검토중'}
-                        {request.status === 'PURCHASING' && '구매중'}
-                        {request.status === 'DELIVERED' && '배송완료'}
+                        {request.status === 'REVIEWING' && t('home.status.reviewing')}
+                        {request.status === 'PURCHASING' && t('home.status.purchasing')}
+                        {request.status === 'DELIVERED' && t('home.status.delivered')}
                       </Badge>
                     </div>
                     <p className="text-sm text-gray-500">
-                      {request.requestNumber} · {new Date(request.createdAt).toLocaleDateString('ko-KR')}
+                      {request.requestNumber} · {formatDate(request.createdAt, locale)}
                     </p>
                   </div>
                   <div className="text-right">
                     <p className="font-semibold text-gray-900">
-                      ₩{request.totalAmountKrw?.toLocaleString()}
+                      ₩{request.totalAmountKrw != null ? formatNumber(request.totalAmountKrw, locale) : ""}
                     </p>
                   </div>
                 </div>
@@ -251,7 +252,7 @@ export default function Home() {
           ) : (
             <div className="text-center py-8 text-gray-500">
               <ShoppingCart className="w-12 h-12 mx-auto mb-2 text-gray-400" />
-              <p>아직 구매 요청이 없습니다</p>
+              <p>{t('home.recentRequests.empty')}</p>
             </div>
           )}
         </CardContent>
@@ -261,10 +262,10 @@ export default function Home() {
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
-            <CardTitle>공지사항</CardTitle>
+            <CardTitle>{t('home.recentNotices.title')}</CardTitle>
             <Link to="/notice">
               <Button variant="ghost" size="sm">
-                전체보기
+                {t('home.recentNotices.viewAll')}
                 <ArrowRight className="w-4 h-4 ml-1" />
               </Button>
             </Link>
@@ -279,12 +280,12 @@ export default function Home() {
                     <div className="flex-1">
                       <div className="flex items-center space-x-2 mb-1">
                         {notice.isPinned && (
-                          <Badge variant="destructive" className="text-xs">중요</Badge>
+                          <Badge variant="destructive" className="text-xs">{t('home.notice.pinned')}</Badge>
                         )}
                         <span className="font-medium text-gray-900">{notice.title}</span>
                       </div>
                       <p className="text-sm text-gray-500">
-                        {new Date(notice.publishedAt!).toLocaleDateString('ko-KR')}
+                        {notice.publishedAt ? formatDate(notice.publishedAt, locale) : ""}
                       </p>
                     </div>
                   </div>
