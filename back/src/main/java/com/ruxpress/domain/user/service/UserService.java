@@ -1,10 +1,108 @@
 package com.ruxpress.domain.user.service;
 
+import com.ruxpress.common.exception.BusinessException;
+import com.ruxpress.common.exception.ErrorCode;
+import com.ruxpress.common.util.JwtUtil;
+import com.ruxpress.domain.user.dto.EmailSignupRequest;
+import com.ruxpress.domain.user.dto.LoginRequest;
+import com.ruxpress.domain.user.dto.LoginResponse;
+import com.ruxpress.domain.user.entity.User;
+import com.ruxpress.domain.user.entity.Verification;
+import com.ruxpress.domain.user.repository.UserRepository;
+import com.ruxpress.domain.user.repository.VerificationRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
-// TODO: User 비즈니스 로직 구현
+import java.time.LocalDateTime;
+
 @Service
 @RequiredArgsConstructor
 public class UserService {
+
+    private static final int SIGNUP_VERIFICATION_VALID_MINUTES = 30;
+
+    private final UserRepository userRepository;
+    private final VerificationRepository verificationRepository;
+    private final PasswordEncoder passwordEncoder;
+    private final JwtUtil jwtUtil;
+
+    /**
+     * 이메일 인증 완료 후 회원가입. 인증된 이메일이 최근 30분 이내여야 함.
+     */
+    @Transactional
+    public void signupWithEmail(EmailSignupRequest request) {
+        String email = request.getEmail() == null ? null : request.getEmail().trim().toLowerCase();
+        if (email == null || email.isEmpty()) {
+            throw new BusinessException(ErrorCode.INVALID_INPUT, "이메일을 입력하세요.");
+        }
+
+        // 이메일 인증 완료 여부 및 유효 시간 확인
+        Verification verified = verificationRepository
+                .findTopByTypeAndTargetAndIsVerifiedOrderByCreatedAtDesc(
+                        Verification.VerificationType.EMAIL, email, true)
+                .orElseThrow(() -> new BusinessException(ErrorCode.EMAIL_VERIFICATION_REQUIRED, "이메일 인증을 먼저 완료해 주세요."));
+
+        LocalDateTime validUntil = verified.getCreatedAt().plusMinutes(SIGNUP_VERIFICATION_VALID_MINUTES);
+        if (LocalDateTime.now().isAfter(validUntil)) {
+            throw new BusinessException(ErrorCode.EMAIL_VERIFICATION_REQUIRED, "이메일 인증이 만료되었습니다. 인증을 다시 진행해 주세요.");
+        }
+
+        if (userRepository.existsByEmail(email)) {
+            throw new BusinessException(ErrorCode.DUPLICATE_EMAIL, "이미 사용 중인 이메일입니다.");
+        }
+
+        String nickname = request.getNickname() == null ? null : request.getNickname().trim();
+        if (nickname == null || nickname.isEmpty()) {
+            throw new BusinessException(ErrorCode.INVALID_INPUT, "닉네임을 입력하세요.");
+        }
+
+        String encodedPassword = passwordEncoder.encode(request.getPassword());
+        LocalDateTime now = LocalDateTime.now();
+
+        User user = User.builder()
+                .email(email)
+                .passwordHash(encodedPassword)
+                .nickname(nickname)
+                .status(User.UserStatus.ACTIVE)
+                .emailVerified(true)
+                .phoneVerified(false)
+                .signupType(User.SignupType.EMAIL)
+                .timezone("Asia/Seoul")
+                .createdAt(now)
+                .updatedAt(now)
+                .build();
+        userRepository.save(user);
+    }
+
+    /**
+     * 이메일/비밀번호 로그인. 성공 시 JWT 및 사용자 정보 반환.
+     */
+    @Transactional
+    public LoginResponse login(LoginRequest request) {
+        String email = request.getEmail() == null ? null : request.getEmail().trim().toLowerCase();
+        if (email == null || email.isEmpty()) {
+            throw new BusinessException(ErrorCode.INVALID_INPUT, "이메일을 입력하세요.");
+        }
+        if (request.getPassword() == null || request.getPassword().isEmpty()) {
+            throw new BusinessException(ErrorCode.INVALID_INPUT, "비밀번호를 입력하세요.");
+        }
+
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new BusinessException(ErrorCode.UNAUTHORIZED, "이메일 또는 비밀번호가 올바르지 않습니다."));
+
+        if (user.getStatus() != User.UserStatus.ACTIVE) {
+            throw new BusinessException(ErrorCode.FORBIDDEN, "계정이 비활성화되었습니다.");
+        }
+        if (user.getPasswordHash() == null || !passwordEncoder.matches(request.getPassword(), user.getPasswordHash())) {
+            throw new BusinessException(ErrorCode.UNAUTHORIZED, "이메일 또는 비밀번호가 올바르지 않습니다.");
+        }
+
+        user.updateLastLoginAt();
+        userRepository.save(user);
+
+        String token = jwtUtil.generateToken(user.getId(), user.getEmail());
+        return new LoginResponse(token, user.getId(), user.getEmail(), user.getNickname());
+    }
 }

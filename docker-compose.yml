@@ -6,6 +6,8 @@ services:
     container_name: ruxpress-back
     ports:
       - "8080:8080"
+    env_file:
+      - ./back/.env
     restart: unless-stopped
 
   frontend:
