@@ -1,4 +1,5 @@
 import { Outlet, Link, useLocation } from "react-router";
+import { useState, useRef, useEffect } from "react";
 import { Bell, Menu, User, ShoppingCart, MessageSquare, FileText, Home, Globe } from "lucide-react";
 import { Button } from "../ui/button";
 import { Badge } from "../ui/badge";
@@ -9,18 +10,26 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "../ui/sheet";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "../ui/dropdown-menu";
 import { useTranslation } from "../../hooks/useTranslation";
 import { LOCALES } from "../../utils/constants";
 
 export default function UserLayout() {
   const location = useLocation();
   const { t, locale, setLocale } = useTranslation();
+  const [langOpen, setLangOpen] = useState(false);
+  const langRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!langOpen) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (langRef.current && !langRef.current.contains(e.target as Node)) {
+        setLangOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [langOpen]);
+
   const isActive = (path: string) => location.pathname === path;
 
   const navigation = [
@@ -60,24 +69,41 @@ export default function UserLayout() {
             </nav>
 
             <div className="flex items-center space-x-2">
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" title={t("common.language")}>
-                    <Globe className="w-5 h-5" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  {LOCALES.map((loc) => (
-                    <DropdownMenuItem
-                      key={loc}
-                      onClick={() => setLocale(loc)}
-                      className={locale === loc ? "bg-accent" : undefined}
-                    >
-                      {t(`locale.${loc}`)}
-                    </DropdownMenuItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
+              <div className="relative" ref={langRef}>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  title={t("common.language")}
+                  onClick={() => setLangOpen((v) => !v)}
+                  aria-expanded={langOpen}
+                  aria-haspopup="listbox"
+                >
+                  <Globe className="w-5 h-5" />
+                </Button>
+                {langOpen && (
+                  <div
+                    className="absolute right-0 top-full mt-1 min-w-[10rem] rounded-md border border-gray-200 bg-white py-1 shadow-lg z-[100]"
+                    role="listbox"
+                  >
+                    {LOCALES.map((loc) => (
+                      <button
+                        key={loc}
+                        type="button"
+                        role="option"
+                        aria-selected={locale === loc}
+                        className={`block w-full px-3 py-2 text-left text-sm hover:bg-gray-100 ${locale === loc ? "bg-blue-50 text-blue-700 font-medium" : "text-gray-900"}`}
+                        onClick={() => {
+                          setLocale(loc);
+                          setLangOpen(false);
+                        }}
+                      >
+                        {t(`locale.${loc}`)}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
               <Button variant="ghost" size="icon" className="relative">
                 <Bell className="w-5 h-5" />
                 <Badge className="absolute -top-1 -right-1 w-5 h-5 flex items-center justify-center p-0 text-xs">
