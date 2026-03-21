@@ -33,4 +33,9 @@ public class InquiryReply extends BaseEntity {
         reply.isRead = false;
         return reply;
     }
+
+    public void updateContent(String newContent) {
+        this.content = newContent;
+    }
+
 }

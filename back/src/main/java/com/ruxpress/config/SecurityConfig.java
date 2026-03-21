@@ -1,7 +1,9 @@
 package com.ruxpress.config;
 
+import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
@@ -10,10 +12,14 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 @Configuration
 @EnableWebSecurity
+@RequiredArgsConstructor
 public class SecurityConfig {
+
+    private final JwtAuthenticationFilter jwtAuthenticationFilter;
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
@@ -24,9 +30,20 @@ public class SecurityConfig {
                 .sessionManagement(session ->
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        // TODO: 인증 필요한 경로 설정
+                        .requestMatchers("/api/v1/admin/auth/**").permitAll()
+                        .requestMatchers("/api/v1/admin/admins/**").hasRole("SUPER_ADMIN")
+                        .requestMatchers("/api/v1/admin/users/**").hasRole("SUPER_ADMIN")
+                        .requestMatchers("/api/v1/admin/notices/**").hasRole("SUPER_ADMIN")
+                        .requestMatchers("/api/v1/admin/settings/**").hasRole("SUPER_ADMIN")
+                        .requestMatchers("/api/v1/admin/inquiries/**").hasAnyRole("SUPER_ADMIN", "COUNSELOR")
+                        .requestMatchers("/api/v1/admin/reply-templates/**").hasAnyRole("SUPER_ADMIN", "COUNSELOR")
+                        .requestMatchers("/api/v1/admin/stats/**").hasAnyRole("SUPER_ADMIN", "COUNSELOR")
+                        .requestMatchers("/api/v1/admin/**").hasAnyRole("SUPER_ADMIN", "COUNSELOR")
+                        .requestMatchers(HttpMethod.GET, "/api/v1/notices/**").permitAll()
+                        .requestMatchers("/h2-console/**").permitAll()
                         .anyRequest().permitAll()
-                );
+                )
+                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
