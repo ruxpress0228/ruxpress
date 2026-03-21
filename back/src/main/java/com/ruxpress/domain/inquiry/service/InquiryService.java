@@ -1,10 +1,183 @@
 package com.ruxpress.domain.inquiry.service;
 
+import com.ruxpress.common.entity.Attachment;
+import com.ruxpress.common.entity.AttachmentRefType;
+import com.ruxpress.common.exception.BusinessException;
+import com.ruxpress.common.exception.ErrorCode;
+import com.ruxpress.common.repository.AttachmentRepository;
+import com.ruxpress.common.storage.FileStoragePort;
+import com.ruxpress.common.dto.AttachmentResponse;
+import com.ruxpress.common.dto.PageResponse;
+import com.ruxpress.domain.inquiry.dto.request.InquiryCreateRequest;
+import com.ruxpress.domain.inquiry.dto.response.InquiryListResponse;
+import com.ruxpress.domain.inquiry.dto.response.InquiryReplyResponse;
+import com.ruxpress.domain.inquiry.dto.response.InquiryResponse;
+import com.ruxpress.domain.inquiry.entity.Inquiry;
+import com.ruxpress.domain.inquiry.entity.InquiryReply;
+import com.ruxpress.domain.inquiry.repository.InquiryReplyRepository;
+import com.ruxpress.domain.inquiry.repository.InquiryRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.core.io.Resource;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
-// TODO: Inquiry 비즈니스 로직 구현
+import java.util.List;
+import java.util.stream.Collectors;
+
 @Service
 @RequiredArgsConstructor
 public class InquiryService {
+
+    private static final int MAX_FILE_COUNT = 5;
+    private static final long MAX_FILE_SIZE_BYTES = 10L * 1024 * 1024; // 10MB
+
+    private final InquiryRepository inquiryRepository;
+    private final InquiryReplyRepository inquiryReplyRepository;
+    private final AttachmentRepository attachmentRepository;
+    private final FileStoragePort fileStoragePort;
+
+    @Transactional
+    public InquiryResponse createInquiry(Long userId, InquiryCreateRequest request,
+                                        List<MultipartFile> files) {
+        List<MultipartFile> fileList = files != null ? files : List.of();
+        if (fileList.size() > MAX_FILE_COUNT) {
+            throw new BusinessException(ErrorCode.FILE_COUNT_EXCEEDED);
+        }
+        for (MultipartFile file : fileList) {
+            if (file.getSize() > MAX_FILE_SIZE_BYTES) {
+                throw new BusinessException(ErrorCode.FILE_SIZE_EXCEEDED);
+            }
+        }
+
+        Inquiry inquiry = Inquiry.create(
+                userId,
+                request.getCategory(),
+                request.getTitle(),
+                request.getContent()
+        );
+        inquiry = inquiryRepository.save(inquiry);
+
+        String directory = "inquiry/" + inquiry.getId();
+        for (int i = 0; i < fileList.size(); i++) {
+            MultipartFile file = fileList.get(i);
+            try {
+                String storedUrl = fileStoragePort.store(directory, file);
+                Attachment attachment = Attachment.create(
+                        AttachmentRefType.INQUIRY,
+                        inquiry.getId(),
+                        file.getOriginalFilename() != null ? file.getOriginalFilename() : "file",
+                        storedUrl,
+                        (int) file.getSize(),
+                        file.getContentType() != null ? file.getContentType() : "application/octet-stream",
+                        i
+                );
+                attachmentRepository.save(attachment);
+            } catch (Exception e) {
+                throw new BusinessException(ErrorCode.FILE_UPLOAD_FAILED, e.getMessage());
+            }
+        }
+
+        return toDetailResponse(inquiry);
+    }
+
+    @Transactional(readOnly = true)
+    public PageResponse<InquiryListResponse> getMyInquiries(Long userId, Pageable pageable) {
+        Page<Inquiry> page = inquiryRepository.findByUserIdAndDeletedAtIsNullOrderByCreatedAtDesc(userId, pageable);
+        List<InquiryListResponse> content = page.getContent().stream()
+                .map(this::toListResponse)
+                .collect(Collectors.toList());
+        return new PageResponse<>(
+                content,
+                page.getTotalElements(),
+                page.getTotalPages(),
+                page.getNumber(),
+                page.getSize()
+        );
+    }
+
+    @Transactional(readOnly = true)
+    public InquiryResponse getInquiryDetail(Long userId, Long inquiryId) {
+        Inquiry inquiry = inquiryRepository.findById(inquiryId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.INQUIRY_NOT_FOUND));
+        if (!inquiry.getUserId().equals(userId)) {
+            throw new BusinessException(ErrorCode.INQUIRY_ACCESS_DENIED);
+        }
+        return toDetailResponse(inquiry);
+    }
+
+    @Transactional(readOnly = true)
+    public Resource getAttachmentResource(Long attachmentId, Long userId) {
+        Attachment attachment = attachmentRepository.findById(attachmentId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
+        if (attachment.getRefType() != AttachmentRefType.INQUIRY) {
+            throw new BusinessException(ErrorCode.FORBIDDEN);
+        }
+        Inquiry inquiry = inquiryRepository.findById(attachment.getRefId())
+                .orElseThrow(() -> new BusinessException(ErrorCode.INQUIRY_NOT_FOUND));
+        if (!inquiry.getUserId().equals(userId)) {
+            throw new BusinessException(ErrorCode.INQUIRY_ACCESS_DENIED);
+        }
+        return fileStoragePort.loadAsResource(attachment.getStoredUrl());
+    }
+
+    @Transactional(readOnly = true)
+    public String getAttachmentOriginalFilename(Long attachmentId) {
+        Attachment attachment = attachmentRepository.findById(attachmentId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
+        return attachment.getOriginalFilename();
+    }
+
+    private InquiryListResponse toListResponse(Inquiry inquiry) {
+        List<InquiryReply> replies = inquiryReplyRepository.findByInquiry_IdAndDeletedAtIsNullOrderByCreatedAtAsc(inquiry.getId());
+        int replyCount = replies.size();
+        boolean hasUnreadReply = replies.stream().anyMatch(r -> !r.isRead());
+        return new InquiryListResponse(
+                inquiry.getId(),
+                inquiry.getCategory(),
+                inquiry.getTitle(),
+                inquiry.getStatus(),
+                replyCount,
+                hasUnreadReply,
+                inquiry.getCreatedAt()
+        );
+    }
+
+    private InquiryResponse toDetailResponse(Inquiry inquiry) {
+        List<InquiryReply> replies = inquiryReplyRepository.findByInquiry_IdAndDeletedAtIsNullOrderByCreatedAtAsc(inquiry.getId());
+        List<InquiryReplyResponse> replyResponses = replies.stream()
+                .map(r -> new InquiryReplyResponse(
+                        r.getId(),
+                        r.getAdminId(),
+                        r.getContent(),
+                        r.isRead(),
+                        r.getCreatedAt()
+                ))
+                .collect(Collectors.toList());
+        List<Attachment> attachments = attachmentRepository.findByRefTypeAndRefIdOrderBySortOrder(AttachmentRefType.INQUIRY, inquiry.getId());
+        List<AttachmentResponse> attachmentResponses = attachments.stream()
+                .map(a -> new AttachmentResponse(
+                        a.getId(),
+                        a.getOriginalFilename(),
+                        a.getStoredUrl(),
+                        a.getThumbnailUrl(),
+                        a.getFileSize(),
+                        a.getMimeType()
+                ))
+                .collect(Collectors.toList());
+        return new InquiryResponse(
+                inquiry.getId(),
+                inquiry.getUserId(),
+                inquiry.getCategory(),
+                inquiry.getTitle(),
+                inquiry.getContent(),
+                inquiry.getStatus(),
+                inquiry.getCreatedAt(),
+                inquiry.getUpdatedAt(),
+                replyResponses,
+                attachmentResponses
+        );
+    }
 }

@@ -1,6 +1,5 @@
 import { describe, it, expect } from 'vitest';
 import { localeToTag, formatDate, formatNumber } from './format';
-import type { Locale } from './constants';
 
 describe('localeToTag', () => {
   it('returns ko-KR for ko', () => {

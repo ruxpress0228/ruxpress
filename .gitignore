@@ -4,6 +4,7 @@ front/node_modules/
 
 # Build
 front/dist/
+front/tsconfig.tsbuildinfo
 back/target/
 
 # IDE

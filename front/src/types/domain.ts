@@ -103,6 +103,17 @@ export interface Inquiry {
   createdAt: string;
   updatedAt: string;
   replies?: InquiryReply[];
+  attachments?: Attachment[];
+}
+
+export interface InquiryListItem {
+  id: number;
+  category: InquiryCategory;
+  title: string;
+  status: InquiryStatus;
+  replyCount: number;
+  hasUnreadReply: boolean;
+  createdAt: string;
 }
 
 export interface InquiryReply {
