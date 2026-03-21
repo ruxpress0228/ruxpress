@@ -22,6 +22,7 @@ import com.ruxpress.domain.user.dto.response.UserResponse;
 import com.ruxpress.domain.user.dto.response.UserStatsResponse;
 
 // Domain - User (Entity & Repository)
+import com.ruxpress.domain.user.entity.SignupType;
 import com.ruxpress.domain.user.entity.User;
 import com.ruxpress.domain.user.entity.UserStatus;
 import com.ruxpress.domain.user.entity.Verification;
@@ -95,8 +96,9 @@ public class UserService {
         LocalDateTime todayStart = LocalDate.now().atStartOfDay();
         long newToday = userRepository.countByCreatedAtAfterAndDeletedAtIsNull(todayStart);
 
-        return new UserStatsResponse(total, active, suspended, withdrawn, newToday);}
+        return new UserStatsResponse(total, active, suspended, withdrawn, newToday);
     }
+
     /**
      * 이메일 인증 완료 후 회원가입. 인증된 이메일이 최근 30분 이내여야 함.
      */
@@ -134,10 +136,10 @@ public class UserService {
                 .email(email)
                 .passwordHash(encodedPassword)
                 .nickname(nickname)
-                .status(User.UserStatus.ACTIVE)
+                .status(UserStatus.ACTIVE)
                 .emailVerified(true)
                 .phoneVerified(false)
-                .signupType(User.SignupType.EMAIL)
+                .signupType(SignupType.EMAIL)
                 .timezone("Asia/Seoul")
                 .createdAt(now)
                 .updatedAt(now)
@@ -161,7 +163,7 @@ public class UserService {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new BusinessException(ErrorCode.UNAUTHORIZED, "이메일 또는 비밀번호가 올바르지 않습니다."));
 
-        if (user.getStatus() != User.UserStatus.ACTIVE) {
+        if (user.getStatus() != UserStatus.ACTIVE) {
             throw new BusinessException(ErrorCode.FORBIDDEN, "계정이 비활성화되었습니다.");
         }
         if (user.getPasswordHash() == null || !passwordEncoder.matches(request.getPassword(), user.getPasswordHash())) {

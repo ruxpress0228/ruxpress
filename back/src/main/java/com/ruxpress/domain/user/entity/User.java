@@ -14,7 +14,7 @@ import java.time.LocalDateTime;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor
 @Builder
-public class User extends BaseEntity {
+public class User {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -42,11 +42,11 @@ public class User extends BaseEntity {
 
     @Column(name = "email_verified", nullable = false)
     @Builder.Default
-    private Boolean emailVerified = true;
+    private boolean emailVerified = true;
 
     @Column(name = "phone_verified", nullable = false)
     @Builder.Default
-    private Boolean phoneVerified = false;
+    private boolean phoneVerified = false;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "signup_type", nullable = false, length = 20)
@@ -91,13 +91,6 @@ public class User extends BaseEntity {
     public void updateLastLoginAt() {
         this.lastLoginAt = LocalDateTime.now();
     }
-
-    public enum UserStatus {
-        ACTIVE, SUSPENDED, WITHDRAWN
-    }
-
-    public enum SignupType {
-        EMAIL, PHONE, GOOGLE
 
     public static User create(String email, String nickname, SignupType signupType) {
         User user = new User();
