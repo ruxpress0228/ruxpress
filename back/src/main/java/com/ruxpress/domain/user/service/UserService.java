@@ -1,21 +1,39 @@
 package com.ruxpress.domain.user.service;
 
-import com.ruxpress.common.exception.BusinessException;
-import com.ruxpress.common.exception.ErrorCode;
-import com.ruxpress.common.util.JwtUtil;
-import com.ruxpress.domain.user.dto.EmailSignupRequest;
-import com.ruxpress.domain.user.dto.LoginRequest;
-import com.ruxpress.domain.user.dto.LoginResponse;
-import com.ruxpress.domain.user.entity.User;
-import com.ruxpress.domain.user.entity.Verification;
-import com.ruxpress.domain.user.repository.UserRepository;
-import com.ruxpress.domain.user.repository.VerificationRepository;
+// Spring & Lombok
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+// Common (Utility, Exception, DTO)
+import com.ruxpress.common.dto.PageResponse;
+import com.ruxpress.common.exception.BusinessException;
+import com.ruxpress.common.exception.ErrorCode;
+import com.ruxpress.common.util.JwtUtil;
+
+// Domain - User (DTO)
+import com.ruxpress.domain.user.dto.EmailSignupRequest;
+import com.ruxpress.domain.user.dto.LoginRequest;
+import com.ruxpress.domain.user.dto.LoginResponse;
+import com.ruxpress.domain.user.dto.response.UserResponse;
+import com.ruxpress.domain.user.dto.response.UserStatsResponse;
+
+// Domain - User (Entity & Repository)
+import com.ruxpress.domain.user.entity.User;
+import com.ruxpress.domain.user.entity.UserStatus;
+import com.ruxpress.domain.user.entity.Verification;
+import com.ruxpress.domain.user.repository.UserRepository;
+import com.ruxpress.domain.user.repository.VerificationRepository;
+
+// Java Standard Library
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
+import java.util.stream.Collectors;
+
 
 @Service
 @RequiredArgsConstructor
@@ -28,6 +46,57 @@ public class UserService {
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
 
+    @Transactional(readOnly = true)
+    public PageResponse<UserResponse> getUsers(String keyword, UserStatus status, Pageable pageable) {
+        Page<User> page;
+
+        boolean hasKeyword = keyword != null && !keyword.isBlank();
+        boolean hasStatus = status != null;
+
+        if (hasKeyword && hasStatus) {
+            page = userRepository.searchByKeywordAndStatus(keyword.trim(), status, pageable);
+        } else if (hasKeyword) {
+            page = userRepository.searchByKeyword(keyword.trim(), pageable);
+        } else if (hasStatus) {
+            page = userRepository.findByStatusAndDeletedAtIsNullOrderByCreatedAtDesc(status, pageable);
+        } else {
+            page = userRepository.findByDeletedAtIsNullOrderByCreatedAtDesc(pageable);
+        }
+
+        List<UserResponse> content = page.getContent().stream()
+                .map(UserResponse::from)
+                .collect(Collectors.toList());
+
+        return new PageResponse<>(content, page.getTotalElements(), page.getTotalPages(), page.getNumber(), page.getSize());
+    }
+
+    @Transactional(readOnly = true)
+    public UserResponse getUserDetail(Long id) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
+        return UserResponse.from(user);
+    }
+
+    @Transactional
+    public UserResponse changeUserStatus(Long id, UserStatus newStatus) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
+        user.changeStatus(newStatus);
+        return UserResponse.from(userRepository.save(user));
+    }
+
+    @Transactional(readOnly = true)
+    public UserStatsResponse getUserStats() {
+        long total = userRepository.countByDeletedAtIsNull();
+        long active = userRepository.countByStatusAndDeletedAtIsNull(UserStatus.ACTIVE);
+        long suspended = userRepository.countByStatusAndDeletedAtIsNull(UserStatus.SUSPENDED);
+        long withdrawn = userRepository.countByStatusAndDeletedAtIsNull(UserStatus.WITHDRAWN);
+
+        LocalDateTime todayStart = LocalDate.now().atStartOfDay();
+        long newToday = userRepository.countByCreatedAtAfterAndDeletedAtIsNull(todayStart);
+
+        return new UserStatsResponse(total, active, suspended, withdrawn, newToday);}
+    }
     /**
      * 이메일 인증 완료 후 회원가입. 인증된 이메일이 최근 30분 이내여야 함.
      */

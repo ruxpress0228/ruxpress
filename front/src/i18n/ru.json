@@ -12,6 +12,7 @@
   "nav.admin.notices": "Новости",
   "nav.admin.exchangeRate": "Курс валют",
   "nav.admin.users": "Пользователи",
+  "nav.admin.admins": "Управление админами",
   "nav.admin.label": "Администратор",
   "nav.admin.logout": "Выход",
   "footer.tagline": "Платформа покупки корейских товаров с доставкой в Россию",

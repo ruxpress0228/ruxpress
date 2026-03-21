@@ -136,7 +136,8 @@ CREATE TABLE `admins` (
 	`status`	ENUM('ACTIVE', 'INACTIVE')	NOT NULL	DEFAULT 'ACTIVE'	COMMENT '상태',
 	`last_login_at`	DATETIME	NULL	COMMENT '마지막 로그인',
 	`created_at`	DATETIME	NOT NULL,
-	`updated_at`	DATETIME	NOT NULL	DEFAULT CURRENT_TIMESTAMP
+	`updated_at`	DATETIME	NOT NULL	DEFAULT CURRENT_TIMESTAMP,
+	`deleted_at`	DATETIME	NULL	COMMENT '소프트 삭제'
 );
 
 CREATE TABLE `user_social_accounts` (

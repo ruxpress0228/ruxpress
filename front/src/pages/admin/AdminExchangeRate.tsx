@@ -9,11 +9,13 @@ import { Label } from "../../components/ui/label";
 import { Badge } from "../../components/ui/badge";
 import { toast } from "sonner";
 import {
+  api,
   getCurrentExchangeRate,
   getExchangeRateHistory,
   triggerExchangeRateFetch,
   setManualExchangeRate,
 } from "../../utils/api";
+import { unwrap } from "../../utils/exception";
 import { useTranslation } from "../../hooks/useTranslation";
 import { formatDate, formatNumber } from "../../utils/format";
 import type { ExchangeRate } from "../../types";
@@ -55,8 +57,16 @@ export default function AdminExchangeRate() {
     }
   };
 
+  const loadFeeRate = async () => {
+    try {
+      const res = await api.get<{ key: string; value: string }>("/v1/admin/settings/fee-rate");
+      setFeeRate(unwrap(res).value);
+    } catch { /* keep default */ }
+  };
+
   useEffect(() => {
     loadData();
+    loadFeeRate();
   }, []);
 
   const fetchExchangeRate = async () => {
@@ -91,8 +101,13 @@ export default function AdminExchangeRate() {
     }
   };
 
-  const updateFeeRate = () => {
-    toast.success(t('admin.exchange.toast.feeSuccess'));
+  const updateFeeRate = async () => {
+    try {
+      await api.put<{ key: string; value: string }>("/v1/admin/settings/fee-rate", { value: feeRate });
+      toast.success(t('admin.exchange.toast.feeSuccess'));
+    } catch {
+      toast.error("수수료율 저장에 실패했습니다");
+    }
   };
 
   if (loading && !currentRate) {

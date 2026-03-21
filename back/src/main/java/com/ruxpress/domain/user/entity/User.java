@@ -14,7 +14,7 @@ import java.time.LocalDateTime;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor
 @Builder
-public class User {
+public class User extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -57,6 +57,7 @@ public class User {
     @Builder.Default
     private String timezone = "Asia/Seoul";
 
+
     @Column(name = "notification_settings", columnDefinition = "JSON")
     private String notificationSettings;
 
@@ -97,5 +98,34 @@ public class User {
 
     public enum SignupType {
         EMAIL, PHONE, GOOGLE
+
+    public static User create(String email, String nickname, SignupType signupType) {
+        User user = new User();
+        user.email = email;
+        user.nickname = nickname;
+        user.signupType = signupType;
+        user.status = UserStatus.ACTIVE;
+        return user;
+    }
+
+    public static User createWithPassword(String email, String passwordHash, String nickname, SignupType signupType) {
+        User user = new User();
+        user.email = email;
+        user.passwordHash = passwordHash;
+        user.nickname = nickname;
+        user.signupType = signupType;
+        user.status = UserStatus.ACTIVE;
+        return user;
+    }
+
+    public void changeStatus(UserStatus newStatus) {
+        this.status = newStatus;
+        if (newStatus == UserStatus.WITHDRAWN) {
+            this.withdrawnAt = LocalDateTime.now();
+        }
+    }
+
+    public void updateLastLogin() {
+        this.lastLoginAt = LocalDateTime.now();
     }
 }
