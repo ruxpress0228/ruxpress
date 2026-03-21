@@ -88,7 +88,7 @@ export default function InquiryDetail() {
       <Button
         variant="ghost"
         className="mb-6"
-        onClick={() => navigate(-1)}
+        onClick={() => navigate("/inquiry")}
       >
         <ArrowLeft className="w-4 h-4 mr-2" />
         {t("inquiry.detail.backToList")}

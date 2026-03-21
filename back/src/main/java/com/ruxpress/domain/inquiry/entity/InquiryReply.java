@@ -23,14 +23,14 @@ public class InquiryReply extends BaseEntity {
     private String content;
 
     @Column(name = "is_read", nullable = false)
-    private boolean isRead = false;
+    private boolean read = false;
 
     public static InquiryReply create(Inquiry inquiry, Long adminId, String content) {
         InquiryReply reply = new InquiryReply();
         reply.inquiry = inquiry;
         reply.adminId = adminId;
         reply.content = content;
-        reply.isRead = false;
+        reply.read = false;
         return reply;
     }
 
