@@ -1,6 +1,7 @@
 package com.ruxpress.domain.user.repository;
 
 import com.ruxpress.domain.user.entity.User;
+
 import com.ruxpress.domain.user.entity.UserStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -8,9 +9,14 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.Optional;
 import java.time.LocalDateTime;
 
 public interface UserRepository extends JpaRepository<User, Long> {
+
+    Optional<User> findByEmail(String email);
+
+    boolean existsByEmail(String email);
 
     Page<User> findByDeletedAtIsNullOrderByCreatedAtDesc(Pageable pageable);
 
