@@ -116,6 +116,10 @@ export interface InquiryListItem {
   createdAt: string;
 }
 
+export interface AdminInquiryListItem extends InquiryListItem {
+  userId: number;
+}
+
 export interface InquiryReply {
   id: number;
   inquiryId: number;
@@ -124,6 +128,14 @@ export interface InquiryReply {
   isRead: boolean;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface ReplyTemplate {
+  id: number;
+  title: string;
+  content: string;
+  category: InquiryCategory | null;
+  sortOrder: number;
 }
 
 export type NoticeStatus = 'DRAFT' | 'SCHEDULED' | 'PUBLISHED' | 'HIDDEN';
@@ -137,6 +149,7 @@ export interface Notice {
   viewCount: number;
   status: NoticeStatus;
   publishedAt?: string;
+  scheduledAt?: string;
   createdAt: string;
   updatedAt: string;
 }
