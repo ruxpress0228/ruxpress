@@ -19,6 +19,11 @@ export function setLocale(locale: Locale): void {
   localStorage.setItem(STORAGE_KEYS.LOCALE, locale);
 }
 
+/** Look up message for a specific locale (used by I18nProvider and tests). */
+export function translate(key: string, locale: Locale): string {
+  return messages[locale]?.[key] ?? key;
+}
+
 export function t(key: string): string {
-  return messages[currentLocale]?.[key] ?? key;
+  return translate(key, currentLocale);
 }
