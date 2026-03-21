@@ -96,6 +96,8 @@ export type InquiryStatus = 'PENDING' | 'REPLIED' | 'CLOSED';
 export interface Inquiry {
   id: number;
   userId: number;
+  nickname?: string;
+  email?: string;
   category: InquiryCategory;
   title: string;
   content: string;
@@ -114,6 +116,12 @@ export interface InquiryListItem {
   replyCount: number;
   hasUnreadReply: boolean;
   createdAt: string;
+}
+
+export interface AdminInquiryListItem extends InquiryListItem {
+  userId: number;
+  nickname?: string;
+  email?: string;
 }
 
 export interface InquiryReply {

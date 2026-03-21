@@ -1,15 +1,48 @@
+import { useState } from "react";
 import { useNavigate } from "react-router";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import { Label } from "../../components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../components/ui/card";
+import { toast } from "sonner";
+import { api } from "../../utils/api";
+import { unwrap } from "../../utils/exception";
+import { STORAGE_KEYS } from "../../utils/constants";
+
+interface LoginResponse {
+  token: string;
+  adminId: number;
+  email: string;
+  name: string;
+  role: string;
+}
 
 export default function AdminLogin() {
   const navigate = useNavigate();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    navigate("/admin");
+    setLoading(true);
+    try {
+      const res = await api.post<LoginResponse>("/v1/admin/auth/login", { email, password });
+      const data = unwrap(res);
+      localStorage.setItem(STORAGE_KEYS.TOKEN, data.token);
+      localStorage.setItem("ruxpress_admin", JSON.stringify({
+        id: data.adminId,
+        email: data.email,
+        name: data.name,
+        role: data.role,
+      }));
+      toast.success(`${data.name}님, 환영합니다`);
+      navigate("/admin");
+    } catch {
+      toast.error("이메일 또는 비밀번호가 올바르지 않습니다");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -34,7 +67,10 @@ export default function AdminLogin() {
                 id="admin-email"
                 type="email"
                 placeholder="admin@ruxpress.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
                 required
+                disabled={loading}
               />
             </div>
             <div className="space-y-2">
@@ -43,11 +79,14 @@ export default function AdminLogin() {
                 id="admin-password"
                 type="password"
                 placeholder="••••••••"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
                 required
+                disabled={loading}
               />
             </div>
-            <Button type="submit" className="w-full" size="lg">
-              로그인
+            <Button type="submit" className="w-full" size="lg" disabled={loading}>
+              {loading ? "로그인 중..." : "로그인"}
             </Button>
           </form>
         </CardContent>

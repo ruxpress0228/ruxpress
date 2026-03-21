@@ -9,13 +9,17 @@ import com.ruxpress.common.storage.FileStoragePort;
 import com.ruxpress.common.dto.AttachmentResponse;
 import com.ruxpress.common.dto.PageResponse;
 import com.ruxpress.domain.inquiry.dto.request.InquiryCreateRequest;
+import com.ruxpress.domain.inquiry.dto.response.AdminInquiryListResponse;
 import com.ruxpress.domain.inquiry.dto.response.InquiryListResponse;
 import com.ruxpress.domain.inquiry.dto.response.InquiryReplyResponse;
 import com.ruxpress.domain.inquiry.dto.response.InquiryResponse;
 import com.ruxpress.domain.inquiry.entity.Inquiry;
 import com.ruxpress.domain.inquiry.entity.InquiryReply;
+import com.ruxpress.domain.inquiry.entity.InquiryStatus;
 import com.ruxpress.domain.inquiry.repository.InquiryReplyRepository;
 import com.ruxpress.domain.inquiry.repository.InquiryRepository;
+import com.ruxpress.domain.user.entity.User;
+import com.ruxpress.domain.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.io.Resource;
 import org.springframework.data.domain.Page;
@@ -36,6 +40,7 @@ public class InquiryService {
 
     private final InquiryRepository inquiryRepository;
     private final InquiryReplyRepository inquiryReplyRepository;
+    private final UserRepository userRepository;
     private final AttachmentRepository attachmentRepository;
     private final FileStoragePort fileStoragePort;
 
@@ -130,6 +135,83 @@ public class InquiryService {
         return attachment.getOriginalFilename();
     }
 
+    // ─── Admin methods ────────────────────────────────────────────
+
+    @Transactional(readOnly = true)
+    public PageResponse<AdminInquiryListResponse> getAllInquiriesForAdmin(Pageable pageable) {
+        Page<Inquiry> page = inquiryRepository.findByDeletedAtIsNullOrderByCreatedAtDesc(pageable);
+        List<AdminInquiryListResponse> content = page.getContent().stream()
+                .map(this::toAdminListResponse)
+                .collect(Collectors.toList());
+        return new PageResponse<>(content, page.getTotalElements(), page.getTotalPages(), page.getNumber(), page.getSize());
+    }
+
+    @Transactional(readOnly = true)
+    public InquiryResponse getInquiryDetailForAdmin(Long inquiryId) {
+        Inquiry inquiry = inquiryRepository.findById(inquiryId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.INQUIRY_NOT_FOUND));
+        return toDetailResponse(inquiry);
+    }
+
+    @Transactional
+    public InquiryResponse addAdminReply(Long adminId, Long inquiryId, String replyContent) {
+        Inquiry inquiry = inquiryRepository.findById(inquiryId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.INQUIRY_NOT_FOUND));
+        if (inquiry.getStatus() == InquiryStatus.CLOSED) {
+            throw new BusinessException(ErrorCode.INVALID_INPUT);
+        }
+        InquiryReply reply = InquiryReply.create(inquiry, adminId, replyContent);
+        inquiryReplyRepository.save(reply);
+        inquiry.markAsReplied();
+        inquiryRepository.save(inquiry);
+        return toDetailResponse(inquiry);
+    }
+
+    @Transactional
+    public InquiryResponse updateAdminReply(Long inquiryId, Long replyId, String newContent) {
+        InquiryReply reply = inquiryReplyRepository.findById(replyId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
+        if (!reply.getInquiry().getId().equals(inquiryId)) {
+            throw new BusinessException(ErrorCode.INVALID_INPUT);
+        }
+        reply.updateContent(newContent);
+        inquiryReplyRepository.save(reply);
+        return toDetailResponse(reply.getInquiry());
+    }
+
+    @Transactional
+    public InquiryResponse deleteAdminReply(Long inquiryId, Long replyId) {
+        InquiryReply reply = inquiryReplyRepository.findById(replyId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
+        if (!reply.getInquiry().getId().equals(inquiryId)) {
+            throw new BusinessException(ErrorCode.INVALID_INPUT);
+        }
+        reply.markDeleted();
+        inquiryReplyRepository.save(reply);
+        return toDetailResponse(reply.getInquiry());
+    }
+
+    @Transactional
+    public InquiryResponse changeInquiryStatus(Long inquiryId, InquiryStatus newStatus) {
+        Inquiry inquiry = inquiryRepository.findById(inquiryId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.INQUIRY_NOT_FOUND));
+        inquiry.changeStatus(newStatus);
+        inquiryRepository.save(inquiry);
+        return toDetailResponse(inquiry);
+    }
+
+    private AdminInquiryListResponse toAdminListResponse(Inquiry inquiry) {
+        List<InquiryReply> replies = inquiryReplyRepository.findByInquiry_IdAndDeletedAtIsNullOrderByCreatedAtAsc(inquiry.getId());
+        User user = userRepository.findById(inquiry.getUserId()).orElse(null);
+        String nickname = user != null ? user.getNickname() : null;
+        String email = user != null ? user.getEmail() : null;
+        return new AdminInquiryListResponse(
+                inquiry.getId(), inquiry.getUserId(), nickname, email,
+                inquiry.getCategory(), inquiry.getTitle(),
+                inquiry.getStatus(), replies.size(),
+                replies.stream().anyMatch(r -> !r.isRead()), inquiry.getCreatedAt());
+    }
+
     private InquiryListResponse toListResponse(Inquiry inquiry) {
         List<InquiryReply> replies = inquiryReplyRepository.findByInquiry_IdAndDeletedAtIsNullOrderByCreatedAtAsc(inquiry.getId());
         int replyCount = replies.size();
@@ -167,9 +249,14 @@ public class InquiryService {
                         a.getMimeType()
                 ))
                 .collect(Collectors.toList());
+        User user = userRepository.findById(inquiry.getUserId()).orElse(null);
+        String nickname = user != null ? user.getNickname() : null;
+        String email = user != null ? user.getEmail() : null;
         return new InquiryResponse(
                 inquiry.getId(),
                 inquiry.getUserId(),
+                nickname,
+                email,
                 inquiry.getCategory(),
                 inquiry.getTitle(),
                 inquiry.getContent(),

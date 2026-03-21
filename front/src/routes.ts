@@ -22,6 +22,7 @@ import AdminInquiries from "./pages/admin/AdminInquiries";
 import AdminNotices from "./pages/admin/AdminNotices";
 import AdminExchangeRate from "./pages/admin/AdminExchangeRate";
 import AdminUsers from "./pages/admin/AdminUsers";
+import AdminAdmins from "./pages/admin/AdminAdmins";
 import NotFound from "./pages/NotFound";
 import ExamplePage from "./pages/ExamplePage";
 
@@ -59,6 +60,7 @@ export const router = createBrowserRouter([
           { path: "notices", Component: AdminNotices },
           { path: "exchange-rate", Component: AdminExchangeRate },
           { path: "users", Component: AdminUsers },
+          { path: "admins", Component: AdminAdmins },
         ],
       },
       { path: "*", Component: NotFound },
