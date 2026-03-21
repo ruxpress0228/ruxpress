@@ -1,19 +1,25 @@
 package com.ruxpress.domain.exchange.entity;
 
-import com.ruxpress.common.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "exchange_rate")
+@Table(name = "exchange_rates")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor
 @Builder
-public class ExchangeRate extends BaseEntity {
+@EntityListeners(AuditingEntityListener.class)
+public class ExchangeRate {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
 
     @Column(nullable = false, length = 3)
     private String baseCurrency;
@@ -21,7 +27,7 @@ public class ExchangeRate extends BaseEntity {
     @Column(nullable = false, length = 3)
     private String targetCurrency;
 
-    @Column(nullable = false, precision = 10, scale = 6)
+    @Column(nullable = false, precision = 18, scale = 6)
     private BigDecimal rate;
 
     @Enumerated(EnumType.STRING)
@@ -40,4 +46,8 @@ public class ExchangeRate extends BaseEntity {
 
     @Column(nullable = false)
     private LocalDateTime fetchedAt;
+
+    @CreatedDate
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private LocalDateTime createdAt;
 }

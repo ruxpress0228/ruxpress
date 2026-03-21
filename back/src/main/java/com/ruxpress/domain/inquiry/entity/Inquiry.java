@@ -44,4 +44,14 @@ public class Inquiry extends BaseEntity {
         inquiry.status = InquiryStatus.PENDING;
         return inquiry;
     }
+
+    public void markAsReplied() {
+        if (this.status != InquiryStatus.CLOSED) {
+            this.status = InquiryStatus.REPLIED;
+        }
+    }
+
+    public void changeStatus(InquiryStatus newStatus) {
+        this.status = newStatus;
+    }
 }

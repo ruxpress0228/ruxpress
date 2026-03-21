@@ -15,6 +15,8 @@ public class InquiryResponse {
 
     private final Long id;
     private final Long userId;
+    private final String nickname;
+    private final String email;
     private final InquiryCategory category;
     private final String title;
     private final String content;
