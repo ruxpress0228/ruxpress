@@ -9,7 +9,8 @@ echo "Initializing RuxPress environment (first-time server setup)..."
 # 1. 패키지 업데이트 및 필수 도구 설치 (git, docker)
 echo "Updating packages and installing git, docker..."
 sudo apt-get update
-sudo apt-get install -y git docker.io docker-compose-plugin
+# docker-compose-plugin 설치 시 문제가 발생하여 docker-compose 설치 우분투 22.04 이후 버전에는 docker-compose-plugin 있음.
+sudo apt-get install -y git docker.io docker-compose
 sudo usermod -aG docker "${SUDO_USER:-$(whoami)}" 2>/dev/null || true
 
 # 2. /svc 디렉터리 생성 (deploy-dev.yml과 동일한 경로)
