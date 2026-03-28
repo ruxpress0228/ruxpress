@@ -221,6 +221,8 @@ export default function AdminBankTransfers() {
         <CardContent>
           {loading ? (
             <p className="text-sm text-gray-500">{t("admin.bank.loading")}</p>
+          ) : rows.length === 0 ? (
+            <p className="text-sm text-gray-500">{t("admin.bank.ledger.empty")}</p>
           ) : (
             <Table>
               <TableHeader>

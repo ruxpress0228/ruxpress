@@ -265,6 +265,7 @@
   "admin.bank.ledger.userEmailPlaceholder": "user@example.com",
   "admin.bank.table.userEmail": "Email",
   "admin.bank.ledger.listTitle": "Entries",
+  "admin.bank.ledger.empty": "No entries match your filters.",
   "admin.bank.ledger.loadError": "Failed to load list",
   "admin.bank.ledger.confirmed": "Deposit confirmed",
   "admin.bank.ledger.cancelled": "Cancelled",

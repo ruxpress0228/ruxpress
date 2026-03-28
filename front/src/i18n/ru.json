@@ -265,6 +265,7 @@
   "admin.bank.ledger.userEmailPlaceholder": "user@example.com",
   "admin.bank.table.userEmail": "Email",
   "admin.bank.ledger.listTitle": "Список",
+  "admin.bank.ledger.empty": "Нет записей по заданным условиям.",
   "admin.bank.ledger.loadError": "Ошибка загрузки",
   "admin.bank.ledger.confirmed": "Подтверждено",
   "admin.bank.ledger.cancelled": "Отменено",

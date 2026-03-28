@@ -266,6 +266,7 @@
   "admin.bank.ledger.userEmailPlaceholder": "example@email.com",
   "admin.bank.table.userEmail": "이메일",
   "admin.bank.ledger.listTitle": "원장 목록",
+  "admin.bank.ledger.empty": "조건에 맞는 내역이 없습니다.",
   "admin.bank.ledger.loadError": "목록을 불러오지 못했습니다",
   "admin.bank.ledger.confirmed": "입금이 확정되었습니다",
   "admin.bank.ledger.cancelled": "신청이 취소되었습니다",
