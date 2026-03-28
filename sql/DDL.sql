@@ -24,9 +24,9 @@ CREATE TABLE `user_devices` (
 
 CREATE TABLE `verifications` (
 	`id`	BIGINT	NOT NULL,
-	`type`	ENUM('EMAIL', 'PHONE')	NOT NULL	COMMENT '인증 유형',
+	`type`	ENUM('EMAIL', 'PHONE', 'PASSWORD_RESET')	NOT NULL	COMMENT '인증 유형',
 	`target`	VARCHAR(255)	NOT NULL	COMMENT '인증 대상 (이메일 또는 전화번호)',
-	`code`	VARCHAR(10)	NOT NULL	COMMENT '인증 코드 (6자리)',
+	`code`	VARCHAR(64)	NOT NULL	COMMENT '인증 코드 (6자리)',
 	`is_verified`	TINYINT(1)	NOT NULL	DEFAULT 0	COMMENT '인증 완료 여부',
 	`attempt_count`	INT	NOT NULL	DEFAULT 0	COMMENT '시도 횟수 (최대 5회)',
 	`expires_at`	DATETIME	NOT NULL	COMMENT '만료 시각',
@@ -97,7 +97,10 @@ CREATE TABLE `users` (
 	`withdrawn_at`	DATETIME	NULL	COMMENT '탈퇴 일시',
 	`created_at`	DATETIME	NOT NULL	DEFAULT CURRENT_TIMESTAMP	COMMENT '가입 일시',
 	`updated_at`	DATETIME	NOT NULL	DEFAULT CURRENT_TIMESTAMP,
-	`deleted_at`	DATETIME	NULL	COMMENT '소프트 삭제'
+	`deleted_at`	DATETIME	NULL	COMMENT '소프트 삭제',
+	`address_postal_code` VARCHAR(10) NULL COMMENT '우편번호',
+	`address_line1` VARCHAR(255) NULL COMMENT '기본 주소',
+	`address_line2` VARCHAR(255) NULL COMMENT '상세 주소'
 );
 
 CREATE TABLE `notices` (
