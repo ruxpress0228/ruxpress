@@ -3,6 +3,7 @@ package com.ruxpress.common.exception;
 import com.ruxpress.common.dto.ApiResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -27,6 +28,14 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(NoResourceFoundException.class)
     public ResponseEntity<ApiResponse<Void>> handleNoResourceFound(NoResourceFoundException e) {
         return ResponseEntity.status(404).body(ApiResponse.error(404, "Not Found"));
+    }
+
+    @ExceptionHandler(ObjectOptimisticLockingFailureException.class)
+    public ResponseEntity<ApiResponse<Void>> handleOptimisticLock(ObjectOptimisticLockingFailureException e) {
+        log.warn("Optimistic lock failure: {}", e.getMessage());
+        return ResponseEntity
+                .status(ErrorCode.CONCURRENT_UPDATE.getStatus())
+                .body(ApiResponse.error(ErrorCode.CONCURRENT_UPDATE.getStatus(), ErrorCode.CONCURRENT_UPDATE.getMessageKey()));
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)

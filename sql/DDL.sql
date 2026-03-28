@@ -69,7 +69,7 @@ CREATE TABLE `purchase_requests` (
 CREATE TABLE `notifications` (
 	`id`	BIGINT	NOT NULL,
 	`user_id`	BIGINT	NOT NULL	COMMENT '수신자 ID',
-	`type`	ENUM('SIGNUP', 'NEW_DEVICE', 'INQUIRY_REPLY', 'NOTICE', 'PROMOTION', 'PURCHASE_STATUS', 'BALANCE')	NOT NULL	COMMENT '알림 유형',
+	`type`	ENUM('SIGNUP', 'NEW_DEVICE', 'INQUIRY_REPLY', 'NOTICE', 'PROMOTION', 'PURCHASE_STATUS', 'BALANCE', 'BANK_DEPOSIT', 'ESCROW_STATUS')	NOT NULL	COMMENT '알림 유형',
 	`channel`	ENUM('PUSH', 'SMS', 'EMAIL')	NOT NULL	DEFAULT 'PUSH'	COMMENT '발송 채널',
 	`title`	VARCHAR(200)	NOT NULL	COMMENT '제목',
 	`body`	TEXT	NOT NULL	COMMENT '본문',
@@ -177,6 +177,53 @@ CREATE TABLE `exchange_rates` (
 	`fetched_at`	DATETIME	NOT NULL	COMMENT '조회/입력 시각',
 	`created_at`	DATETIME	NOT NULL
 );
+
+-- REQ-017: 정산(에스크로) 입금 계좌 (관리자 등록)
+CREATE TABLE `settlement_accounts` (
+	`id`	BIGINT	NOT NULL AUTO_INCREMENT,
+	`bank_name`	VARCHAR(100)	NOT NULL	COMMENT '은행명',
+	`account_number`	VARCHAR(50)	NOT NULL	COMMENT '계좌번호 (평문 저장 금지 권장 — 앱 레벨 암호화)',
+	`account_holder`	VARCHAR(100)	NOT NULL	COMMENT '예금주',
+	`display_memo`	VARCHAR(300)	NULL	COMMENT '안내 메모',
+	`active`	TINYINT(1)	NOT NULL	DEFAULT 1	COMMENT '노출/사용 여부',
+	`created_by_admin_id`	BIGINT	NULL	COMMENT '등록 관리자',
+	`created_at`	DATETIME	NOT NULL,
+	`updated_at`	DATETIME	NOT NULL	DEFAULT CURRENT_TIMESTAMP,
+	`deleted_at`	DATETIME	NULL	COMMENT '소프트 삭제',
+	PRIMARY KEY (`id`)
+);
+
+-- REQ-017: 이체·에스크로 공통 원장 (ref_type/ref_id로 purchase_requests 등 후속 연결)
+CREATE TABLE `transfer_ledger_entries` (
+	`id`	BIGINT	NOT NULL AUTO_INCREMENT,
+	`user_id`	BIGINT	NOT NULL	COMMENT '회원 ID',
+	`settlement_account_id`	BIGINT	NOT NULL	COMMENT '입금 대상 계좌',
+	`entry_type`	ENUM('DEPOSIT', 'ESCROW_HOLD', 'SETTLEMENT', 'REFUND')	NOT NULL	COMMENT '원장 유형',
+	`status`	ENUM('PENDING', 'CONFIRMED', 'FAILED', 'CANCELLED')	NOT NULL	DEFAULT 'PENDING',
+	`amount`	DECIMAL(18, 2)	NOT NULL	COMMENT '금액',
+	`currency`	VARCHAR(3)	NOT NULL	DEFAULT 'KRW',
+	`depositor_name`	VARCHAR(100)	NULL	COMMENT '입금자명 (매칭용)',
+	`depositor_memo`	VARCHAR(500)	NULL	COMMENT '사용자 입금 메모',
+	`admin_memo`	VARCHAR(500)	NULL	COMMENT '관리자 메모',
+	`ref_type`	VARCHAR(50)	NULL	COMMENT '참조 도메인 (예: PURCHASE_REQUEST)',
+	`ref_id`	BIGINT	NULL	COMMENT '참조 ID',
+	`parent_entry_id`	BIGINT	NULL	COMMENT '에스크로 본건(ID) — 정산/환불 행이 가리킴',
+	`confirmed_at`	DATETIME	NULL,
+	`confirmed_by_admin_id`	BIGINT	NULL,
+	`idempotency_key`	VARCHAR(100)	NULL	COMMENT 'PG/웹훅 멱등 키',
+	`version`	INT	NOT NULL	DEFAULT 0	COMMENT '낙관적 락',
+	`created_at`	DATETIME	NOT NULL,
+	`updated_at`	DATETIME	NOT NULL	DEFAULT CURRENT_TIMESTAMP,
+	PRIMARY KEY (`id`),
+	KEY `IX_TRANSFER_LEDGER_USER` (`user_id`),
+	KEY `IX_TRANSFER_LEDGER_STATUS` (`status`),
+	KEY `IX_TRANSFER_LEDGER_PARENT` (`parent_entry_id`),
+	KEY `IX_TRANSFER_LEDGER_REF` (`ref_type`, `ref_id`),
+	UNIQUE KEY `UK_TRANSFER_IDEMPOTENCY` (`idempotency_key`)
+);
+
+-- 기존 DB 마이그레이션 시: ALTER TABLE notifications MODIFY COLUMN type ENUM(...,'BANK_DEPOSIT','ESCROW_STATUS') ...
+-- 신규 스키마에서는 아래 CREATE notifications 정의를 위 ENUM으로 교체하거나, 별도 마이그레이션 스크립트 실행.
 
 ALTER TABLE `inquiry_replies` ADD CONSTRAINT `PK_INQUIRY_REPLIES` PRIMARY KEY (
 	`id`

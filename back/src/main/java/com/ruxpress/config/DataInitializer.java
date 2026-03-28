@@ -3,6 +3,8 @@ package com.ruxpress.config;
 import com.ruxpress.domain.admin.entity.Admin;
 import com.ruxpress.domain.admin.entity.AdminRole;
 import com.ruxpress.domain.admin.repository.AdminRepository;
+import com.ruxpress.domain.banktransfer.entity.SettlementAccount;
+import com.ruxpress.domain.banktransfer.repository.SettlementAccountRepository;
 import com.ruxpress.domain.user.entity.SignupType;
 import com.ruxpress.domain.user.entity.User;
 import com.ruxpress.domain.user.repository.UserRepository;
@@ -21,6 +23,7 @@ public class DataInitializer implements CommandLineRunner {
 
     private final AdminRepository adminRepository;
     private final UserRepository userRepository;
+    private final SettlementAccountRepository settlementAccountRepository;
     private final PasswordEncoder passwordEncoder;
 
     @Override
@@ -52,6 +55,17 @@ public class DataInitializer implements CommandLineRunner {
             userRepository.save(User.create("user2@test.com", "테스트유저2", SignupType.EMAIL));
             userRepository.save(User.create("user3@test.com", "구글유저", SignupType.GOOGLE));
             log.info("Seed users created: user1@test.com, user2@test.com, user3@test.com");
+        }
+
+        if (settlementAccountRepository.count() == 0 && adminRepository.count() > 0) {
+            Admin first = adminRepository.findAll().getFirst();
+            settlementAccountRepository.save(SettlementAccount.create(
+                    "신한은행",
+                    "12345678901234",
+                    "럭스프레스(에스크로)",
+                    "입금 시 요청 번호를 입금자명에 포함해 주세요.",
+                    first.getId()));
+            log.info("Seed settlement account created for local profile");
         }
     }
 }

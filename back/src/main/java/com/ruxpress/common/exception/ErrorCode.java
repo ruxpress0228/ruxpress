@@ -23,7 +23,13 @@ public enum ErrorCode {
     NOT_FOUND(404, "error.not_found"),
     INQUIRY_NOT_FOUND(404, "error.inquiry_not_found"),
     INTERNAL_ERROR(500, "error.internal"),
-    FILE_UPLOAD_FAILED(500, "error.file_upload_failed");
+    FILE_UPLOAD_FAILED(500, "error.file_upload_failed"),
+    BANK_LEDGER_NOT_FOUND(404, "error.bank_ledger_not_found"),
+    SETTLEMENT_ACCOUNT_NOT_FOUND(404, "error.settlement_account_not_found"),
+    INVALID_LEDGER_STATE(400, "error.invalid_ledger_state"),
+    CONCURRENT_UPDATE(409, "error.concurrent_update"),
+    LEDGER_AMOUNT_INVALID(400, "error.ledger_amount_invalid"),
+    DUPLICATE_IDEMPOTENCY_KEY(409, "error.duplicate_idempotency_key");
 
     private final int status;
     private final String messageKey;
