@@ -15,6 +15,7 @@ import com.ruxpress.common.exception.ErrorCode;
 import com.ruxpress.common.util.JwtUtil;
 
 // Domain - User (DTO)
+import com.ruxpress.domain.user.dto.ChangePasswordRequest;
 import com.ruxpress.domain.user.dto.EmailSignupRequest;
 import com.ruxpress.domain.user.dto.LoginRequest;
 import com.ruxpress.domain.user.dto.LoginResponse;
@@ -78,6 +79,20 @@ public class UserService {
         return UserResponse.from(user);
     }
 
+    /**
+     * 로그인한 회원 본인 프로필 (삭제·비활성 계정 제외).
+     */
+    @Transactional(readOnly = true)
+    public UserResponse getProfileForCurrentUser(Long userId) {
+        User user = userRepository.findById(userId)
+                .filter(u -> u.getDeletedAt() == null)
+                .orElseThrow(() -> new BusinessException(ErrorCode.UNAUTHORIZED, "회원 정보를 찾을 수 없습니다."));
+        if (user.getStatus() != UserStatus.ACTIVE) {
+            throw new BusinessException(ErrorCode.FORBIDDEN, "이용할 수 없는 계정입니다.");
+        }
+        return UserResponse.from(user);
+    }
+
     @Transactional
     public UserResponse changeUserStatus(Long id, UserStatus newStatus) {
         User user = userRepository.findById(id)
@@ -129,6 +144,13 @@ public class UserService {
             throw new BusinessException(ErrorCode.INVALID_INPUT, "닉네임을 입력하세요.");
         }
 
+        String line1 = request.getAddressLine1() == null ? null : request.getAddressLine1().trim();
+        if (line1 == null || line1.isEmpty()) {
+            throw new BusinessException(ErrorCode.INVALID_INPUT, "주소를 입력하세요.");
+        }
+        String postal = request.getAddressPostalCode() == null ? null : request.getAddressPostalCode().trim();
+        String line2 = request.getAddressLine2() == null ? null : request.getAddressLine2().trim();
+
         String encodedPassword = passwordEncoder.encode(request.getPassword());
         LocalDateTime now = LocalDateTime.now();
 
@@ -136,6 +158,9 @@ public class UserService {
                 .email(email)
                 .passwordHash(encodedPassword)
                 .nickname(nickname)
+                .addressPostalCode(postal == null || postal.isEmpty() ? null : postal)
+                .addressLine1(line1)
+                .addressLine2(line2 == null || line2.isEmpty() ? null : line2)
                 .status(UserStatus.ACTIVE)
                 .emailVerified(true)
                 .phoneVerified(false)
@@ -175,5 +200,26 @@ public class UserService {
 
         String token = jwtUtil.generateToken(user.getId(), user.getEmail());
         return new LoginResponse(token, user.getId(), user.getEmail(), user.getNickname());
+    }
+
+    /**
+     * 로그인한 회원의 비밀번호 변경 (현재 비밀번호 확인).
+     */
+    @Transactional
+    public void changePassword(Long userId, ChangePasswordRequest request) {
+        User user = userRepository.findById(userId)
+                .filter(u -> u.getDeletedAt() == null)
+                .orElseThrow(() -> new BusinessException(ErrorCode.UNAUTHORIZED, "회원 정보를 찾을 수 없습니다."));
+        if (user.getStatus() != UserStatus.ACTIVE) {
+            throw new BusinessException(ErrorCode.FORBIDDEN, "이용할 수 없는 계정입니다.");
+        }
+        if (user.getPasswordHash() == null || user.getPasswordHash().isEmpty()) {
+            throw new BusinessException(ErrorCode.INVALID_INPUT, "비밀번호로 가입한 계정만 변경할 수 있습니다.");
+        }
+        if (!passwordEncoder.matches(request.getCurrentPassword(), user.getPasswordHash())) {
+            throw new BusinessException(ErrorCode.UNAUTHORIZED, "현재 비밀번호가 일치하지 않습니다.");
+        }
+        user.changePasswordHash(passwordEncoder.encode(request.getNewPassword()));
+        userRepository.save(user);
     }
 }

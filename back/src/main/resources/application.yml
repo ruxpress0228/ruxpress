@@ -24,10 +24,14 @@ spring:
     encoding: UTF-8
 
 app:
+  frontend:
+    base-url: ${FRONTEND_BASE_URL:http://localhost}
   mail:
     from: ${MAIL_FROM:}
     verification:
       subject: ${MAIL_VERIFICATION_SUBJECT:}
+    password-reset:
+      subject: ${MAIL_PASSWORD_RESET_SUBJECT:Ruxpress 비밀번호 재설정}
   jwt:
     secret: ${JWT_SECRET:}
     expiration: ${JWT_EXPIRATION:}

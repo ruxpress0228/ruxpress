@@ -57,6 +57,14 @@ public class User {
     @Builder.Default
     private String timezone = "Asia/Seoul";
 
+    @Column(name = "address_postal_code", length = 10)
+    private String addressPostalCode;
+
+    @Column(name = "address_line1", length = 255)
+    private String addressLine1;
+
+    @Column(name = "address_line2", length = 255)
+    private String addressLine2;
 
     @Column(name = "notification_settings", columnDefinition = "JSON")
     private String notificationSettings;
@@ -118,7 +126,7 @@ public class User {
         }
     }
 
-    public void updateLastLogin() {
-        this.lastLoginAt = LocalDateTime.now();
+    public void changePasswordHash(String passwordHash) {
+        this.passwordHash = passwordHash;
     }
 }

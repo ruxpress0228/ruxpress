@@ -14,6 +14,9 @@ export interface User {
   phoneVerified: boolean;
   signupType: SignupType;
   timezone: string;
+  addressPostalCode?: string;
+  addressLine1?: string;
+  addressLine2?: string;
   notificationSettings?: NotificationSettings;
   lastLoginAt?: string;
   withdrawnAt?: string;

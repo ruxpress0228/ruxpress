@@ -11,7 +11,7 @@ import {
   SheetTrigger,
 } from "../ui/sheet";
 import { useTranslation } from "../../hooks/useTranslation";
-import { LOCALES, STORAGE_KEYS } from "../../utils/constants";
+import { LOCALES, STORAGE_KEYS, USER_AUTH_CHANGE_EVENT } from "../../utils/constants";
 
 export default function UserLayout() {
   const location = useLocation();
@@ -19,6 +19,20 @@ export default function UserLayout() {
   const { t, locale, setLocale } = useTranslation();
   const [langOpen, setLangOpen] = useState(false);
   const langRef = useRef<HTMLDivElement>(null);
+  const [, setAuthRevision] = useState(0);
+
+  useEffect(() => {
+    const syncAuth = () => setAuthRevision((n) => n + 1);
+    window.addEventListener(USER_AUTH_CHANGE_EVENT, syncAuth);
+    return () => window.removeEventListener(USER_AUTH_CHANGE_EVENT, syncAuth);
+  }, []);
+
+  useEffect(() => {
+    setAuthRevision((n) => n + 1);
+  }, [location.pathname]);
+
+  const userToken = localStorage.getItem(STORAGE_KEYS.TOKEN);
+  const userNickname = localStorage.getItem(STORAGE_KEYS.USER_NICKNAME);
 
   useEffect(() => {
     if (!langOpen) return;
@@ -117,14 +131,27 @@ export default function UserLayout() {
                   3
                 </Badge>
               </Button>
-              <Link to="/mypage">
-                <Button variant="ghost" size="icon">
-                  <User className="w-5 h-5" />
-                </Button>
-              </Link>
-              <Button variant="ghost" size="icon" onClick={handleLogout} title={t("nav.admin.logout")}>
-                <LogOut className="w-5 h-5" />
-              </Button>
+              {userToken ? (
+                <div className="flex items-center gap-1 max-w-[11rem]">
+                  <span className="hidden sm:inline text-sm text-gray-700 truncate" title={userNickname ?? ""}>
+                    {userNickname ?? "회원"}
+                  </span>
+                  <Link to="/mypage">
+                    <Button variant="ghost" size="icon" title="마이페이지">
+                      <User className="w-5 h-5" />
+                    </Button>
+                  </Link>
+                  <Button variant="ghost" size="icon" onClick={handleLogout} title={t("nav.admin.logout")}>
+                    <LogOut className="w-5 h-5" />
+                  </Button>
+                </div>
+              ) : (
+                <Link to="/login">
+                  <Button variant="ghost" size="sm" className="text-blue-600">
+                    로그인
+                  </Button>
+                </Link>
+              )}
 
               <Sheet>
                 <SheetTrigger asChild className="md:hidden">

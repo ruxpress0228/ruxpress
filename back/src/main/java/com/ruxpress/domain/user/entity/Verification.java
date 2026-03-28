@@ -21,13 +21,13 @@ public class Verification {
     private Long id;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 10)
+    @Column(nullable = false, length = 32)
     private VerificationType type;
 
     @Column(nullable = false, length = 255)
     private String target;
 
-    @Column(nullable = false, length = 10)
+    @Column(nullable = false, length = 64)
     private String code;
 
     @Column(nullable = false)
@@ -52,7 +52,9 @@ public class Verification {
     }
 
     public enum VerificationType {
-        EMAIL, PHONE
+        EMAIL,
+        PHONE,
+        PASSWORD_RESET
     }
 
     public boolean isExpired() {

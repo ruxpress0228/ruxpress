@@ -10,4 +10,9 @@ public interface VerificationRepository extends JpaRepository<Verification, Long
 
     Optional<Verification> findTopByTypeAndTargetAndIsVerifiedOrderByCreatedAtDesc(
             Verification.VerificationType type, String target, Boolean isVerified);
+
+    Optional<Verification> findTopByTypeAndCodeAndIsVerifiedOrderByCreatedAtDesc(
+            Verification.VerificationType type, String code, Boolean isVerified);
+
+    void deleteByTypeAndTarget(Verification.VerificationType type, String target);
 }

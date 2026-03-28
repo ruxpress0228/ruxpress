@@ -22,6 +22,9 @@ public class EmailService {
     @Value("${app.mail.verification.subject:Ruxpress 이메일 인증}")
     private String subject;
 
+    @Value("${app.mail.password-reset.subject:Ruxpress 비밀번호 재설정}")
+    private String passwordResetSubject;
+
     @Value("${spring.mail.password:}")
     private String mailPassword;
 
@@ -47,6 +50,31 @@ public class EmailService {
             log.info("Verification email sent to {}", toEmail);
         } catch (Exception e) {
             log.error("Failed to send verification email to {}", toEmail, e);
+            throw new BusinessException(ErrorCode.EMAIL_SEND_FAILED, "이메일 발송에 실패했습니다.");
+        }
+    }
+
+    /**
+     * 비밀번호 재설정 링크 메일. SMTP 미설정 시 링크만 로그 출력.
+     */
+    public void sendPasswordResetLink(String toEmail, String resetUrl) {
+        if (mailPassword == null || mailPassword.trim().isBlank()) {
+            log.info("[메일 미설정] 비밀번호 재설정 링크 (실제 메일 미발송). toEmail={}, url={}", toEmail, resetUrl);
+            return;
+        }
+        String body = String.format(
+                "비밀번호를 재설정하려면 아래 링크를 클릭하세요.\n\n%s\n\n유효시간: 1시간\n\n본인이 요청한 것이 아니라면 무시하세요.",
+                resetUrl);
+        SimpleMailMessage message = new SimpleMailMessage();
+        message.setFrom(fromAddress);
+        message.setTo(toEmail);
+        message.setSubject(passwordResetSubject);
+        message.setText(body);
+        try {
+            mailSender.send(message);
+            log.info("Password reset email sent to {}", toEmail);
+        } catch (Exception e) {
+            log.error("Failed to send password reset email to {}", toEmail, e);
             throw new BusinessException(ErrorCode.EMAIL_SEND_FAILED, "이메일 발송에 실패했습니다.");
         }
     }
