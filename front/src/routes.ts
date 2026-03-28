@@ -5,6 +5,8 @@ import AdminLayout from "./components/layouts/AdminLayout";
 import Home from "./pages/user/Home";
 import Login from "./pages/user/Login";
 import Signup from "./pages/user/Signup";
+import ForgotPassword from "./pages/user/ForgotPassword";
+import ResetPassword from "./pages/user/ResetPassword";
 import PurchaseRequestForm from "./pages/user/PurchaseRequestForm";
 import PurchaseRequestList from "./pages/user/PurchaseRequestList";
 import InquiryList from "./pages/user/InquiryList";
@@ -89,6 +91,16 @@ export const router = createBrowserRouter([
           { path: "notice", Component: NoticeList, loader: requireUserAuth },
           { path: "notice/:id", Component: NoticeDetail, loader: requireUserAuth },
           { path: "mypage", Component: MyPage, loader: requireUserAuth },
+          { path: "forgot-password", Component: ForgotPassword },
+          { path: "reset-password", Component: ResetPassword },
+          { path: "purchase/new", Component: PurchaseRequestForm },
+          { path: "purchase", Component: PurchaseRequestList },
+          { path: "inquiry", Component: InquiryList },
+          { path: "inquiry/new", Component: InquiryForm },
+          { path: "inquiry/:id", Component: InquiryDetail },
+          { path: "notice", Component: NoticeList },
+          { path: "notice/:id", Component: NoticeDetail },
+          { path: "mypage", Component: MyPage },
           { path: "example1", Component: ExamplePage },
         ],
       },

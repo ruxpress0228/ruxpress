@@ -22,6 +22,9 @@ public class UserResponse {
     private final boolean phoneVerified;
     private final SignupType signupType;
     private final String timezone;
+    private final String addressPostalCode;
+    private final String addressLine1;
+    private final String addressLine2;
     private final LocalDateTime lastLoginAt;
     private final LocalDateTime withdrawnAt;
     private final LocalDateTime createdAt;
@@ -39,6 +42,9 @@ public class UserResponse {
                 user.isPhoneVerified(),
                 user.getSignupType(),
                 user.getTimezone(),
+                user.getAddressPostalCode(),
+                user.getAddressLine1(),
+                user.getAddressLine2(),
                 user.getLastLoginAt(),
                 user.getWithdrawnAt(),
                 user.getCreatedAt(),

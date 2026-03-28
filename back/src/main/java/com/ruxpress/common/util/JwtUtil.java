@@ -47,4 +47,32 @@ public class JwtUtil {
         String sub = parseToken(token).getSubject();
         return sub == null ? null : Long.parseLong(sub);
     }
+
+    /**
+     * {@code Authorization: Bearer …} 에서 일반 회원 JWT만 해석해 userId를 반환한다.
+     * 관리자 JWT({@code role} 클레임 존재)는 {@code null}.
+     */
+    public Long resolveUserIdFromAuthorizationHeader(String authorizationHeader) {
+        if (authorizationHeader == null) {
+            return null;
+        }
+        String[] parts = authorizationHeader.trim().split("\\s+", 2);
+        if (parts.length != 2 || !parts[0].equalsIgnoreCase("Bearer")) {
+            return null;
+        }
+        String token = parts[1].trim();
+        if (token.isEmpty()) {
+            return null;
+        }
+        try {
+            Claims c = parseToken(token);
+            if (c.get("role") != null) {
+                return null;
+            }
+            String sub = c.getSubject();
+            return sub == null ? null : Long.parseLong(sub);
+        } catch (Exception e) {
+            return null;
+        }
+    }
 }

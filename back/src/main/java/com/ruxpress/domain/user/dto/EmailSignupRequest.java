@@ -26,4 +26,16 @@ public class EmailSignupRequest {
     @NotBlank(message = "닉네임을 입력하세요.")
     @Size(min = 1, max = 50)
     private String nickname;
+
+    /** 우편번호 (선택) */
+    @Size(max = 10)
+    private String addressPostalCode;
+
+    @NotBlank(message = "주소를 입력하세요.")
+    @Size(max = 255)
+    private String addressLine1;
+
+    /** 상세주소 (선택) */
+    @Size(max = 255)
+    private String addressLine2;
 }

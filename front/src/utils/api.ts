@@ -1,6 +1,19 @@
-import { API_BASE, STORAGE_KEYS } from './constants';
+import { API_BASE, STORAGE_KEYS, USER_AUTH_CHANGE_EVENT } from './constants';
 import type { ApiResponse } from '../types';
 import type { ExchangeRate } from '../types';
+
+export function notifyUserAuthChange(): void {
+  window.dispatchEvent(new Event(USER_AUTH_CHANGE_EVENT));
+}
+
+/** 일반 회원 로그인 세션 제거 (관리자와 동일 STORAGE_KEYS.TOKEN 사용 시 주의) */
+export function clearUserSession(): void {
+  localStorage.removeItem(STORAGE_KEYS.TOKEN);
+  localStorage.removeItem(STORAGE_KEYS.USER_ID);
+  localStorage.removeItem(STORAGE_KEYS.USER_EMAIL);
+  localStorage.removeItem(STORAGE_KEYS.USER_NICKNAME);
+  notifyUserAuthChange();
+}
 
 function getHeaders(): Record<string, string> {
   const headers: Record<string, string> = {
