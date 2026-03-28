@@ -1,6 +1,6 @@
 import { Outlet, Link, useLocation, useNavigate } from "react-router";
 import { useState, useRef, useEffect } from "react";
-import { Bell, Menu, User, ShoppingCart, MessageSquare, FileText, Home, Globe, LogOut } from "lucide-react";
+import { Bell, Menu, User, ShoppingCart, MessageSquare, FileText, Home, Globe, LogOut, Landmark } from "lucide-react";
 import { Button } from "../ui/button";
 import { Badge } from "../ui/badge";
 import {
@@ -52,6 +52,7 @@ export default function UserLayout() {
     { nameKey: "nav.purchase", path: "/purchase", icon: ShoppingCart },
     { nameKey: "nav.inquiry", path: "/inquiry", icon: MessageSquare },
     { nameKey: "nav.notice", path: "/notice", icon: FileText },
+    { nameKey: "nav.bankTransfer", path: "/bank-transfer", icon: Landmark },
   ];
 
   const handleLogout = () => {

@@ -30,7 +30,14 @@ public class SecurityConfig {
                 .sessionManagement(session ->
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/api/v1/webhooks/**").permitAll()
                         .requestMatchers("/api/v1/admin/auth/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/admin/settlement-accounts/**")
+                        .hasAnyRole("SUPER_ADMIN", "COUNSELOR")
+                        .requestMatchers("/api/v1/admin/settlement-accounts/**").hasRole("SUPER_ADMIN")
+                        .requestMatchers(HttpMethod.GET, "/api/v1/admin/bank-transfers/**")
+                        .hasAnyRole("SUPER_ADMIN", "COUNSELOR")
+                        .requestMatchers("/api/v1/admin/bank-transfers/**").hasRole("SUPER_ADMIN")
                         .requestMatchers("/api/v1/admin/admins/**").hasRole("SUPER_ADMIN")
                         .requestMatchers("/api/v1/admin/users/**").hasRole("SUPER_ADMIN")
                         .requestMatchers("/api/v1/admin/notices/**").hasRole("SUPER_ADMIN")

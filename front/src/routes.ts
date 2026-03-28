@@ -15,6 +15,8 @@ import InquiryDetail from "./pages/user/InquiryDetail";
 import NoticeList from "./pages/user/NoticeList";
 import NoticeDetail from "./pages/user/NoticeDetail";
 import MyPage from "./pages/user/MyPage";
+import BankTransfer from "./pages/user/BankTransfer";
+import BankTransferReceipt from "./pages/user/BankTransferReceipt";
 
 // Admin Pages
 import AdminLogin from "./pages/admin/AdminLogin";
@@ -25,6 +27,8 @@ import AdminNotices from "./pages/admin/AdminNotices";
 import AdminExchangeRate from "./pages/admin/AdminExchangeRate";
 import AdminUsers from "./pages/admin/AdminUsers";
 import AdminAdmins from "./pages/admin/AdminAdmins";
+import AdminBankTransfers from "./pages/admin/AdminBankTransfers";
+import AdminSettlementAccounts from "./pages/admin/AdminSettlementAccounts";
 import NotFound from "./pages/NotFound";
 import ExamplePage from "./pages/ExamplePage";
 import { STORAGE_KEYS } from "./utils/constants";
@@ -93,14 +97,8 @@ export const router = createBrowserRouter([
           { path: "mypage", Component: MyPage, loader: requireUserAuth },
           { path: "forgot-password", Component: ForgotPassword },
           { path: "reset-password", Component: ResetPassword },
-          { path: "purchase/new", Component: PurchaseRequestForm },
-          { path: "purchase", Component: PurchaseRequestList },
-          { path: "inquiry", Component: InquiryList },
-          { path: "inquiry/new", Component: InquiryForm },
-          { path: "inquiry/:id", Component: InquiryDetail },
-          { path: "notice", Component: NoticeList },
-          { path: "notice/:id", Component: NoticeDetail },
-          { path: "mypage", Component: MyPage },
+          { path: "bank-transfer", Component: BankTransfer, loader: requireUserAuth },
+          { path: "bank-transfer/receipt/:id", Component: BankTransferReceipt, loader: requireUserAuth },
           { path: "example1", Component: ExamplePage },
         ],
       },
@@ -116,6 +114,8 @@ export const router = createBrowserRouter([
           { path: "exchange-rate", Component: AdminExchangeRate, loader: requireAdminAuth },
           { path: "users", Component: AdminUsers, loader: requireAdminAuth },
           { path: "admins", Component: AdminAdmins, loader: requireAdminAuth },
+          { path: "bank-transfers", Component: AdminBankTransfers, loader: requireAdminAuth },
+          { path: "settlement-accounts", Component: AdminSettlementAccounts, loader: requireAdminAuth },
         ],
       },
       { path: "*", Component: NotFound },
