@@ -26,7 +26,7 @@ CREATE TABLE `verifications` (
 	`id`	BIGINT	NOT NULL,
 	`type`	ENUM('EMAIL', 'PHONE', 'PASSWORD_RESET')	NOT NULL	COMMENT '인증 유형',
 	`target`	VARCHAR(255)	NOT NULL	COMMENT '인증 대상 (이메일 또는 전화번호)',
-	`code`	VARCHAR(64)	NOT NULL	COMMENT '인증 코드 (6자리)',
+	`code`	VARCHAR(64)	NOT NULL	COMMENT '인증 코드 (6자리) 또는 재설정 토큰(비밀번호 재설정)',
 	`is_verified`	TINYINT(1)	NOT NULL	DEFAULT 0	COMMENT '인증 완료 여부',
 	`attempt_count`	INT	NOT NULL	DEFAULT 0	COMMENT '시도 횟수 (최대 5회)',
 	`expires_at`	DATETIME	NOT NULL	COMMENT '만료 시각',
