@@ -22,6 +22,9 @@ import com.ruxpress.domain.user.dto.LoginResponse;
 import com.ruxpress.domain.user.dto.response.UserResponse;
 import com.ruxpress.domain.user.dto.response.UserStatsResponse;
 
+// Domain - Balance
+import com.ruxpress.domain.balance.service.BalanceService;
+
 // Domain - User (Entity & Repository)
 import com.ruxpress.domain.user.entity.SignupType;
 import com.ruxpress.domain.user.entity.User;
@@ -47,6 +50,7 @@ public class UserService {
     private final VerificationRepository verificationRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
+    private final BalanceService balanceService;
 
     @Transactional(readOnly = true)
     public PageResponse<UserResponse> getUsers(String keyword, UserStatus status, Pageable pageable) {
@@ -76,7 +80,7 @@ public class UserService {
     public UserResponse getUserDetail(Long id) {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
-        return UserResponse.from(user);
+        return UserResponse.from(user, balanceService.getBalance(id));
     }
 
     /**
@@ -90,7 +94,7 @@ public class UserService {
         if (user.getStatus() != UserStatus.ACTIVE) {
             throw new BusinessException(ErrorCode.FORBIDDEN, "이용할 수 없는 계정입니다.");
         }
-        return UserResponse.from(user);
+        return UserResponse.from(user, balanceService.getBalance(userId));
     }
 
     @Transactional

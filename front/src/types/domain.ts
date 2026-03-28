@@ -17,6 +17,7 @@ export interface User {
   addressPostalCode?: string;
   addressLine1?: string;
   addressLine2?: string;
+  pointBalance?: number;
   notificationSettings?: NotificationSettings;
   lastLoginAt?: string;
   withdrawnAt?: string;

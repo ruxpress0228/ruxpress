@@ -1,6 +1,6 @@
 import { Outlet, Link, useLocation, useNavigate } from "react-router";
 import { useState, useRef, useEffect } from "react";
-import { Bell, Menu, User, ShoppingCart, MessageSquare, FileText, Home, Globe, LogOut, Landmark } from "lucide-react";
+import { Bell, Menu, User, ShoppingCart, MessageSquare, FileText, Home, Globe, LogOut, Landmark, Wallet } from "lucide-react";
 import { Button } from "../ui/button";
 import { Badge } from "../ui/badge";
 import {
@@ -11,6 +11,7 @@ import {
   SheetTrigger,
 } from "../ui/sheet";
 import { useTranslation } from "../../hooks/useTranslation";
+import { useBalance } from "../../hooks/balance/useBalance";
 import { LOCALES, STORAGE_KEYS, USER_AUTH_CHANGE_EVENT } from "../../utils/constants";
 
 export default function UserLayout() {
@@ -33,6 +34,7 @@ export default function UserLayout() {
 
   const userToken = localStorage.getItem(STORAGE_KEYS.TOKEN);
   const userNickname = localStorage.getItem(STORAGE_KEYS.USER_NICKNAME);
+  const { balance } = useBalance();
 
   useEffect(() => {
     if (!langOpen) return;
@@ -133,7 +135,13 @@ export default function UserLayout() {
                 </Badge>
               </Button>
               {userToken ? (
-                <div className="flex items-center gap-1 max-w-[11rem]">
+                <div className="flex items-center gap-1 max-w-[18rem]">
+                  {balance != null && (
+                    <span className="hidden sm:inline text-sm font-semibold text-blue-600 tabular-nums whitespace-nowrap" title={t("balance.available")}>
+                      <Wallet className="w-3.5 h-3.5 inline mr-0.5 -mt-0.5" />
+                      ₩{balance.toLocaleString()}
+                    </span>
+                  )}
                   <span className="hidden sm:inline text-sm text-gray-700 truncate" title={userNickname ?? ""}>
                     {userNickname ?? "회원"}
                   </span>

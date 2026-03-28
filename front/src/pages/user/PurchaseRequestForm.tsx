@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
-import { Plus, X, Upload } from "lucide-react";
+import { Plus, X, Upload, AlertTriangle, Wallet } from "lucide-react";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import { Label } from "../../components/ui/label";
@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useExchangeRate } from "../../hooks/exchange/useExchangeRate";
 import { usePurchase } from "../../hooks/purchase/usePurchase";
+import { useBalance } from "../../hooks/balance/useBalance";
 import { formatDate, formatNumber } from "../../utils/format";
 import type { ExchangeRate, PurchaseRequestStatus } from "../../types";
 
@@ -21,6 +22,7 @@ export default function PurchaseRequestForm() {
   const navigate = useNavigate();
   const { getCurrentExchangeRate } = useExchangeRate();
   const { createPurchaseRequest } = usePurchase();
+  const { balance, refetch: refetchBalance } = useBalance();
   const [currentExchangeRate, setCurrentExchangeRate] = useState<ExchangeRate | null>(null);
   const [urls, setUrls] = useState<Array<{ url: string; shop: string }>>([{ url: "", shop: "" }]);
   const [options, setOptions] = useState<Array<{ name: string; value: string }>>([]);
@@ -100,7 +102,7 @@ export default function PurchaseRequestForm() {
       const rate = currentExchangeRate ? Number(currentExchangeRate.rate) : 0;
       const priceRub = rate > 0 ? priceKrw / rate : undefined;
       const feeAmount = totals.feeKrw;
-      const status: PurchaseRequestStatus = "DRAFT";
+      const status: PurchaseRequestStatus = "SUBMITTED";
 
       await createPurchaseRequest({
         productName: productName.trim(),
@@ -116,9 +118,15 @@ export default function PurchaseRequestForm() {
         status,
       });
       toast.success(t('purchase.toastSuccess'));
+      refetchBalance();
       navigate("/purchase");
-    } catch {
-      toast.error("구매 요청 등록에 실패했습니다.");
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "";
+      if (msg.includes("insufficient_balance")) {
+        toast.error(t("balance.insufficient"));
+      } else {
+        toast.error(msg || "구매 요청 등록에 실패했습니다.");
+      }
     } finally {
       setSubmitting(false);
     }
@@ -126,6 +134,7 @@ export default function PurchaseRequestForm() {
 
   const totals = calculateTotal();
   const numOpt = { minimumFractionDigits: 2, maximumFractionDigits: 2 };
+  const isInsufficientBalance = balance != null && totals.totalKrw > 0 && balance < totals.totalKrw;
 
   return (
     <div className="max-w-4xl mx-auto">
@@ -332,6 +341,31 @@ export default function PurchaseRequestForm() {
                 {formatNumber(totals.totalRub, locale, numOpt)} RUB
               </span>
             </div>
+            {balance != null && (
+              <div className={`mt-3 flex items-center justify-between rounded-lg px-3 py-2 text-sm ${isInsufficientBalance ? "bg-red-50 border border-red-200" : "bg-blue-50 border border-blue-200"}`}>
+                <div className="flex items-center gap-1.5">
+                  {isInsufficientBalance ? (
+                    <AlertTriangle className="w-4 h-4 text-red-500" />
+                  ) : (
+                    <Wallet className="w-4 h-4 text-blue-600" />
+                  )}
+                  <span className={isInsufficientBalance ? "text-red-700" : "text-gray-600"}>
+                    {t("balance.available")}
+                  </span>
+                </div>
+                <span className={`font-semibold tabular-nums ${isInsufficientBalance ? "text-red-700" : "text-gray-900"}`}>
+                  ₩{formatNumber(balance, locale)}
+                </span>
+              </div>
+            )}
+            {isInsufficientBalance && (
+              <p className="text-sm text-red-600 mt-1">
+                {t("balance.insufficientDetail", {
+                  balance: formatNumber(balance ?? 0, locale),
+                  total: formatNumber(totals.totalKrw, locale),
+                })}
+              </p>
+            )}
             <p className="text-xs text-gray-500">
               {t('purchase.summary.disclaimer')}
             </p>
@@ -348,7 +382,7 @@ export default function PurchaseRequestForm() {
           >
             {t('purchase.cancel')}
           </Button>
-          <Button type="submit" size="lg" className="flex-1" disabled={submitting}>
+          <Button type="submit" size="lg" className="flex-1" disabled={submitting || isInsufficientBalance}>
             {t('purchase.submit')}
           </Button>
         </div>

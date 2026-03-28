@@ -8,6 +8,8 @@ import com.ruxpress.common.dto.PageResponse;
 import com.ruxpress.common.exception.BusinessException;
 import com.ruxpress.common.exception.ErrorCode;
 import com.ruxpress.common.util.IDGenerateUtil;
+import com.ruxpress.domain.balance.service.BalanceService;
+import com.ruxpress.domain.purchase.dto.request.AdminPurchaseStatusRequest;
 import com.ruxpress.domain.purchase.dto.request.PurchaseRequestCreateRequest;
 import com.ruxpress.domain.purchase.dto.response.PurchaseRequestListResponse;
 import com.ruxpress.domain.purchase.dto.response.PurchaseRequestResponse;
@@ -30,9 +32,20 @@ public class PurchaseService {
 
     private final PurchaseRequestRepository purchaseRequestRepository;
     private final ObjectMapper objectMapper;
+    private final BalanceService balanceService;
 
     @Transactional
     public PurchaseRequestResponse createPurchaseRequest(Long userId, PurchaseRequestCreateRequest request) {
+        PurchaseRequestStatus effectiveStatus = request.getStatus() != null
+                ? request.getStatus() : PurchaseRequestStatus.DRAFT;
+
+        if (effectiveStatus == PurchaseRequestStatus.SUBMITTED) {
+            if (request.getTotalAmountKrw() == null
+                    || request.getTotalAmountKrw().compareTo(java.math.BigDecimal.ZERO) <= 0) {
+                throw new BusinessException(ErrorCode.INVALID_INPUT, "총 금액은 양수여야 합니다.");
+            }
+        }
+
         String requestNumber = IDGenerateUtil.generatePurchaseRequestNumber();
         PurchaseRequest purchaseRequest = PurchaseRequest.create(
                 userId,
@@ -47,8 +60,13 @@ public class PurchaseService {
                 request.getFeeAmount(),
                 request.getTotalAmountKrw(),
                 request.getMemo(),
-                request.getStatus());
+                effectiveStatus);
         PurchaseRequest saved = purchaseRequestRepository.save(purchaseRequest);
+
+        if (effectiveStatus == PurchaseRequestStatus.SUBMITTED) {
+            balanceService.debitForPurchase(userId, saved.getTotalAmountKrw(), saved.getId());
+        }
+
         return toResponse(saved);
     }
 
@@ -78,6 +96,47 @@ public class PurchaseService {
         return purchaseRequestRepository.findTop3ByUserIdAndDeletedAtIsNullOrderByCreatedAtDesc(userId).stream()
                 .map(this::toListResponse)
                 .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public PageResponse<PurchaseRequestResponse> getAdminPurchaseRequests(
+            PurchaseRequestStatus status, Pageable pageable) {
+        Page<PurchaseRequest> page = status == null
+                ? purchaseRequestRepository.findByDeletedAtIsNull(pageable)
+                : purchaseRequestRepository.findByStatusAndDeletedAtIsNull(status, pageable);
+        List<PurchaseRequestResponse> content = page.getContent().stream()
+                .map(this::toResponse)
+                .collect(Collectors.toList());
+        return new PageResponse<>(content, page.getTotalElements(), page.getTotalPages(), page.getNumber(), page.getSize());
+    }
+
+    @Transactional(readOnly = true)
+    public PurchaseRequestResponse getAdminPurchaseRequestDetail(Long id) {
+        PurchaseRequest pr = purchaseRequestRepository.findById(id)
+                .filter(p -> p.getDeletedAt() == null)
+                .orElseThrow(() -> new BusinessException(ErrorCode.PURCHASE_NOT_FOUND));
+        return toResponse(pr);
+    }
+
+    @Transactional
+    public PurchaseRequestResponse updatePurchaseRequestStatus(Long id, Long adminId, AdminPurchaseStatusRequest request) {
+        PurchaseRequest pr = purchaseRequestRepository.findById(id)
+                .filter(p -> p.getDeletedAt() == null)
+                .orElseThrow(() -> new BusinessException(ErrorCode.PURCHASE_NOT_FOUND));
+        pr.changeStatus(request.getStatus());
+        pr.updateAdminMemo(request.getAdminMemo());
+        if (adminId != null) {
+            pr.assignAdmin(adminId);
+        }
+        PurchaseRequest saved = purchaseRequestRepository.save(pr);
+
+        if (request.getStatus() == PurchaseRequestStatus.REFUNDED
+                && saved.getTotalAmountKrw() != null
+                && saved.getTotalAmountKrw().compareTo(java.math.BigDecimal.ZERO) > 0) {
+            balanceService.creditForPurchaseRefund(saved.getUserId(), saved.getTotalAmountKrw(), saved.getId());
+        }
+
+        return toResponse(saved);
     }
 
     private PurchaseRequestListResponse toListResponse(PurchaseRequest purchaseRequest) {

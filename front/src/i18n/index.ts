@@ -20,10 +20,16 @@ export function setLocale(locale: Locale): void {
 }
 
 /** Look up message for a specific locale (used by I18nProvider and tests). */
-export function translate(key: string, locale: Locale): string {
-  return messages[locale]?.[key] ?? key;
+export function translate(key: string, locale: Locale, params?: Record<string, string | number>): string {
+  let msg = messages[locale]?.[key] ?? key;
+  if (params) {
+    for (const [k, v] of Object.entries(params)) {
+      msg = msg.replace(new RegExp(`\\{\\{${k}\\}\\}`, 'g'), String(v));
+    }
+  }
+  return msg;
 }
 
-export function t(key: string): string {
-  return translate(key, currentLocale);
+export function t(key: string, params?: Record<string, string | number>): string {
+  return translate(key, currentLocale, params);
 }

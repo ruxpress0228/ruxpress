@@ -95,4 +95,18 @@ public class PurchaseRequest extends BaseEntity {
         pr.status = status != null ? status : PurchaseRequestStatus.DRAFT;
         return pr;
     }
+
+    public void changeStatus(PurchaseRequestStatus newStatus) {
+        this.status = newStatus;
+    }
+
+    public void updateAdminMemo(String adminMemo) {
+        if (adminMemo != null) {
+            this.adminMemo = adminMemo;
+        }
+    }
+
+    public void assignAdmin(Long adminId) {
+        this.assignedAdminId = adminId;
+    }
 }

@@ -280,3 +280,34 @@ ALTER TABLE `exchange_rates` ADD CONSTRAINT `PK_EXCHANGE_RATES` PRIMARY KEY (
 	`id`
 );
 
+-- REQ-016: 사용자 지갑 (가용 잔액 정본)
+CREATE TABLE `user_wallets` (
+	`id`	BIGINT	NOT NULL AUTO_INCREMENT,
+	`user_id`	BIGINT	NOT NULL	COMMENT '회원 ID',
+	`balance`	DECIMAL(18, 2)	NOT NULL	DEFAULT 0	COMMENT '가용 잔액 (KRW 1:1)',
+	`version`	INT	NOT NULL	DEFAULT 0	COMMENT '낙관적 락',
+	`created_at`	DATETIME	NOT NULL,
+	`updated_at`	DATETIME	NOT NULL	DEFAULT CURRENT_TIMESTAMP,
+	PRIMARY KEY (`id`),
+	UNIQUE KEY `UK_USER_WALLET_USER` (`user_id`)
+);
+
+-- REQ-016: 지갑 원장 (충전·차감 감사 추적)
+CREATE TABLE `wallet_ledger_entries` (
+	`id`	BIGINT	NOT NULL AUTO_INCREMENT,
+	`user_id`	BIGINT	NOT NULL	COMMENT '회원 ID',
+	`entry_type`	VARCHAR(50)	NOT NULL	COMMENT '유형 (CREDIT_BANK_DEPOSIT, CREDIT_PURCHASE_REFUND, DEBIT_PURCHASE, DEBIT_BANK_REFUND 등)',
+	`amount`	DECIMAL(18, 2)	NOT NULL	COMMENT '금액 (양수)',
+	`currency`	VARCHAR(3)	NOT NULL	DEFAULT 'KRW',
+	`transfer_ledger_entry_id`	BIGINT	NULL	COMMENT '입금 확정 원장 ID (멱등)',
+	`purchase_request_id`	BIGINT	NULL	COMMENT '구매 요청 ID (멱등)',
+	`transfer_refund_entry_id`	BIGINT	NULL	COMMENT '이체 환불 원장 ID (멱등)',
+	`memo`	VARCHAR(500)	NULL	COMMENT '메모',
+	`created_at`	DATETIME	NOT NULL,
+	PRIMARY KEY (`id`),
+	KEY `IX_WALLET_LEDGER_USER` (`user_id`),
+	UNIQUE KEY `UK_WALLET_LEDGER_TRANSFER` (`transfer_ledger_entry_id`),
+	UNIQUE KEY `UK_WALLET_LEDGER_PURCHASE` (`purchase_request_id`, `entry_type`),
+	UNIQUE KEY `UK_WALLET_LEDGER_REFUND` (`transfer_refund_entry_id`)
+);
+

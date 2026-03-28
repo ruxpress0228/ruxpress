@@ -216,6 +216,12 @@ export default function AdminUsers() {
                 <div><span className="text-gray-500">최근 로그인:</span>{" "}
                   {selectedUser.lastLoginAt ? new Date(selectedUser.lastLoginAt).toLocaleString("ko-KR") : "-"}
                 </div>
+                <div className="col-span-2 pt-1 border-t">
+                  <span className="text-gray-500">잔액 (KRW):</span>{" "}
+                  <span className="font-semibold tabular-nums">
+                    ₩{selectedUser.pointBalance != null ? selectedUser.pointBalance.toLocaleString("ko-KR") : "0"}
+                  </span>
+                </div>
               </div>
               <div className="flex gap-2 pt-2">
                 {selectedUser.status !== "ACTIVE" && (

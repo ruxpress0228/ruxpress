@@ -12,6 +12,7 @@ import com.ruxpress.domain.banktransfer.entity.TransferLedgerEntryType;
 import com.ruxpress.domain.banktransfer.entity.TransferLedgerStatus;
 import com.ruxpress.domain.banktransfer.repository.SettlementAccountRepository;
 import com.ruxpress.domain.banktransfer.repository.TransferLedgerEntryRepository;
+import com.ruxpress.domain.balance.service.BalanceService;
 import com.ruxpress.domain.notification.service.NotificationService;
 import com.ruxpress.domain.user.entity.SignupType;
 import com.ruxpress.domain.user.entity.User;
@@ -46,6 +47,9 @@ class BankTransferServiceTest {
 
     @Mock
     private UserRepository userRepository;
+
+    @Mock
+    private BalanceService balanceService;
 
     @InjectMocks
     private BankTransferService bankTransferService;
@@ -214,6 +218,106 @@ class BankTransferServiceTest {
                 .hasFieldOrPropertyWithValue("errorCode", ErrorCode.LEDGER_AMOUNT_INVALID);
 
         verify(entryRepository, never()).save(any());
+    }
+
+    @Test
+    void confirmDeposit_creditsWalletForDepositType() {
+        TransferLedgerEntry pending = TransferLedgerEntry.createRootEntry(
+                1L, 10L, TransferLedgerEntryType.DEPOSIT,
+                new BigDecimal("8000"), "KRW", "김", null, null, null, null);
+        ReflectionTestUtils.setField(pending, "id", 88L);
+
+        when(entryRepository.findById(88L)).thenReturn(Optional.of(pending));
+        when(entryRepository.save(any(TransferLedgerEntry.class))).thenAnswer(inv -> {
+            TransferLedgerEntry saved = inv.getArgument(0);
+            ReflectionTestUtils.setField(saved, "id", 88L);
+            return saved;
+        });
+        when(settlementAccountRepository.findById(10L)).thenReturn(Optional.of(settlementAccount));
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user1));
+
+        bankTransferService.confirmDeposit(99L, 88L, null);
+
+        verify(balanceService).creditForBankDeposit(1L, new BigDecimal("8000"), 88L);
+    }
+
+    @Test
+    void confirmDeposit_doesNotCreditWalletForEscrowType() {
+        TransferLedgerEntry pending = TransferLedgerEntry.createRootEntry(
+                1L, 10L, TransferLedgerEntryType.ESCROW_HOLD,
+                new BigDecimal("5000"), "KRW", "김", null, null, null, null);
+        ReflectionTestUtils.setField(pending, "id", 77L);
+
+        when(entryRepository.findById(77L)).thenReturn(Optional.of(pending));
+        when(entryRepository.save(any(TransferLedgerEntry.class))).thenAnswer(inv -> {
+            TransferLedgerEntry saved = inv.getArgument(0);
+            ReflectionTestUtils.setField(saved, "id", 77L);
+            return saved;
+        });
+        when(settlementAccountRepository.findById(10L)).thenReturn(Optional.of(settlementAccount));
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user1));
+
+        bankTransferService.confirmDeposit(99L, 77L, null);
+
+        verify(balanceService, never()).creditForBankDeposit(anyLong(), any(), anyLong());
+    }
+
+    @Test
+    void refund_debitsWalletWhenParentIsDeposit() {
+        TransferLedgerEntry parent = TransferLedgerEntry.createRootEntry(
+                1L, 10L, TransferLedgerEntryType.DEPOSIT,
+                new BigDecimal("10000"), "KRW", null, null, null, null, null);
+        ReflectionTestUtils.setField(parent, "id", 100L);
+        parent.applyConfirm(1L, null);
+
+        when(entryRepository.findById(100L)).thenReturn(Optional.of(parent));
+        when(entryRepository.existsByParentEntryIdAndEntryTypeAndStatus(
+                100L, TransferLedgerEntryType.SETTLEMENT, TransferLedgerStatus.CONFIRMED)).thenReturn(false);
+        when(entryRepository.existsByParentEntryIdAndEntryTypeAndStatus(
+                100L, TransferLedgerEntryType.REFUND, TransferLedgerStatus.CONFIRMED)).thenReturn(false);
+        when(entryRepository.save(any(TransferLedgerEntry.class))).thenAnswer(inv -> {
+            TransferLedgerEntry saved = inv.getArgument(0);
+            ReflectionTestUtils.setField(saved, "id", 301L);
+            return saved;
+        });
+        when(settlementAccountRepository.findById(10L)).thenReturn(Optional.of(settlementAccount));
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user1));
+
+        SettlementOrRefundRequest req = new SettlementOrRefundRequest();
+        req.setAmount(new BigDecimal("5000"));
+
+        bankTransferService.refund(5L, 100L, req);
+
+        verify(balanceService).debitForBankRefund(1L, new BigDecimal("5000"), 301L);
+    }
+
+    @Test
+    void refund_doesNotDebitWalletWhenParentIsEscrow() {
+        TransferLedgerEntry parent = TransferLedgerEntry.createRootEntry(
+                1L, 10L, TransferLedgerEntryType.ESCROW_HOLD,
+                new BigDecimal("10000"), "KRW", null, null, null, null, null);
+        ReflectionTestUtils.setField(parent, "id", 100L);
+        parent.applyConfirm(1L, null);
+
+        when(entryRepository.findById(100L)).thenReturn(Optional.of(parent));
+        when(entryRepository.existsByParentEntryIdAndEntryTypeAndStatus(
+                100L, TransferLedgerEntryType.SETTLEMENT, TransferLedgerStatus.CONFIRMED)).thenReturn(false);
+        when(entryRepository.existsByParentEntryIdAndEntryTypeAndStatus(
+                100L, TransferLedgerEntryType.REFUND, TransferLedgerStatus.CONFIRMED)).thenReturn(false);
+        when(entryRepository.save(any(TransferLedgerEntry.class))).thenAnswer(inv -> {
+            TransferLedgerEntry saved = inv.getArgument(0);
+            ReflectionTestUtils.setField(saved, "id", 302L);
+            return saved;
+        });
+        when(settlementAccountRepository.findById(10L)).thenReturn(Optional.of(settlementAccount));
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user1));
+
+        SettlementOrRefundRequest req = new SettlementOrRefundRequest();
+        req.setAmount(new BigDecimal("5000"));
+
+        bankTransferService.refund(5L, 100L, req);
+
+        verify(balanceService, never()).debitForBankRefund(anyLong(), any(), anyLong());
     }
 
     @Test

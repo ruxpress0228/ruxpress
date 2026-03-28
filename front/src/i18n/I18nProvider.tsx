@@ -13,7 +13,7 @@ import { setLocale as setModuleLocale, translate } from "./index";
 type I18nContextValue = {
   locale: Locale;
   setLocale: (locale: Locale) => void;
-  t: (key: string) => string;
+  t: (key: string, params?: Record<string, string | number>) => string;
 };
 
 const I18nContext = createContext<I18nContextValue | null>(null);
@@ -36,7 +36,10 @@ export function I18nProvider({ children }: { children: ReactNode }) {
     setLocaleState(newLocale);
   }, []);
 
-  const t = useCallback((key: string) => translate(key, locale), [locale]);
+  const t = useCallback(
+    (key: string, params?: Record<string, string | number>) => translate(key, locale, params),
+    [locale],
+  );
 
   const value = useMemo(
     () => ({ locale, setLocale, t }),

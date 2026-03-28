@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router";
-import { ShoppingCart, MessageSquare, FileText, TrendingUp, ArrowRight, Calculator } from "lucide-react";
+import { ShoppingCart, MessageSquare, FileText, TrendingUp, ArrowRight, Calculator, Wallet } from "lucide-react";
 import { Button } from "../../components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../components/ui/card";
 import { Badge } from "../../components/ui/badge";
@@ -10,6 +10,7 @@ import { mockNotices } from "../../data/mockData";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useExchangeRate } from "../../hooks/exchange/useExchangeRate";
 import { usePurchase } from "../../hooks/purchase/usePurchase";
+import { useBalance } from "../../hooks/balance/useBalance";
 import { formatDate, formatNumber } from "../../utils/format";
 import type { ExchangeRate } from "../../types";
 import type { PurchaseRequestListItem } from "../../types/purchase";
@@ -18,6 +19,7 @@ export default function Home() {
   const { t, locale } = useTranslation();
   const { getCurrentExchangeRate } = useExchangeRate();
   const { getRecentPurchaseRequests } = usePurchase();
+  const { balance } = useBalance();
   const [currentExchangeRate, setCurrentExchangeRate] = useState<ExchangeRate | null>(null);
   const [myRequests, setMyRequests] = useState<PurchaseRequestListItem[]>([]);
   const [converterRub, setConverterRub] = useState<string>("");
@@ -53,6 +55,38 @@ export default function Home() {
           </Button>
         </Link>
       </div>
+
+      {/* Balance Card */}
+      {balance != null && (
+        <Card className="border-blue-200 bg-gradient-to-r from-blue-50 to-white">
+          <CardContent className="py-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                  <Wallet className="w-5 h-5 text-blue-600" />
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">{t("balance.available")}</p>
+                  <p className="text-2xl font-bold text-gray-900 tabular-nums">
+                    ₩{formatNumber(balance, locale)}
+                  </p>
+                </div>
+              </div>
+              {currentExchangeRate && Number(currentExchangeRate.rate) > 0 && (
+                <p className="text-sm text-gray-500 tabular-nums">
+                  {t("balance.rubEquivalent", {
+                    amount: formatNumber(
+                      Math.round((balance / Number(currentExchangeRate.rate)) * 100) / 100,
+                      locale,
+                      { minimumFractionDigits: 2, maximumFractionDigits: 2 }
+                    ),
+                  })}
+                </p>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Exchange Rate */}
       <Card>

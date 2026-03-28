@@ -6,6 +6,7 @@ import com.ruxpress.domain.user.entity.UserStatus;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Getter
@@ -29,8 +30,13 @@ public class UserResponse {
     private final LocalDateTime withdrawnAt;
     private final LocalDateTime createdAt;
     private final LocalDateTime updatedAt;
+    private final BigDecimal pointBalance;
 
     public static UserResponse from(User user) {
+        return from(user, null);
+    }
+
+    public static UserResponse from(User user, BigDecimal pointBalance) {
         return new UserResponse(
                 user.getId(),
                 user.getEmail(),
@@ -48,7 +54,8 @@ public class UserResponse {
                 user.getLastLoginAt(),
                 user.getWithdrawnAt(),
                 user.getCreatedAt(),
-                user.getUpdatedAt()
+                user.getUpdatedAt(),
+                pointBalance
         );
     }
 }

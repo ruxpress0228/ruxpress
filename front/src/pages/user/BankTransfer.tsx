@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router";
-import { Landmark, Send, FileText } from "lucide-react";
+import { Landmark, Send, FileText, Wallet } from "lucide-react";
 import { Button } from "../../components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../components/ui/card";
 import { Input } from "../../components/ui/input";
@@ -21,7 +21,8 @@ import {
   reportDeposit,
 } from "../../api/bankTransfer";
 import { useTranslation } from "../../hooks/useTranslation";
-import { formatDate } from "../../utils/format";
+import { useBalance } from "../../hooks/balance/useBalance";
+import { formatDate, formatNumber } from "../../utils/format";
 import type { SettlementAccount, TransferLedgerEntry } from "../../types/bankTransfer";
 
 function statusBadgeVariant(s: string): "default" | "secondary" | "destructive" | "outline" {
@@ -40,6 +41,7 @@ function statusBadgeVariant(s: string): "default" | "secondary" | "destructive" 
 
 export default function BankTransfer() {
   const { t, locale } = useTranslation();
+  const { balance, refetch: refetchBalance } = useBalance();
   const [accounts, setAccounts] = useState<SettlementAccount[]>([]);
   const [entries, setEntries] = useState<TransferLedgerEntry[]>([]);
   const [loading, setLoading] = useState(true);
@@ -94,6 +96,7 @@ export default function BankTransfer() {
       setAmount("");
       setDepositorMemo("");
       await load();
+      refetchBalance();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : t("bankTransfer.toast.reportError"));
     } finally {
@@ -103,12 +106,23 @@ export default function BankTransfer() {
 
   return (
     <div className="space-y-10">
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-2">
-          <Landmark className="w-8 h-8 text-blue-600" />
-          {t("bankTransfer.title")}
-        </h1>
-        <p className="text-gray-600 mt-1">{t("bankTransfer.subtitle")}</p>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-2">
+            <Landmark className="w-8 h-8 text-blue-600" />
+            {t("bankTransfer.title")}
+          </h1>
+          <p className="text-gray-600 mt-1">{t("bankTransfer.subtitle")}</p>
+        </div>
+        {balance != null && (
+          <div className="flex items-center gap-2 rounded-lg border border-blue-200 bg-blue-50 px-4 py-2">
+            <Wallet className="w-4 h-4 text-blue-600" />
+            <span className="text-sm text-gray-500">{t("balance.available")}</span>
+            <span className="text-lg font-bold text-gray-900 tabular-nums">
+              ₩{formatNumber(balance, locale)}
+            </span>
+          </div>
+        )}
       </div>
 
       <div className="grid gap-8 lg:grid-cols-2">
