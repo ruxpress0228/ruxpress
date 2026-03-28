@@ -1,6 +1,5 @@
 import { API_BASE, STORAGE_KEYS, USER_AUTH_CHANGE_EVENT } from './constants';
 import type { ApiResponse } from '../types';
-import type { ExchangeRate } from '../types';
 
 export function notifyUserAuthChange(): void {
   window.dispatchEvent(new Event(USER_AUTH_CHANGE_EVENT));
@@ -113,32 +112,3 @@ export const api = {
     URL.revokeObjectURL(url);
   },
 };
-
-// Exchange rate API (returns data or throws)
-const EXCHANGE_BASE = '/v1/exchange-rates';
-
-export async function getCurrentExchangeRate(): Promise<ExchangeRate> {
-  const res = await api.get<ExchangeRate>(`${EXCHANGE_BASE}/current`);
-  if (res.code !== 200 || res.data == null) throw new Error(res.message || 'Failed to load exchange rate');
-  return res.data;
-}
-
-export async function getExchangeRateHistory(page = 0, size = 20): Promise<{ content: ExchangeRate[]; totalElements: number; totalPages: number; number: number; size: number }> {
-  const res = await api.get<{ content: ExchangeRate[]; totalElements: number; totalPages: number; number: number; size: number }>(
-    `${EXCHANGE_BASE}?page=${page}&size=${size}`
-  );
-  if (res.code !== 200 || res.data == null) throw new Error(res.message || 'Failed to load exchange rate history');
-  return res.data;
-}
-
-export async function triggerExchangeRateFetch(): Promise<ExchangeRate> {
-  const res = await api.post<ExchangeRate>(`${EXCHANGE_BASE}/fetch`);
-  if (res.code !== 200 || res.data == null) throw new Error(res.message || 'Failed to fetch exchange rate');
-  return res.data;
-}
-
-export async function setManualExchangeRate(rate: number): Promise<ExchangeRate> {
-  const res = await api.post<ExchangeRate>(`${EXCHANGE_BASE}/manual`, { rate });
-  if (res.code !== 200 || res.data == null) throw new Error(res.message || 'Failed to set manual exchange rate');
-  return res.data;
-}

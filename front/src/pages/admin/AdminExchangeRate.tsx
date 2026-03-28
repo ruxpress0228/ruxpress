@@ -8,15 +8,10 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Label } from "../../components/ui/label";
 import { Badge } from "../../components/ui/badge";
 import { toast } from "sonner";
-import {
-  api,
-  getCurrentExchangeRate,
-  getExchangeRateHistory,
-  triggerExchangeRateFetch,
-  setManualExchangeRate,
-} from "../../utils/api";
+import { api } from "../../utils/api";
 import { unwrap } from "../../utils/exception";
 import { useTranslation } from "../../hooks/useTranslation";
+import { useExchangeRate } from "../../hooks/exchange/useExchangeRate";
 import { formatDate, formatNumber } from "../../utils/format";
 import type { ExchangeRate } from "../../types";
 
@@ -30,6 +25,12 @@ const fetchedAtOptions: Intl.DateTimeFormatOptions = {
 
 export default function AdminExchangeRate() {
   const { t, locale } = useTranslation();
+  const {
+    getCurrentExchangeRate,
+    getExchangeRateHistory,
+    triggerExchangeRateFetch,
+    setManualExchangeRate,
+  } = useExchangeRate();
   const [currentRate, setCurrentRate] = useState<ExchangeRate | null>(null);
   const [history, setHistory] = useState<ExchangeRate[]>([]);
   const [loading, setLoading] = useState(true);

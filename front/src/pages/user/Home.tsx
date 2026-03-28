@@ -7,8 +7,8 @@ import { Badge } from "../../components/ui/badge";
 import { Input } from "../../components/ui/input";
 import { Label } from "../../components/ui/label";
 import { mockNotices } from "../../data/mockData";
-import { getCurrentExchangeRate } from "../../utils/api";
 import { useTranslation } from "../../hooks/useTranslation";
+import { useExchangeRate } from "../../hooks/exchange/useExchangeRate";
 import { usePurchase } from "../../hooks/purchase/usePurchase";
 import { formatDate, formatNumber } from "../../utils/format";
 import type { ExchangeRate } from "../../types";
@@ -16,6 +16,7 @@ import type { PurchaseRequestListItem } from "../../types/purchase";
 
 export default function Home() {
   const { t, locale } = useTranslation();
+  const { getCurrentExchangeRate } = useExchangeRate();
   const { getRecentPurchaseRequests } = usePurchase();
   const [currentExchangeRate, setCurrentExchangeRate] = useState<ExchangeRate | null>(null);
   const [myRequests, setMyRequests] = useState<PurchaseRequestListItem[]>([]);

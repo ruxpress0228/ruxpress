@@ -8,8 +8,8 @@ import { Textarea } from "../../components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../components/ui/card";
 import { Badge } from "../../components/ui/badge";
 import { toast } from "sonner";
-import { getCurrentExchangeRate } from "../../utils/api";
 import { useTranslation } from "../../hooks/useTranslation";
+import { useExchangeRate } from "../../hooks/exchange/useExchangeRate";
 import { usePurchase } from "../../hooks/purchase/usePurchase";
 import { formatDate, formatNumber } from "../../utils/format";
 import type { ExchangeRate, PurchaseRequestStatus } from "../../types";
@@ -19,6 +19,7 @@ const FEE_PERCENT = 12;
 export default function PurchaseRequestForm() {
   const { t, locale } = useTranslation();
   const navigate = useNavigate();
+  const { getCurrentExchangeRate } = useExchangeRate();
   const { createPurchaseRequest } = usePurchase();
   const [currentExchangeRate, setCurrentExchangeRate] = useState<ExchangeRate | null>(null);
   const [urls, setUrls] = useState<Array<{ url: string; shop: string }>>([{ url: "", shop: "" }]);
