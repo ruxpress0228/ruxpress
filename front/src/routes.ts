@@ -1,4 +1,4 @@
-import { createBrowserRouter } from "react-router";
+import { createBrowserRouter, redirect } from "react-router";
 import Root from "./components/Root";
 import UserLayout from "./components/layouts/UserLayout";
 import AdminLayout from "./components/layouts/AdminLayout";
@@ -25,6 +25,49 @@ import AdminUsers from "./pages/admin/AdminUsers";
 import AdminAdmins from "./pages/admin/AdminAdmins";
 import NotFound from "./pages/NotFound";
 import ExamplePage from "./pages/ExamplePage";
+import { STORAGE_KEYS } from "./utils/constants";
+
+function getTokenRole(token: string): string | null {
+  try {
+    const payload = token.split(".")[1];
+    if (!payload) return null;
+    const normalized = payload.replace(/-/g, "+").replace(/_/g, "/");
+    const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, "=");
+    const decoded = atob(padded);
+    const json = JSON.parse(decoded) as { role?: string };
+    return json.role ?? null;
+  } catch {
+    return null;
+  }
+}
+
+function isAdminRole(role: string | null): boolean {
+  return role === "SUPER_ADMIN" || role === "COUNSELOR";
+}
+
+function requireUserAuth() {
+  const token = localStorage.getItem(STORAGE_KEYS.TOKEN);
+  if (!token) {
+    throw redirect("/login");
+  }
+  const role = getTokenRole(token);
+  if (isAdminRole(role)) {
+    throw redirect("/login");
+  }
+  return null;
+}
+
+function requireAdminAuth() {
+  const token = localStorage.getItem(STORAGE_KEYS.TOKEN);
+  if (!token) {
+    throw redirect("/admin/login");
+  }
+  const role = getTokenRole(token);
+  if (!isAdminRole(role)) {
+    throw redirect("/admin/login");
+  }
+  return null;
+}
 
 export const router = createBrowserRouter([
   {
@@ -35,17 +78,17 @@ export const router = createBrowserRouter([
         path: "/",
         Component: UserLayout,
         children: [
-          { index: true, Component: Home },
+          { index: true, Component: Home, loader: requireUserAuth},
           { path: "login", Component: Login },
           { path: "signup", Component: Signup },
-          { path: "purchase/new", Component: PurchaseRequestForm },
-          { path: "purchase", Component: PurchaseRequestList },
-          { path: "inquiry", Component: InquiryList },
-          { path: "inquiry/new", Component: InquiryForm },
-          { path: "inquiry/:id", Component: InquiryDetail },
-          { path: "notice", Component: NoticeList },
-          { path: "notice/:id", Component: NoticeDetail },
-          { path: "mypage", Component: MyPage },
+          { path: "purchase/new", Component: PurchaseRequestForm, loader: requireUserAuth },
+          { path: "purchase", Component: PurchaseRequestList, loader: requireUserAuth },
+          { path: "inquiry", Component: InquiryList, loader: requireUserAuth },
+          { path: "inquiry/new", Component: InquiryForm, loader: requireUserAuth },
+          { path: "inquiry/:id", Component: InquiryDetail, loader: requireUserAuth },
+          { path: "notice", Component: NoticeList, loader: requireUserAuth },
+          { path: "notice/:id", Component: NoticeDetail, loader: requireUserAuth },
+          { path: "mypage", Component: MyPage, loader: requireUserAuth },
           { path: "example1", Component: ExamplePage },
         ],
       },
@@ -54,13 +97,13 @@ export const router = createBrowserRouter([
         Component: AdminLayout,
         children: [
           { path: "login", Component: AdminLogin },
-          { path: "", Component: AdminDashboard },
-          { path: "purchase-requests", Component: AdminPurchaseRequests },
-          { path: "inquiries", Component: AdminInquiries },
-          { path: "notices", Component: AdminNotices },
-          { path: "exchange-rate", Component: AdminExchangeRate },
-          { path: "users", Component: AdminUsers },
-          { path: "admins", Component: AdminAdmins },
+          { path: "", Component: AdminDashboard, loader: requireAdminAuth },
+          { path: "purchase-requests", Component: AdminPurchaseRequests, loader: requireAdminAuth },
+          { path: "inquiries", Component: AdminInquiries, loader: requireAdminAuth },
+          { path: "notices", Component: AdminNotices, loader: requireAdminAuth },
+          { path: "exchange-rate", Component: AdminExchangeRate, loader: requireAdminAuth },
+          { path: "users", Component: AdminUsers, loader: requireAdminAuth },
+          { path: "admins", Component: AdminAdmins, loader: requireAdminAuth },
         ],
       },
       { path: "*", Component: NotFound },
