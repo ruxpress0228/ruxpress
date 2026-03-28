@@ -10,18 +10,24 @@ import { Badge } from "../../components/ui/badge";
 import { toast } from "sonner";
 import { getCurrentExchangeRate } from "../../utils/api";
 import { useTranslation } from "../../hooks/useTranslation";
+import { usePurchase } from "../../hooks/purchase/usePurchase";
 import { formatDate, formatNumber } from "../../utils/format";
-import type { ExchangeRate } from "../../types";
+import type { ExchangeRate, PurchaseRequestStatus } from "../../types";
 
 const FEE_PERCENT = 12;
 
 export default function PurchaseRequestForm() {
   const { t, locale } = useTranslation();
   const navigate = useNavigate();
+  const { createPurchaseRequest } = usePurchase();
   const [currentExchangeRate, setCurrentExchangeRate] = useState<ExchangeRate | null>(null);
   const [urls, setUrls] = useState<Array<{ url: string; shop: string }>>([{ url: "", shop: "" }]);
   const [options, setOptions] = useState<Array<{ name: string; value: string }>>([]);
   const [priceKrw, setPriceKrw] = useState<number>(0);
+  const [productName, setProductName] = useState("");
+  const [quantity, setQuantity] = useState(1);
+  const [memo, setMemo] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     getCurrentExchangeRate()
@@ -76,10 +82,45 @@ export default function PurchaseRequestForm() {
     };
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    toast.success(t('purchase.toastSuccess'));
-    navigate("/purchase");
+    if (submitting) return;
+
+    try {
+      setSubmitting(true);
+      const filteredUrls = urls.map((u) => u.url.trim()).filter(Boolean);
+      const optionMap = options.reduce<Record<string, string>>((acc, cur) => {
+        const key = cur.name.trim();
+        const value = cur.value.trim();
+        if (key && value) acc[key] = value;
+        return acc;
+      }, {});
+
+      const rate = currentExchangeRate ? Number(currentExchangeRate.rate) : 0;
+      const priceRub = rate > 0 ? priceKrw / rate : undefined;
+      const feeAmount = totals.feeKrw;
+      const status: PurchaseRequestStatus = "DRAFT";
+
+      await createPurchaseRequest({
+        productName: productName.trim(),
+        quantity,
+        urls: filteredUrls.length ? filteredUrls : undefined,
+        options: Object.keys(optionMap).length ? optionMap : undefined,
+        priceRub,
+        priceKrw,
+        exchangeRateId: currentExchangeRate?.id,
+        feeAmount,
+        totalAmountKrw: totals.totalKrw,
+        memo: memo.trim() || undefined,
+        status,
+      });
+      toast.success(t('purchase.toastSuccess'));
+      navigate("/purchase");
+    } catch {
+      toast.error("구매 요청 등록에 실패했습니다.");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const totals = calculateTotal();
@@ -108,6 +149,8 @@ export default function PurchaseRequestForm() {
               <Input
                 id="productName"
                 placeholder={t('purchase.productNamePlaceholder')}
+                value={productName}
+                onChange={(e) => setProductName(e.target.value)}
                 required
               />
             </div>
@@ -159,7 +202,8 @@ export default function PurchaseRequestForm() {
                   id="quantity"
                   type="number"
                   min="1"
-                  defaultValue="1"
+                  value={quantity}
+                  onChange={(e) => setQuantity(Math.max(1, Number(e.target.value) || 1))}
                   required
                 />
               </div>
@@ -246,6 +290,8 @@ export default function PurchaseRequestForm() {
             <Textarea
               placeholder={t('purchase.notes.placeholder')}
               rows={4}
+              value={memo}
+              onChange={(e) => setMemo(e.target.value)}
             />
           </CardContent>
         </Card>
@@ -301,7 +347,7 @@ export default function PurchaseRequestForm() {
           >
             {t('purchase.cancel')}
           </Button>
-          <Button type="submit" size="lg" className="flex-1">
+          <Button type="submit" size="lg" className="flex-1" disabled={submitting}>
             {t('purchase.submit')}
           </Button>
         </div>

@@ -6,24 +6,31 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../..
 import { Badge } from "../../components/ui/badge";
 import { Input } from "../../components/ui/input";
 import { Label } from "../../components/ui/label";
-import { mockNotices, mockPurchaseRequests } from "../../data/mockData";
+import { mockNotices } from "../../data/mockData";
 import { getCurrentExchangeRate } from "../../utils/api";
 import { useTranslation } from "../../hooks/useTranslation";
+import { usePurchase } from "../../hooks/purchase/usePurchase";
 import { formatDate, formatNumber } from "../../utils/format";
 import type { ExchangeRate } from "../../types";
+import type { PurchaseRequestListItem } from "../../types/purchase";
 
 export default function Home() {
   const { t, locale } = useTranslation();
+  const { getRecentPurchaseRequests } = usePurchase();
   const [currentExchangeRate, setCurrentExchangeRate] = useState<ExchangeRate | null>(null);
+  const [myRequests, setMyRequests] = useState<PurchaseRequestListItem[]>([]);
   const [converterRub, setConverterRub] = useState<string>("");
   const [converterKrw, setConverterKrw] = useState<string>("");
   const recentNotices = mockNotices.filter(n => n.status === 'PUBLISHED').slice(0, 3);
-  const myRequests = mockPurchaseRequests.slice(0, 3);
 
   useEffect(() => {
     getCurrentExchangeRate()
       .then(setCurrentExchangeRate)
       .catch(() => setCurrentExchangeRate(null));
+
+    getRecentPurchaseRequests()
+      .then(setMyRequests)
+      .catch(() => setMyRequests([]));
   }, []);
 
   const numOpt = { minimumFractionDigits: 2, maximumFractionDigits: 2 };
@@ -235,6 +242,7 @@ export default function Home() {
                         {request.status === 'REVIEWING' && t('home.status.reviewing')}
                         {request.status === 'PURCHASING' && t('home.status.purchasing')}
                         {request.status === 'DELIVERED' && t('home.status.delivered')}
+                        {request.status !== 'REVIEWING' && request.status !== 'PURCHASING' && request.status !== 'DELIVERED' && request.status}
                       </Badge>
                     </div>
                     <p className="text-sm text-gray-500">

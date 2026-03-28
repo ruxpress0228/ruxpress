@@ -1,3 +1,4 @@
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router";
 import { Plus, Search, Filter } from "lucide-react";
 import { Button } from "../../components/ui/button";
@@ -5,8 +6,10 @@ import { Input } from "../../components/ui/input";
 import { Badge } from "../../components/ui/badge";
 import { Card, CardContent } from "../../components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../components/ui/select";
-import { mockPurchaseRequests } from "../../data/mockData";
+import { usePurchase } from "../../hooks/purchase/usePurchase";
 import type { PurchaseRequestStatus } from "../../types";
+import type { PurchaseRequestListItem } from "../../types/purchase";
+import { toast } from "sonner";
 
 const statusLabels: Record<PurchaseRequestStatus, { label: string; variant: 'default' | 'secondary' | 'outline' | 'destructive' }> = {
   DRAFT: { label: '작성중', variant: 'outline' },
@@ -22,6 +25,43 @@ const statusLabels: Record<PurchaseRequestStatus, { label: string; variant: 'def
 };
 
 export default function PurchaseRequestList() {
+  const { getMyPurchaseRequests, getRecentPurchaseRequests } = usePurchase();
+  const [requests, setRequests] = useState<PurchaseRequestListItem[]>([]);
+  const [recentRequests, setRecentRequests] = useState<PurchaseRequestListItem[]>([]);
+  const [searchKeyword, setSearchKeyword] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [sortValue, setSortValue] = useState<"latest" | "oldest">("latest");
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        setLoading(true);
+        const sort = sortValue === "oldest" ? "createdAt,asc" : "createdAt,desc";
+        const status = statusFilter === "all" ? undefined : (statusFilter as PurchaseRequestStatus);
+        const [pageData, recentData] = await Promise.all([
+          getMyPurchaseRequests({ page: 0, size: 20, sort, status }),
+          getRecentPurchaseRequests(),
+        ]);
+        setRequests(pageData.content);
+        setRecentRequests(recentData);
+      } catch {
+        toast.error("구매 요청 목록 조회에 실패했습니다.");
+      } finally {
+        setLoading(false);
+      }
+    };
+    void load();
+  }, [statusFilter, sortValue]);
+
+  const filteredRequests = useMemo(() => {
+    const keyword = searchKeyword.trim().toLowerCase();
+    if (!keyword) return requests;
+    return requests.filter((r) =>
+      r.requestNumber.toLowerCase().includes(keyword) || r.productName.toLowerCase().includes(keyword)
+    );
+  }, [requests, searchKeyword]);
+
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
@@ -46,9 +86,11 @@ export default function PurchaseRequestList() {
               <Input
                 placeholder="요청번호, 상품명 검색"
                 className="pl-10"
+                value={searchKeyword}
+                onChange={(e) => setSearchKeyword(e.target.value)}
               />
             </div>
-            <Select defaultValue="all">
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
               <SelectTrigger>
                 <Filter className="w-4 h-4 mr-2" />
                 <SelectValue placeholder="상태 필터" />
@@ -59,26 +101,44 @@ export default function PurchaseRequestList() {
                 <SelectItem value="PURCHASING">구매중</SelectItem>
                 <SelectItem value="SHIPPING">배송중</SelectItem>
                 <SelectItem value="DELIVERED">배송완료</SelectItem>
+                <SelectItem value="DRAFT">작성중</SelectItem>
+                <SelectItem value="SUBMITTED">제출됨</SelectItem>
               </SelectContent>
             </Select>
-            <Select defaultValue="latest">
+            <Select value={sortValue} onValueChange={(v) => setSortValue(v as "latest" | "oldest")}>
               <SelectTrigger>
                 <SelectValue placeholder="정렬" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="latest">최신순</SelectItem>
                 <SelectItem value="oldest">오래된순</SelectItem>
-                <SelectItem value="price-high">가격 높은순</SelectItem>
-                <SelectItem value="price-low">가격 낮은순</SelectItem>
               </SelectContent>
             </Select>
           </div>
         </CardContent>
       </Card>
 
+      <Card className="mb-6">
+        <CardContent className="pt-6">
+          <h3 className="font-semibold mb-3">최근 구매요청 3건</h3>
+          {recentRequests.length === 0 ? (
+            <p className="text-sm text-gray-500">최근 구매요청이 없습니다.</p>
+          ) : (
+            <div className="space-y-2">
+              {recentRequests.map((item) => (
+                <div key={item.id} className="flex items-center justify-between text-sm">
+                  <span>{item.productName}</span>
+                  <span className="text-gray-500">{item.requestNumber}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       {/* Request List */}
       <div className="space-y-4">
-        {mockPurchaseRequests.map((request) => {
+        {filteredRequests.map((request) => {
           const statusInfo = statusLabels[request.status];
           return (
             <Card key={request.id} className="hover:shadow-lg transition-shadow">
@@ -106,50 +166,10 @@ export default function PurchaseRequestList() {
                   </div>
                   <div className="text-right">
                     <p className="text-2xl font-bold text-gray-900">
-                      ₩{request.totalAmountKrw?.toLocaleString()}
-                    </p>
-                    <p className="text-sm text-gray-500">
-                      {request.priceRub?.toLocaleString()} RUB
+                      ₩{(request.totalAmountKrw ?? 0).toLocaleString()}
                     </p>
                   </div>
                 </div>
-
-                {request.urls && request.urls.length > 0 && (
-                  <div className="mb-4">
-                    <p className="text-sm text-gray-600 mb-1">상품 URL:</p>
-                    {request.urls.map((url, idx) => (
-                      <a
-                        key={idx}
-                        href={url.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-sm text-blue-600 hover:underline block truncate"
-                      >
-                        {url.shop}: {url.url}
-                      </a>
-                    ))}
-                  </div>
-                )}
-
-                {request.options && request.options.length > 0 && (
-                  <div className="mb-4">
-                    <div className="flex flex-wrap gap-2">
-                      {request.options.map((option, idx) => (
-                        <Badge key={idx} variant="outline">
-                          {option.name}: {option.value}
-                        </Badge>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {request.memo && (
-                  <div className="mb-4 p-3 bg-gray-50 rounded-lg">
-                    <p className="text-sm text-gray-700">
-                      <span className="font-medium">메모:</span> {request.memo}
-                    </p>
-                  </div>
-                )}
 
                 <div className="flex items-center justify-between pt-4 border-t border-gray-200">
                   <div className="text-sm text-gray-500">
@@ -159,11 +179,6 @@ export default function PurchaseRequestList() {
                     <Button variant="outline" size="sm">
                       상세보기
                     </Button>
-                    {request.status === 'REVIEWING' && (
-                      <Button variant="ghost" size="sm" className="text-red-600">
-                        취소하기
-                      </Button>
-                    )}
                   </div>
                 </div>
               </CardContent>
@@ -172,7 +187,7 @@ export default function PurchaseRequestList() {
         })}
       </div>
 
-      {mockPurchaseRequests.length === 0 && (
+      {!loading && filteredRequests.length === 0 && (
         <Card className="p-12">
           <div className="text-center">
             <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">

@@ -1,6 +1,6 @@
-import { Outlet, Link, useLocation } from "react-router";
+import { Outlet, Link, useLocation, useNavigate } from "react-router";
 import { useState, useRef, useEffect } from "react";
-import { Bell, Menu, User, ShoppingCart, MessageSquare, FileText, Home, Globe } from "lucide-react";
+import { Bell, Menu, User, ShoppingCart, MessageSquare, FileText, Home, Globe, LogOut } from "lucide-react";
 import { Button } from "../ui/button";
 import { Badge } from "../ui/badge";
 import {
@@ -11,10 +11,11 @@ import {
   SheetTrigger,
 } from "../ui/sheet";
 import { useTranslation } from "../../hooks/useTranslation";
-import { LOCALES } from "../../utils/constants";
+import { LOCALES, STORAGE_KEYS } from "../../utils/constants";
 
 export default function UserLayout() {
   const location = useLocation();
+  const navigate = useNavigate();
   const { t, locale, setLocale } = useTranslation();
   const [langOpen, setLangOpen] = useState(false);
   const langRef = useRef<HTMLDivElement>(null);
@@ -38,6 +39,12 @@ export default function UserLayout() {
     { nameKey: "nav.inquiry", path: "/inquiry", icon: MessageSquare },
     { nameKey: "nav.notice", path: "/notice", icon: FileText },
   ];
+
+  const handleLogout = () => {
+    localStorage.removeItem(STORAGE_KEYS.TOKEN);
+    localStorage.removeItem(STORAGE_KEYS.USER_ID);
+    navigate("/login");
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -115,6 +122,9 @@ export default function UserLayout() {
                   <User className="w-5 h-5" />
                 </Button>
               </Link>
+              <Button variant="ghost" size="icon" onClick={handleLogout} title={t("nav.admin.logout")}>
+                <LogOut className="w-5 h-5" />
+              </Button>
 
               <Sheet>
                 <SheetTrigger asChild className="md:hidden">
@@ -141,6 +151,14 @@ export default function UserLayout() {
                         </Link>
                       );
                     })}
+                    <Button
+                      variant="ghost"
+                      className="w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50"
+                      onClick={handleLogout}
+                    >
+                      <LogOut className="w-4 h-4 mr-2" />
+                      {t("nav.admin.logout")}
+                    </Button>
                   </nav>
                 </SheetContent>
               </Sheet>
