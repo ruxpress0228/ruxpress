@@ -115,6 +115,7 @@
   "home.recentRequests.empty": "No purchase requests yet",
   "home.recentNotices.title": "Notice",
   "home.recentNotices.viewAll": "View all",
+  "home.recentNotices.empty": "No notices yet",
   "home.status.reviewing": "Reviewing",
   "home.status.purchasing": "Purchasing",
   "home.status.delivered": "Delivered",

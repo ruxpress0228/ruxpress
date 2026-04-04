@@ -10,8 +10,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Label } from "../../components/ui/label";
 import { Textarea } from "../../components/ui/textarea";
 import { toast } from "sonner";
-import { mockPurchaseRequests } from "../../data/mockData";
-import type { PurchaseRequestStatus } from "../../types";
+import type { PurchaseRequest, PurchaseRequestStatus } from "../../types";
 
 const statusLabels: Record<PurchaseRequestStatus, { label: string; variant: 'default' | 'secondary' | 'outline' | 'destructive' }> = {
   DRAFT: { label: '작성중', variant: 'outline' },
@@ -27,7 +26,8 @@ const statusLabels: Record<PurchaseRequestStatus, { label: string; variant: 'def
 };
 
 export default function AdminPurchaseRequests() {
-  const [selectedRequest, setSelectedRequest] = useState<typeof mockPurchaseRequests[0] | null>(null);
+  const requests: PurchaseRequest[] = [];
+  const [selectedRequest, setSelectedRequest] = useState<PurchaseRequest | null>(null);
   const [newStatus, setNewStatus] = useState<PurchaseRequestStatus>('REVIEWING');
 
   const updateStatus = () => {
@@ -101,7 +101,13 @@ export default function AdminPurchaseRequests() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {mockPurchaseRequests.map((request) => {
+              {requests.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={7} className="text-center text-gray-500 py-12">
+                    구매 요청이 없습니다
+                  </TableCell>
+                </TableRow>
+              ) : requests.map((request) => {
                 const statusInfo = statusLabels[request.status];
                 return (
                   <TableRow key={request.id}>

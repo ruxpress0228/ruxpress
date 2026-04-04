@@ -115,6 +115,7 @@
   "home.recentRequests.empty": "Пока нет заявок на покупку",
   "home.recentNotices.title": "Новости",
   "home.recentNotices.viewAll": "Всё",
+  "home.recentNotices.empty": "Объявлений пока нет",
   "home.status.reviewing": "На проверке",
   "home.status.purchasing": "Покупка",
   "home.status.delivered": "Доставлено",
