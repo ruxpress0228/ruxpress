@@ -11,6 +11,7 @@ import com.ruxpress.domain.user.dto.EmailVerifyRequest;
 import com.ruxpress.domain.user.dto.ForgotPasswordRequest;
 import com.ruxpress.domain.user.dto.LoginRequest;
 import com.ruxpress.domain.user.dto.LoginResponse;
+import com.ruxpress.domain.user.dto.ProfileUpdateRequest;
 import com.ruxpress.domain.user.dto.ResetPasswordRequest;
 import com.ruxpress.domain.user.dto.response.UserResponse;
 import com.ruxpress.domain.user.service.EmailVerificationService;
@@ -19,7 +20,13 @@ import com.ruxpress.domain.user.service.UserService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/v1/users")
@@ -69,6 +76,21 @@ public class UserController {
         }
         UserResponse profile = userService.getProfileForCurrentUser(userId);
         return ApiResponse.success(profile);
+    }
+
+    /**
+     * 프로필(닉네임·배송지) 수정 (Bearer: 일반 회원 JWT)
+     */
+    @PatchMapping("/me")
+    public ApiResponse<UserResponse> updateProfile(
+            @RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String authorization,
+            @Valid @RequestBody ProfileUpdateRequest request) {
+        Long userId = jwtUtil.resolveUserIdFromAuthorizationHeader(authorization);
+        if (userId == null) {
+            throw new BusinessException(ErrorCode.UNAUTHORIZED, "로그인이 필요합니다.");
+        }
+        UserResponse profile = userService.updateProfileForCurrentUser(userId, request);
+        return ApiResponse.success("프로필이 수정되었습니다.", profile);
     }
 
     /**

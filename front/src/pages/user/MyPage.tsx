@@ -57,6 +57,13 @@ export default function MyPage() {
   const [newPwdConfirm, setNewPwdConfirm] = useState("");
   const [pwdSubmitting, setPwdSubmitting] = useState(false);
 
+  const [profileEditOpen, setProfileEditOpen] = useState(false);
+  const [editNickname, setEditNickname] = useState("");
+  const [editPostal, setEditPostal] = useState("");
+  const [editLine1, setEditLine1] = useState("");
+  const [editLine2, setEditLine2] = useState("");
+  const [profileSubmitting, setProfileSubmitting] = useState(false);
+
   const loadProfile = useCallback(async () => {
     const token = localStorage.getItem(STORAGE_KEYS.TOKEN);
     if (!token) {
@@ -103,6 +110,64 @@ export default function MyPage() {
     setCurrentPwd("");
     setNewPwd("");
     setNewPwdConfirm("");
+  };
+
+  const openProfileEdit = () => {
+    if (!profile) return;
+    setEditNickname(profile.nickname);
+    setEditPostal(profile.addressPostalCode ?? "");
+    setEditLine1(profile.addressLine1 ?? "");
+    setEditLine2(profile.addressLine2 ?? "");
+    setProfileEditOpen(true);
+  };
+
+  const resetProfileEditForm = () => {
+    setEditNickname("");
+    setEditPostal("");
+    setEditLine1("");
+    setEditLine2("");
+  };
+
+  const submitProfileUpdate = async () => {
+    const nickname = editNickname.trim();
+    const line1 = editLine1.trim();
+    if (!nickname) {
+      toast.error("닉네임을 입력하세요");
+      return;
+    }
+    if (!line1) {
+      toast.error("기본 주소를 입력하세요");
+      return;
+    }
+    const postal = editPostal.trim();
+    const line2 = editLine2.trim();
+    setProfileSubmitting(true);
+    try {
+      const res = await api.patch<UserProfile>("/v1/users/me", {
+        nickname,
+        addressPostalCode: postal || undefined,
+        addressLine1: line1,
+        addressLine2: line2 || undefined,
+      });
+      if (res.code === 200 && res.data) {
+        setProfile(res.data);
+        localStorage.setItem(STORAGE_KEYS.USER_NICKNAME, res.data.nickname);
+        notifyUserAuthChange();
+        toast.success(res.message ?? "프로필이 수정되었습니다");
+        setProfileEditOpen(false);
+        resetProfileEditForm();
+      } else if (res.code === 401) {
+        clearUserSession();
+        toast.error("다시 로그인해 주세요");
+        navigate("/login", { replace: true });
+      } else {
+        toast.error(res.message ?? "프로필 수정에 실패했습니다");
+      }
+    } catch {
+      toast.error("프로필 수정에 실패했습니다");
+    } finally {
+      setProfileSubmitting(false);
+    }
   };
 
   const submitPasswordChange = async () => {
@@ -185,7 +250,7 @@ export default function MyPage() {
                   <Badge variant="outline">{signupTypeLabel(profile.signupType)}</Badge>
                 </div>
               </div>
-              <Button type="button" variant="outline" disabled>
+              <Button type="button" variant="outline" onClick={openProfileEdit}>
                 프로필 수정
               </Button>
             </div>
@@ -213,19 +278,23 @@ export default function MyPage() {
                 </div>
               )}
 
-              {(profile.addressLine1 || profile.addressPostalCode) && (
-                <div className="flex items-start">
-                  <MapPin className="w-5 h-5 text-gray-400 mr-3 mt-0.5 shrink-0" />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm text-gray-500">배송지</p>
+              <div className="flex items-start">
+                <MapPin className="w-5 h-5 text-gray-400 mr-3 mt-0.5 shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm text-gray-500">배송지</p>
+                  {profile.addressLine1 || profile.addressPostalCode ? (
                     <p className="font-medium text-gray-900">
                       {[profile.addressPostalCode, profile.addressLine1, profile.addressLine2]
                         .filter(Boolean)
                         .join(" ")}
                     </p>
-                  </div>
+                  ) : (
+                    <p className="font-medium text-gray-500">
+                      등록된 배송지가 없습니다. 프로필 수정에서 입력해 주세요.
+                    </p>
+                  )}
                 </div>
-              )}
+              </div>
 
               <div className="flex items-center">
                 <User className="w-5 h-5 text-gray-400 mr-3 shrink-0" />
@@ -375,6 +444,78 @@ export default function MyPage() {
             </Button>
           </CardContent>
         </Card>
+
+        <Dialog
+          open={profileEditOpen}
+          onOpenChange={(open) => {
+            setProfileEditOpen(open);
+            if (!open) resetProfileEditForm();
+          }}
+        >
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>프로필 수정</DialogTitle>
+              <DialogDescription>닉네임과 배송지 주소를 수정할 수 있습니다.</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-3 py-2">
+              <div className="space-y-2">
+                <Label htmlFor="edit-nickname">닉네임</Label>
+                <Input
+                  id="edit-nickname"
+                  value={editNickname}
+                  onChange={(e) => setEditNickname(e.target.value)}
+                  maxLength={50}
+                  autoComplete="nickname"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-postal">우편번호</Label>
+                <Input
+                  id="edit-postal"
+                  value={editPostal}
+                  onChange={(e) => setEditPostal(e.target.value)}
+                  maxLength={10}
+                  placeholder="선택"
+                  autoComplete="postal-code"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-line1">기본 주소</Label>
+                <Input
+                  id="edit-line1"
+                  value={editLine1}
+                  onChange={(e) => setEditLine1(e.target.value)}
+                  maxLength={255}
+                  autoComplete="street-address"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-line2">상세 주소</Label>
+                <Input
+                  id="edit-line2"
+                  value={editLine2}
+                  onChange={(e) => setEditLine2(e.target.value)}
+                  maxLength={255}
+                  placeholder="선택"
+                  autoComplete="address-line2"
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setProfileEditOpen(false)}
+                disabled={profileSubmitting}
+              >
+                취소
+              </Button>
+              <Button type="button" onClick={() => void submitProfileUpdate()} disabled={profileSubmitting}>
+                {profileSubmitting ? "저장 중…" : "저장"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
         <Dialog
           open={pwdOpen}
