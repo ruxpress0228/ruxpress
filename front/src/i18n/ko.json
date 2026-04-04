@@ -116,6 +116,7 @@
   "home.recentRequests.empty": "아직 구매 요청이 없습니다",
   "home.recentNotices.title": "공지사항",
   "home.recentNotices.viewAll": "전체보기",
+  "home.recentNotices.empty": "등록된 공지사항이 없습니다",
   "home.status.reviewing": "검토중",
   "home.status.purchasing": "구매중",
   "home.status.delivered": "배송완료",

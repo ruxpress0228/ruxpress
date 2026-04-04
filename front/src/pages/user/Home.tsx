@@ -6,12 +6,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../..
 import { Badge } from "../../components/ui/badge";
 import { Input } from "../../components/ui/input";
 import { Label } from "../../components/ui/label";
-import { mockNotices } from "../../data/mockData";
+import { api } from "../../utils/api";
+import { unwrap } from "../../utils/exception";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useExchangeRate } from "../../hooks/exchange/useExchangeRate";
 import { usePurchase } from "../../hooks/purchase/usePurchase";
 import { formatDate, formatNumber } from "../../utils/format";
-import type { ExchangeRate } from "../../types";
+import type { ExchangeRate, Notice, PageResponse } from "../../types";
 import type { PurchaseRequestListItem } from "../../types/purchase";
 
 export default function Home() {
@@ -22,7 +23,7 @@ export default function Home() {
   const [myRequests, setMyRequests] = useState<PurchaseRequestListItem[]>([]);
   const [converterRub, setConverterRub] = useState<string>("");
   const [converterKrw, setConverterKrw] = useState<string>("");
-  const recentNotices = mockNotices.filter(n => n.status === 'PUBLISHED').slice(0, 3);
+  const [recentNotices, setRecentNotices] = useState<Notice[]>([]);
 
   useEffect(() => {
     getCurrentExchangeRate()
@@ -32,6 +33,11 @@ export default function Home() {
     getRecentPurchaseRequests()
       .then(setMyRequests)
       .catch(() => setMyRequests([]));
+
+    api
+      .get<PageResponse<Notice>>("/v1/notices?page=0&size=3")
+      .then((res) => setRecentNotices(unwrap(res).content))
+      .catch(() => setRecentNotices([]));
   }, []);
 
   const numOpt = { minimumFractionDigits: 2, maximumFractionDigits: 2 };
@@ -281,27 +287,34 @@ export default function Home() {
           </div>
         </CardHeader>
         <CardContent>
-          <div className="space-y-3">
-            {recentNotices.map((notice) => (
-              <Link key={notice.id} to={`/notice/${notice.id}`}>
-                <div className="p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center space-x-2 mb-1">
-                        {notice.isPinned && (
-                          <Badge variant="destructive" className="text-xs">{t('home.notice.pinned')}</Badge>
-                        )}
-                        <span className="font-medium text-gray-900">{notice.title}</span>
+          {recentNotices.length > 0 ? (
+            <div className="space-y-3">
+              {recentNotices.map((notice) => (
+                <Link key={notice.id} to={`/notice/${notice.id}`}>
+                  <div className="p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center space-x-2 mb-1">
+                          {notice.isPinned && (
+                            <Badge variant="destructive" className="text-xs">{t('home.notice.pinned')}</Badge>
+                          )}
+                          <span className="font-medium text-gray-900">{notice.title}</span>
+                        </div>
+                        <p className="text-sm text-gray-500">
+                          {notice.publishedAt ? formatDate(notice.publishedAt, locale) : ""}
+                        </p>
                       </div>
-                      <p className="text-sm text-gray-500">
-                        {notice.publishedAt ? formatDate(notice.publishedAt, locale) : ""}
-                      </p>
                     </div>
                   </div>
-                </div>
-              </Link>
-            ))}
-          </div>
+                </Link>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-8 text-gray-500">
+              <FileText className="w-12 h-12 mx-auto mb-2 text-gray-400" />
+              <p>{t('home.recentNotices.empty')}</p>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
