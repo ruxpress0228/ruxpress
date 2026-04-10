@@ -11,6 +11,7 @@ import com.ruxpress.domain.user.dto.EmailVerifyRequest;
 import com.ruxpress.domain.user.dto.ForgotPasswordRequest;
 import com.ruxpress.domain.user.dto.LoginRequest;
 import com.ruxpress.domain.user.dto.LoginResponse;
+import com.ruxpress.domain.user.dto.PushContextRequest;
 import com.ruxpress.domain.user.dto.ResetPasswordRequest;
 import com.ruxpress.domain.user.dto.response.UserResponse;
 import com.ruxpress.domain.user.service.EmailVerificationService;
@@ -18,9 +19,11 @@ import com.ruxpress.domain.user.service.PasswordResetService;
 import com.ruxpress.domain.user.service.UserService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
 import org.springframework.web.bind.annotation.*;
 
+@Slf4j
 @RestController
 @RequestMapping("/api/v1/users")
 @RequiredArgsConstructor
@@ -62,13 +65,43 @@ public class UserController {
      * 현재 로그인한 회원 정보 (Bearer: 일반 회원 JWT)
      */
     @GetMapping("/me")
-    public ApiResponse<UserResponse> me(@RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String authorization) {
+    public ApiResponse<UserResponse> me(
+            @RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String authorization) {
         Long userId = jwtUtil.resolveUserIdFromAuthorizationHeader(authorization);
         if (userId == null) {
             throw new BusinessException(ErrorCode.UNAUTHORIZED, "로그인이 필요합니다.");
         }
         UserResponse profile = userService.getProfileForCurrentUser(userId);
         return ApiResponse.success(profile);
+    }
+
+    /**
+     * 앱 FCM 토큰 수신 end-point
+     */
+    @PostMapping("/me/push-context")
+    public ApiResponse<Void> pushContext(
+            @RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String authorization,
+            @RequestBody(required = false) PushContextRequest body) {
+        Long userId = jwtUtil.resolveUserIdFromAuthorizationHeader(authorization);
+        if (userId == null) {
+            throw new BusinessException(ErrorCode.UNAUTHORIZED, "로그인이 필요합니다.");
+        }
+        if (body == null) {
+            body = new PushContextRequest();
+        }
+        log.info(
+                "[push-context] userId={} fcmToken={} notificationsEnabled={} manufacturer={} model={} brand={} device={} sdkInt={} versionRelease={}",
+                userId,
+                body.getFcmToken(),
+                body.getNotificationsEnabled(),
+                body.getManufacturer(),
+                body.getModel(),
+                body.getBrand(),
+                body.getDevice(),
+                body.getSdkInt(),
+                body.getVersionRelease());
+        // publish-event to kafka
+        return ApiResponse.success("수신되었습니다.", null);
     }
 
     /**

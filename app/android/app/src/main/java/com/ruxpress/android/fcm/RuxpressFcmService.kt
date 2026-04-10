@@ -11,17 +11,15 @@ import androidx.core.app.NotificationCompat
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
 import com.ruxpress.android.MainActivity
+import com.ruxpress.android.PushContextSync
 import com.ruxpress.android.R
 
 class RuxpressFcmService : FirebaseMessagingService() {
 
     override fun onNewToken(token: String) {
         super.onNewToken(token)
-        // 토큰을 SharedPreferences에 저장 → JS Bridge로 React 앱에서 읽어감
-        getSharedPreferences("fcm", Context.MODE_PRIVATE)
-            .edit()
-            .putString("token", token)
-            .apply()
+        PushContextSync.prefsFcm(this).edit().putString(PushContextSync.KEY_FCM_TOKEN, token).apply()
+        PushContextSync.onFcmTokenRefreshed(this, token)
     }
 
     @RequiresApi(Build.VERSION_CODES.O)
@@ -42,7 +40,7 @@ class RuxpressFcmService : FirebaseMessagingService() {
                 append("}")
             }
             activity.runOnUiThread {
-                activity.evaluateJavascript("window.onPushReceived($payload)")
+                activity.evaluateJavascript("window.onPushReceived($payload)", null)
             }
             return
         }

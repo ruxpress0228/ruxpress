@@ -1,11 +1,9 @@
 package com.ruxpress.android
 
 import android.Manifest
-import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
-import android.webkit.JavascriptInterface
 import android.webkit.RenderProcessGoneDetail
 import android.webkit.WebView
 import android.webkit.WebViewClient
@@ -82,20 +80,12 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    fun evaluateJavascript(script: String) {
+    fun evaluateJavascript(script: String, nothing: Nothing?) {
         webView.evaluateJavascript(script, null)
     }
 
     override fun onDestroy() {
         if (instance === this) instance = null
         super.onDestroy()
-    }
-}
-
-class WebAppInterface(private val context: Context) {
-    @JavascriptInterface
-    fun getFcmToken(): String {
-        return context.getSharedPreferences("fcm", Context.MODE_PRIVATE)
-            .getString("token", "") ?: ""
     }
 }
