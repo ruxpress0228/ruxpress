@@ -28,6 +28,11 @@ spring:
     hibernate:
       ddl-auto: none
 
+ruxpress:
+  kafka:
+    publish-events: ${RUXPRESS_KAFKA_PUBLISH:true}
+    consume-results: ${RUXPRESS_KAFKA_CONSUME_RESULTS:true}
+
 logging:
   level:
     root: WARN

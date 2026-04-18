@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<full-backup-content>
+    <!-- FCM 토큰은 기기 종속값이므로 백업 제외 -->
+    <exclude domain="sharedpref" path="fcm.xml" />
+</full-backup-content>
