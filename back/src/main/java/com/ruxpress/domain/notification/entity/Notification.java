@@ -4,6 +4,8 @@ import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.time.LocalDateTime;
 
@@ -34,7 +36,8 @@ public class Notification {
     @Column(nullable = false, columnDefinition = "TEXT")
     private String body;
 
-    @Column(name = "data_json", columnDefinition = "TEXT")
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "data_json")
     private String dataJson;
 
     @Column(name = "is_read", nullable = false)

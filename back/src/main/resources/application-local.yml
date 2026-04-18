@@ -12,24 +12,28 @@ spring:
           starttls:
             enable: true
   datasource:
-    url: jdbc:h2:mem:ruxpress;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
-    driver-class-name: org.h2.Driver
-    username: sa
-    password:
-  h2:
-    console:
-      enabled: true
-      path: /h2-console
-      settings:
-        web-allow-others: true
+    url: jdbc:mariadb://${DB_HOST:}:${DB_PORT:}/${DB_NAME:}
+    driver-class-name: org.mariadb.jdbc.Driver
+    username: ${DB_USERNAME:}
+    password: ${DB_PASSWORD:}
   jpa:
-    database-platform: org.hibernate.dialect.H2Dialect
+    database-platform: org.hibernate.dialect.MariaDBDialect
     hibernate:
-      ddl-auto: create-drop
-    show-sql: true
-    properties:
-      hibernate:
-        format_sql: true
+      ddl-auto: validate
+  # h2:
+  #   console:
+  #     enabled: true
+  #     path: /h2-console
+  #     settings:
+  #       web-allow-others: true
+  # jpa:
+  #   database-platform: org.hibernate.dialect.H2Dialect
+  #   hibernate:
+  #     ddl-auto: create-drop
+  #   show-sql: true
+  #   properties:
+  #     hibernate:
+  #       format_sql: true
 
 storage:
   type: local

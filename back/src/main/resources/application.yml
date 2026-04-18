@@ -25,14 +25,19 @@ spring:
       auto-offset-reset: latest
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
       value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+  messages:
+    basename: messages/messages
+    encoding: UTF-8
+  datasource:
+    url: jdbc:mariadb://${DB_HOST:}:${DB_PORT:}/${DB_NAME:}
+    driver-class-name: org.mariadb.jdbc.Driver
+    username: ${DB_USERNAME:}
+    password: ${DB_PASSWORD:}
   jpa:
     properties:
       hibernate:
         jdbc:
           time_zone: UTC
-  messages:
-    basename: messages/messages
-    encoding: UTF-8
 
 ruxpress:
   # 로컬 구간 테스트: GET /internal/dev/user-device (기본 비활성)
