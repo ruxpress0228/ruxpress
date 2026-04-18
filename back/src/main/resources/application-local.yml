@@ -1,7 +1,8 @@
 spring:
   mail:
-    host: ${MAIL_HOST:}
-    port: ${MAIL_PORT:}
+    # 빈 값이면 Integer.parseInt("") 로 기동 실패하므로 로컬 기본 포트·호스트 사용
+    host: ${MAIL_HOST:smtp.local}
+    port: ${MAIL_PORT:587}
     username: ${MAIL_USERNAME:}
     password: ${MAIL_PASSWORD:}
     properties:
@@ -35,7 +36,21 @@ storage:
   local:
     upload-dir: ./uploads
 
+# device-sync / dispatch to mobilePush: set RUXPRESS_KAFKA_PUBLISH=true and run Kafka (see back/.env.example).
+ruxpress:
+  dev-verify-api-enabled: ${RUXPRESS_DEV_VERIFY_API:true}
+  kafka:
+    publish-events: ${RUXPRESS_KAFKA_PUBLISH:false}
+    consume-results: ${RUXPRESS_KAFKA_CONSUME_RESULTS:false}
+
 logging:
+  # 콘솔 + 파일 (back/ 에서 기동 시 back/logs/ruxpress-back.log)
+  file:
+    name: logs/ruxpress-back.log
+  logback:
+    rollingpolicy:
+      max-file-size: 20MB
+      max-history: 14
   level:
     com.ruxpress: DEBUG
     org.springframework.security: DEBUG

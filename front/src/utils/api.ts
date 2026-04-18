@@ -7,6 +7,9 @@ export function notifyUserAuthChange(): void {
 
 /** 일반 회원 로그인 세션 제거 (관리자와 동일 STORAGE_KEYS.TOKEN 사용 시 주의) */
 export function clearUserSession(): void {
+  if (typeof window !== 'undefined') {
+    window.Android?.clearAuthToken?.();
+  }
   localStorage.removeItem(STORAGE_KEYS.TOKEN);
   localStorage.removeItem(STORAGE_KEYS.USER_ID);
   localStorage.removeItem(STORAGE_KEYS.USER_EMAIL);

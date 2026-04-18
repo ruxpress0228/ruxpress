@@ -11,16 +11,23 @@ import com.ruxpress.domain.user.dto.EmailVerifyRequest;
 import com.ruxpress.domain.user.dto.ForgotPasswordRequest;
 import com.ruxpress.domain.user.dto.LoginRequest;
 import com.ruxpress.domain.user.dto.LoginResponse;
+import com.ruxpress.domain.user.dto.PushContextRequest;
 import com.ruxpress.domain.user.dto.ResetPasswordRequest;
 import com.ruxpress.domain.user.dto.response.UserResponse;
+import com.ruxpress.domain.user.entity.DeviceType;
 import com.ruxpress.domain.user.service.EmailVerificationService;
 import com.ruxpress.domain.user.service.PasswordResetService;
+import com.ruxpress.domain.user.service.UserDeviceService;
 import com.ruxpress.domain.user.service.UserService;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
+import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 
+@Slf4j
 @RestController
 @RequestMapping("/api/v1/users")
 @RequiredArgsConstructor
@@ -29,6 +36,7 @@ public class UserController {
     private final EmailVerificationService emailVerificationService;
     private final UserService userService;
     private final PasswordResetService passwordResetService;
+    private final UserDeviceService userDeviceService;
     private final JwtUtil jwtUtil;
 
     /**
@@ -62,13 +70,75 @@ public class UserController {
      * 현재 로그인한 회원 정보 (Bearer: 일반 회원 JWT)
      */
     @GetMapping("/me")
-    public ApiResponse<UserResponse> me(@RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String authorization) {
+    public ApiResponse<UserResponse> me(
+            @RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String authorization) {
         Long userId = jwtUtil.resolveUserIdFromAuthorizationHeader(authorization);
         if (userId == null) {
             throw new BusinessException(ErrorCode.UNAUTHORIZED, "로그인이 필요합니다.");
         }
         UserResponse profile = userService.getProfileForCurrentUser(userId);
         return ApiResponse.success(profile);
+    }
+
+    /**
+     * 앱 FCM 토큰 수신 end-point
+     */
+    @PostMapping("/me/push-context")
+    public ApiResponse<Void> pushContext(
+            @RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String authorization,
+            @RequestBody(required = false) PushContextRequest body,
+            HttpServletRequest request) {
+        Long userId = jwtUtil.resolveUserIdFromAuthorizationHeader(authorization);
+        if (userId == null) {
+            throw new BusinessException(ErrorCode.UNAUTHORIZED, "로그인이 필요합니다.");
+        }
+        if (body == null) {
+            body = new PushContextRequest();
+        }
+        log.info(
+                "[push-context] userId={} fcmToken={} notificationsEnabled={} manufacturer={} model={} brand={} device={} sdkInt={} versionRelease={}",
+                userId,
+                body.getFcmToken(),
+                body.getNotificationsEnabled(),
+                body.getManufacturer(),
+                body.getModel(),
+                body.getBrand(),
+                body.getDevice(),
+                body.getSdkInt(),
+                body.getVersionRelease());
+
+        String token = body.getFcmToken() == null ? "" : body.getFcmToken().trim();
+        if (!StringUtils.hasText(token)) {
+            return ApiResponse.success("수신되었습니다.", null);
+        }
+
+        String ip = resolveClientIp(request);
+        if (Boolean.FALSE.equals(body.getNotificationsEnabled())) {
+            userDeviceService.deactivateAndEnqueueSync(userId, token);
+        } else {
+            String deviceName = buildDeviceDisplayName(body);
+            userDeviceService.upsertAndEnqueueSync(
+                    userId, token, DeviceType.ANDROID, deviceName, ip);
+        }
+        return ApiResponse.success("수신되었습니다.", null);
+    }
+
+    private static String buildDeviceDisplayName(PushContextRequest body) {
+        String m = body.getManufacturer() == null ? "" : body.getManufacturer().trim();
+        String model = body.getModel() == null ? "" : body.getModel().trim();
+        String name = (m + " " + model).trim();
+        return StringUtils.hasText(name) ? name : "Android";
+    }
+
+    private static String resolveClientIp(HttpServletRequest request) {
+        if (request == null) {
+            return null;
+        }
+        String xff = request.getHeader("X-Forwarded-For");
+        if (StringUtils.hasText(xff)) {
+            return xff.split(",")[0].trim();
+        }
+        return request.getRemoteAddr();
     }
 
     /**

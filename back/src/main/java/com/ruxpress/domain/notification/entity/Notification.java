@@ -68,4 +68,12 @@ public class Notification {
         n.createdAt = LocalDateTime.now();
         return n;
     }
+
+    public void applyPushDeliveryResult(NotificationSendStatus status, LocalDateTime sentAt) {
+        if (this.sendStatus != NotificationSendStatus.PENDING) {
+            return;
+        }
+        this.sendStatus = status;
+        this.sentAt = sentAt;
+    }
 }

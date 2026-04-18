@@ -43,6 +43,14 @@ export default function Login() {
         localStorage.setItem(STORAGE_KEYS.USER_ID, String(res.data.userId));
         localStorage.setItem(STORAGE_KEYS.USER_EMAIL, res.data.email);
         localStorage.setItem(STORAGE_KEYS.USER_NICKNAME, res.data.nickname);
+        window.Android?.setAuthToken?.(
+          JSON.stringify({
+            token: res.data.token,
+            userId: res.data.userId,
+            email: res.data.email,
+            nickname: res.data.nickname,
+          }),
+        );
         notifyUserAuthChange();
         toast.success(res.message ?? "로그인되었습니다");
         navigate("/");
