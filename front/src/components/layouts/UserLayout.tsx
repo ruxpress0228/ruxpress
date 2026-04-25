@@ -12,6 +12,7 @@ import {
 } from "../ui/sheet";
 import { useTranslation } from "../../hooks/useTranslation";
 import { LOCALES, STORAGE_KEYS, USER_AUTH_CHANGE_EVENT } from "../../utils/constants";
+import { clearUserSession } from "../../utils/api";
 
 export default function UserLayout() {
   const location = useLocation();
@@ -56,8 +57,7 @@ export default function UserLayout() {
   ];
 
   const handleLogout = () => {
-    localStorage.removeItem(STORAGE_KEYS.TOKEN);
-    localStorage.removeItem(STORAGE_KEYS.USER_ID);
+    clearUserSession();
     navigate("/login");
   };
 

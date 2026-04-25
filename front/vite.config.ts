@@ -17,6 +17,8 @@ export default defineConfig({
     },
   },
   server: {
+    // nginx(127.0.0.1:3000) 프록시가 붙을 수 있게 0.0.0.0에 바인딩 (Windows에서 502 방지)
+    host: true,
     // npm run dev로 도커 실행 없을 경우 해당 옵션 적용함
     port: Number(process.env.VITE_PORT) || 3000,
     proxy: {

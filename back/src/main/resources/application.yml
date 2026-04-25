@@ -14,6 +14,17 @@ spring:
     scheduling:
       enabled: true
 
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+      acks: all
+    consumer:
+      group-id: ruxpress-back-push-result
+      auto-offset-reset: latest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
   jpa:
     properties:
       hibernate:
@@ -22,6 +33,17 @@ spring:
   messages:
     basename: messages/messages
     encoding: UTF-8
+
+ruxpress:
+  # 로컬 구간 테스트: GET /internal/dev/user-device (기본 비활성)
+  dev-verify-api-enabled: ${RUXPRESS_DEV_VERIFY_API:false}
+  kafka:
+    publish-events: ${RUXPRESS_KAFKA_PUBLISH:false}
+    consume-results: ${RUXPRESS_KAFKA_CONSUME_RESULTS:false}
+    topics:
+      dispatch: ruxpress.notification.push.dispatch
+      device-sync: ruxpress.user.device.sync
+      result: ruxpress.notification.push.result
 
 app:
   frontend:
@@ -33,5 +55,6 @@ app:
     password-reset:
       subject: ${MAIL_PASSWORD_RESET_SUBJECT:Ruxpress 비밀번호 재설정}
   jwt:
-    secret: ${JWT_SECRET:}
-    expiration: ${JWT_EXPIRATION:}
+    # 로컬에서 환경 변수 미설정 시에도 기동되도록 기본값(운영은 반드시 JWT_* 로 덮어쓰기)
+    secret: ${JWT_SECRET:local-dev-only-change-me-use-strong-secret-in-production-min-32chars}
+    expiration: ${JWT_EXPIRATION:86400000}
