@@ -11,14 +11,14 @@ spring:
           starttls:
             enable: true
   datasource:
-    url: jdbc:mariadb://mariadb:${DB_HOST:}/${DB_NAME:}
+    url: jdbc:mariadb://mariadb:3306/${DB_NAME:ruxpress}
     driver-class-name: org.mariadb.jdbc.Driver
-    username: ${DB_USERNAME:}
-    password: ${DB_PASSWORD:}
+    username: ${DB_USERNAME:ruxpress}
+    password: ${DB_PASSWORD:ruxpress}
   jpa:
     database-platform: org.hibernate.dialect.MariaDBDialect
     hibernate:
-      ddl-auto: validate
+      ddl-auto: update
 
 ruxpress:
   kafka:
