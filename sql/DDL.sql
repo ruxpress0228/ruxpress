@@ -280,3 +280,36 @@ ALTER TABLE `exchange_rates` ADD CONSTRAINT `PK_EXCHANGE_RATES` PRIMARY KEY (
 	`id`
 );
 
+-- REQ-016: 지갑·원장 (신규 DB 또는 마이그레이션 시 참고)
+CREATE TABLE IF NOT EXISTS `user_wallets` (
+	`id`	BIGINT	NOT NULL AUTO_INCREMENT,
+	`user_id`	BIGINT	NOT NULL	COMMENT '회원 ID',
+	`balance`	DECIMAL(18, 2)	NOT NULL	DEFAULT 0	COMMENT '가용 잔액 (KRW)',
+	`version`	INT	NOT NULL	DEFAULT 0	COMMENT '낙관적 락',
+	`created_at`	DATETIME	NOT NULL,
+	`updated_at`	DATETIME	NOT NULL	DEFAULT CURRENT_TIMESTAMP,
+	PRIMARY KEY (`id`),
+	UNIQUE KEY `UK_USER_WALLET_USER` (`user_id`)
+);
+
+CREATE TABLE IF NOT EXISTS `wallet_ledger_entries` (
+	`id`	BIGINT	NOT NULL AUTO_INCREMENT,
+	`user_id`	BIGINT	NOT NULL	COMMENT '회원 ID',
+	`entry_type`	VARCHAR(50)	NOT NULL	COMMENT '원장 유형',
+	`amount`	DECIMAL(18, 2)	NOT NULL	COMMENT '금액 (양수)',
+	`currency`	VARCHAR(3)	NOT NULL	DEFAULT 'KRW',
+	`idempotency_key`	VARCHAR(100)	NOT NULL	COMMENT '멱등 키',
+	`transfer_ledger_entry_id`	BIGINT	NULL,
+	`purchase_request_id`	BIGINT	NULL,
+	`transfer_refund_entry_id`	BIGINT	NULL,
+	`memo`	VARCHAR(500)	NULL,
+	`created_at`	DATETIME	NOT NULL,
+	PRIMARY KEY (`id`),
+	UNIQUE KEY `UK_WALLET_LEDGER_IDEM` (`idempotency_key`),
+	KEY `IX_WALLET_LEDGER_USER` (`user_id`)
+);
+
+-- 기존 purchase_requests 테이블에 컬럼이 없을 때만 실행 (이미 있으면 생략)
+-- ALTER TABLE `purchase_requests` ADD COLUMN `charged_amount_krw` DECIMAL(18,2) NULL COMMENT '지갑 선차감' AFTER `total_amount_krw`;
+-- ALTER TABLE `purchase_requests` ADD COLUMN `settled_amount_krw` DECIMAL(18,2) NULL COMMENT '확정 실제 비용' AFTER `charged_amount_krw`;
+

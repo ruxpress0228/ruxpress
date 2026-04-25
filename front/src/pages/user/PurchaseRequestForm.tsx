@@ -12,6 +12,7 @@ import { useTranslation } from "../../hooks/useTranslation";
 import { useExchangeRate } from "../../hooks/exchange/useExchangeRate";
 import { usePurchase } from "../../hooks/purchase/usePurchase";
 import { formatDate, formatNumber } from "../../utils/format";
+import { USER_BALANCE_CHANGE_EVENT } from "../../utils/constants";
 import type { ExchangeRate, PurchaseRequestStatus } from "../../types";
 
 const FEE_PERCENT = 12;
@@ -83,6 +84,8 @@ export default function PurchaseRequestForm() {
     };
   };
 
+  const totals = calculateTotal();
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (submitting) return;
@@ -100,7 +103,7 @@ export default function PurchaseRequestForm() {
       const rate = currentExchangeRate ? Number(currentExchangeRate.rate) : 0;
       const priceRub = rate > 0 ? priceKrw / rate : undefined;
       const feeAmount = totals.feeKrw;
-      const status: PurchaseRequestStatus = "DRAFT";
+      const status: PurchaseRequestStatus = "SUBMITTED";
 
       await createPurchaseRequest({
         productName: productName.trim(),
@@ -115,6 +118,7 @@ export default function PurchaseRequestForm() {
         memo: memo.trim() || undefined,
         status,
       });
+      window.dispatchEvent(new Event(USER_BALANCE_CHANGE_EVENT));
       toast.success(t('purchase.toastSuccess'));
       navigate("/purchase");
     } catch {
@@ -124,7 +128,6 @@ export default function PurchaseRequestForm() {
     }
   };
 
-  const totals = calculateTotal();
   const numOpt = { minimumFractionDigits: 2, maximumFractionDigits: 2 };
 
   return (
@@ -316,6 +319,9 @@ export default function PurchaseRequestForm() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
+            <p className="text-sm text-amber-900 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
+              {t("purchase.summary.adminWalletNote")}
+            </p>
             <div className="flex justify-between text-sm">
               <span className="text-gray-600">{t('purchase.summary.productPrice')}</span>
               <span className="font-medium">

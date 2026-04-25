@@ -1,6 +1,6 @@
 import { Outlet, Link, useLocation, useNavigate } from "react-router";
 import { useState, useRef, useEffect } from "react";
-import { Bell, Menu, User, ShoppingCart, MessageSquare, FileText, Home, Globe, LogOut, Landmark } from "lucide-react";
+import { Bell, Menu, User, ShoppingCart, MessageSquare, FileText, Home, Globe, LogOut, Landmark, Wallet } from "lucide-react";
 import { Button } from "../ui/button";
 import { Badge } from "../ui/badge";
 import {
@@ -11,6 +11,8 @@ import {
   SheetTrigger,
 } from "../ui/sheet";
 import { useTranslation } from "../../hooks/useTranslation";
+import { useBalance } from "../../hooks/balance/useBalance";
+import { formatNumber } from "../../utils/format";
 import { LOCALES, STORAGE_KEYS, USER_AUTH_CHANGE_EVENT } from "../../utils/constants";
 import { clearUserSession } from "../../utils/api";
 
@@ -18,6 +20,7 @@ export default function UserLayout() {
   const location = useLocation();
   const navigate = useNavigate();
   const { t, locale, setLocale } = useTranslation();
+  const { balance } = useBalance();
   const [langOpen, setLangOpen] = useState(false);
   const langRef = useRef<HTMLDivElement>(null);
   const [, setAuthRevision] = useState(0);
@@ -51,6 +54,7 @@ export default function UserLayout() {
   const navigation = [
     { nameKey: "nav.home", path: "/", icon: Home },
     { nameKey: "nav.purchase", path: "/purchase", icon: ShoppingCart },
+    { nameKey: "nav.wallet", path: "/wallet", icon: Wallet },
     { nameKey: "nav.inquiry", path: "/inquiry", icon: MessageSquare },
     { nameKey: "nav.notice", path: "/notice", icon: FileText },
     { nameKey: "nav.bankTransfer", path: "/bank-transfer", icon: Landmark },
@@ -133,7 +137,14 @@ export default function UserLayout() {
                 </Badge>
               </Button>
               {userToken ? (
-                <div className="flex items-center gap-1 max-w-[11rem]">
+                <div className="flex items-center gap-1 max-w-[14rem]">
+                  <Link
+                    to="/wallet"
+                    className="hidden sm:flex items-center text-xs font-semibold text-blue-700 bg-blue-50 px-2 py-1 rounded-md whitespace-nowrap"
+                    title={t("nav.walletBalanceHint")}
+                  >
+                    {`₩${formatNumber(balance ?? 0, locale, { maximumFractionDigits: 0 })}`}
+                  </Link>
                   <span className="hidden sm:inline text-sm text-gray-700 truncate" title={userNickname ?? ""}>
                     {userNickname ?? "회원"}
                   </span>

@@ -8,6 +8,10 @@ import com.ruxpress.common.dto.PageResponse;
 import com.ruxpress.common.exception.BusinessException;
 import com.ruxpress.common.exception.ErrorCode;
 import com.ruxpress.common.util.IDGenerateUtil;
+import com.ruxpress.domain.balance.service.BalanceService;
+import com.ruxpress.domain.notification.service.NotificationService;
+import com.ruxpress.domain.purchase.dto.request.AdminPurchaseStatusRequest;
+import com.ruxpress.domain.purchase.dto.request.AdminPurchaseWalletCreditRequest;
 import com.ruxpress.domain.purchase.dto.request.PurchaseRequestCreateRequest;
 import com.ruxpress.domain.purchase.dto.response.PurchaseRequestListResponse;
 import com.ruxpress.domain.purchase.dto.response.PurchaseRequestResponse;
@@ -20,6 +24,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -30,9 +35,19 @@ public class PurchaseService {
 
     private final PurchaseRequestRepository purchaseRequestRepository;
     private final ObjectMapper objectMapper;
+    private final BalanceService balanceService;
+    private final NotificationService notificationService;
 
     @Transactional
     public PurchaseRequestResponse createPurchaseRequest(Long userId, PurchaseRequestCreateRequest request) {
+        PurchaseRequestStatus effectiveStatus = request.getStatus() != null
+                ? request.getStatus() : PurchaseRequestStatus.DRAFT;
+        if (effectiveStatus == PurchaseRequestStatus.SUBMITTED) {
+            if (request.getTotalAmountKrw() == null || request.getTotalAmountKrw().compareTo(BigDecimal.ZERO) <= 0) {
+                throw new BusinessException(ErrorCode.INVALID_INPUT, "차감 금액은 양수여야 합니다.");
+            }
+        }
+
         String requestNumber = IDGenerateUtil.generatePurchaseRequestNumber();
         PurchaseRequest purchaseRequest = PurchaseRequest.create(
                 userId,
@@ -47,8 +62,13 @@ public class PurchaseService {
                 request.getFeeAmount(),
                 request.getTotalAmountKrw(),
                 request.getMemo(),
-                request.getStatus());
+                effectiveStatus);
         PurchaseRequest saved = purchaseRequestRepository.save(purchaseRequest);
+        if (effectiveStatus == PurchaseRequestStatus.SUBMITTED) {
+            balanceService.debitForPurchase(userId, request.getTotalAmountKrw(), saved.getId());
+            saved.recordChargedAmount(request.getTotalAmountKrw());
+            saved = purchaseRequestRepository.save(saved);
+        }
         return toResponse(saved);
     }
 
@@ -80,6 +100,78 @@ public class PurchaseService {
                 .collect(Collectors.toList());
     }
 
+    @Transactional(readOnly = true)
+    public PageResponse<PurchaseRequestResponse> getAdminPurchaseRequests(
+            PurchaseRequestStatus status, Pageable pageable) {
+        Page<PurchaseRequest> page = status == null
+                ? purchaseRequestRepository.findByDeletedAtIsNull(pageable)
+                : purchaseRequestRepository.findByStatusAndDeletedAtIsNull(status, pageable);
+        List<PurchaseRequestResponse> content = page.getContent().stream()
+                .map(this::toResponse)
+                .collect(Collectors.toList());
+        return new PageResponse<>(content, page.getTotalElements(), page.getTotalPages(), page.getNumber(), page.getSize());
+    }
+
+    @Transactional(readOnly = true)
+    public PurchaseRequestResponse getAdminPurchaseRequestDetail(Long id) {
+        PurchaseRequest pr = purchaseRequestRepository.findById(id)
+                .filter(p -> p.getDeletedAt() == null)
+                .orElseThrow(() -> new BusinessException(ErrorCode.PURCHASE_NOT_FOUND));
+        return toResponse(pr);
+    }
+
+    @Transactional
+    public PurchaseRequestResponse updatePurchaseRequestStatus(Long id, Long adminId, AdminPurchaseStatusRequest request) {
+        PurchaseRequest pr = purchaseRequestRepository.findById(id)
+                .filter(p -> p.getDeletedAt() == null)
+                .orElseThrow(() -> new BusinessException(ErrorCode.PURCHASE_NOT_FOUND));
+        pr.changeStatus(request.getStatus());
+        pr.updateAdminMemo(request.getAdminMemo());
+        if (adminId != null) {
+            pr.assignAdmin(adminId);
+        }
+        PurchaseRequest saved = purchaseRequestRepository.save(pr);
+
+        if (request.getStatus() == PurchaseRequestStatus.REFUNDED) {
+            balanceService.creditForPurchaseRefund(saved.getUserId(), saved.getId());
+        }
+
+        return toResponse(saved);
+    }
+
+    @Transactional
+    public PurchaseRequestResponse creditPurchaseWalletAdjustment(
+            Long id,
+            Long adminId,
+            AdminPurchaseWalletCreditRequest request) {
+        PurchaseRequest pr = purchaseRequestRepository.findById(id)
+                .filter(p -> p.getDeletedAt() == null)
+                .orElseThrow(() -> new BusinessException(ErrorCode.PURCHASE_NOT_FOUND));
+        if (adminId != null) {
+            pr.assignAdmin(adminId);
+        }
+        pr.recordSettledAmount(request.getSettledAmountKrw());
+        if (request.getAdminMemo() != null && !request.getAdminMemo().isBlank()) {
+            pr.updateAdminMemo(request.getAdminMemo());
+        }
+        purchaseRequestRepository.save(pr);
+
+        String memo = request.getAdminMemo();
+        balanceService.creditPurchaseAdjustment(
+                pr.getUserId(),
+                pr.getId(),
+                request.getAmount(),
+                request.getIdempotencyKey(),
+                memo);
+
+        notificationService.notifyWalletPurchaseAdjustment(
+                pr.getUserId(),
+                pr.getId(),
+                request.getAmount());
+
+        return toResponse(purchaseRequestRepository.findById(id).orElse(pr));
+    }
+
     private PurchaseRequestListResponse toListResponse(PurchaseRequest purchaseRequest) {
         return new PurchaseRequestListResponse(
                 purchaseRequest.getId(),
@@ -87,6 +179,8 @@ public class PurchaseService {
                 purchaseRequest.getProductName(),
                 purchaseRequest.getQuantity(),
                 purchaseRequest.getTotalAmountKrw(),
+                purchaseRequest.getChargedAmountKrw(),
+                purchaseRequest.getSettledAmountKrw(),
                 purchaseRequest.getStatus(),
                 purchaseRequest.getCreatedAt());
     }
@@ -105,6 +199,8 @@ public class PurchaseService {
                 purchaseRequest.getExchangeRateId(),
                 purchaseRequest.getFeeAmount(),
                 purchaseRequest.getTotalAmountKrw(),
+                purchaseRequest.getChargedAmountKrw(),
+                purchaseRequest.getSettledAmountKrw(),
                 purchaseRequest.getMemo(),
                 purchaseRequest.getStatus(),
                 purchaseRequest.getAdminMemo(),
