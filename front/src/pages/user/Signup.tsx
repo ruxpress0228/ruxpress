@@ -149,6 +149,7 @@ export default function Signup() {
                 className="flex-1"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && sendEmailVerification()}
                 disabled={emailVerified}
               />
               {!emailVerified && (
@@ -168,6 +169,7 @@ export default function Signup() {
                   placeholder="6자리 숫자"
                   value={emailCode}
                   onChange={(e) => setEmailCode(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && verifyEmailCode()}
                   className="flex-1"
                 />
                 <Button type="button" onClick={verifyEmailCode} disabled={emailVerifying}>
@@ -239,6 +241,7 @@ export default function Signup() {
                   placeholder="동·호수 등"
                   value={addressLine2}
                   onChange={(e) => setAddressLine2(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && submitSignup()}
                 />
               </div>
               <Button type="button" className="w-full" size="lg" onClick={submitSignup} disabled={signupLoading}>

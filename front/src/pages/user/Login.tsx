@@ -21,7 +21,7 @@ export default function Login() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const handleLogin = async (e?: React.MouseEvent) => {
+  const handleLogin = async (e?: React.FormEvent | React.MouseEvent) => {
     e?.preventDefault();
     const trimmedEmail = email.trim();
     if (!trimmedEmail) {
@@ -79,6 +79,7 @@ export default function Login() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+          <form onSubmit={handleLogin} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="email">이메일</Label>
             <Input
@@ -104,9 +105,10 @@ export default function Login() {
               onChange={(e) => setPassword(e.target.value)}
             />
           </div>
-          <Button type="button" className="w-full" size="lg" onClick={handleLogin} disabled={loading}>
+          <Button type="submit" className="w-full" size="lg" disabled={loading}>
             {loading ? "로그인 중..." : "로그인"}
           </Button>
+          </form>
 
           <div className="text-center text-sm text-gray-600">
             아직 계정이 없으신가요?{" "}
