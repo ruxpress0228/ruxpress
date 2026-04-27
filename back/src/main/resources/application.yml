@@ -34,10 +34,35 @@ spring:
     username: ${DB_USERNAME:}
     password: ${DB_PASSWORD:}
   jpa:
+    # (프로필별 권장)
+    # - local/dev: validate
+    # - docker: update
+    # - prod: none
     properties:
       hibernate:
         jdbc:
           time_zone: UTC
+  mail:
+    # 빈 값이면 Integer.parseInt("") 로 기동 실패할 수 있어 local/dev 에서는 기본값을 두는 편이 안전합니다.
+    # 운영(prod)은 반드시 MAIL_* 환경변수를 주입하세요.
+    host: ${MAIL_HOST:}
+    port: ${MAIL_PORT:}
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+
+  # (옵션) 로컬 H2 콘솔 사용 시 참고. 기본은 MariaDB 기준.
+  # h2:
+  #   console:
+  #     enabled: true
+  #     path: /h2-console
+  #     settings:
+  #       web-allow-others: true
 
 ruxpress:
   # 로컬 구간 테스트: GET /internal/dev/user-device (기본 비활성)
@@ -63,3 +88,29 @@ app:
     # 로컬에서 환경 변수 미설정 시에도 기동되도록 기본값(운영은 반드시 JWT_* 로 덮어쓰기)
     secret: ${JWT_SECRET:local-dev-only-change-me-use-strong-secret-in-production-min-32chars}
     expiration: ${JWT_EXPIRATION:86400000}
+
+# 파일 업로드 저장소 설정.
+# - local/dev/docker: local 권장
+# - prod: s3 권장
+storage:
+  type: ${STORAGE_TYPE:local}
+  local:
+    upload-dir: ${UPLOAD_DIR:./uploads}
+  s3:
+    bucket: ${S3_BUCKET:}
+    region: ${S3_REGION:ap-northeast-2}
+    access-key: ${S3_ACCESS_KEY:}
+    secret-key: ${S3_SECRET_KEY:}
+
+# 로깅(파일/롤링)은 필요 시 프로필에서 조정하세요.
+logging:
+  file:
+    name: logs/ruxpress-back.log
+  logback:
+    rollingpolicy:
+      max-file-size: 20MB
+      max-history: 14
+  level:
+    root: INFO
+    com.ruxpress: INFO
+    org.springframework.security: INFO
