@@ -8,6 +8,7 @@ import com.ruxpress.common.repository.AttachmentRepository;
 import com.ruxpress.common.storage.FileStoragePort;
 import com.ruxpress.common.dto.AttachmentResponse;
 import com.ruxpress.common.dto.PageResponse;
+import com.ruxpress.common.util.ModulePrefix;
 import com.ruxpress.domain.inquiry.dto.request.InquiryCreateRequest;
 import com.ruxpress.domain.inquiry.dto.response.AdminInquiryListResponse;
 import com.ruxpress.domain.inquiry.dto.response.InquiryListResponse;
@@ -33,6 +34,7 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@SuppressWarnings("null")
 public class InquiryService {
 
     private static final int MAX_FILE_COUNT = 5;
@@ -65,7 +67,7 @@ public class InquiryService {
         );
         inquiry = inquiryRepository.save(inquiry);
 
-        String directory = "inquiry/" + inquiry.getId();
+        String directory = ModulePrefix.INQUIRY;
         for (int i = 0; i < fileList.size(); i++) {
             MultipartFile file = fileList.get(i);
             try {

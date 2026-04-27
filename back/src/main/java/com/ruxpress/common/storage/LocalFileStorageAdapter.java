@@ -8,6 +8,8 @@ import org.springframework.core.io.UrlResource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.multipart.MultipartFile;
 
+import com.ruxpress.common.util.ModulePrefix;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
@@ -20,6 +22,7 @@ import java.util.UUID;
 @Slf4j
 @Component
 @ConditionalOnProperty(name = "storage.type", havingValue = "local", matchIfMissing = true)
+@SuppressWarnings("null")
 public class LocalFileStorageAdapter implements FileStoragePort {
 
     private final Path rootLocation;
@@ -39,12 +42,16 @@ public class LocalFileStorageAdapter implements FileStoragePort {
         if (file == null || file.isEmpty()) {
             throw new IllegalArgumentException("File must not be empty");
         }
+        if (ModulePrefix.PURCHASE.equals(directory)) {
+            FileStorageUtil.validateImageOrThrow(file);
+        }
         String ext = Optional.ofNullable(file.getOriginalFilename())
                 .filter(n -> n.contains("."))
                 .map(n -> n.substring(n.lastIndexOf('.')))
                 .orElse("");
         String storedFilename = UUID.randomUUID() + ext;
-        Path targetDir = rootLocation.resolve(directory);
+        String storedDir = FileStorageUtil.buildDatedDirectory(directory);
+        Path targetDir = rootLocation.resolve(Paths.get(storedDir));
         try {
             Files.createDirectories(targetDir);
             Path targetFile = targetDir.resolve(storedFilename);
@@ -55,7 +62,7 @@ public class LocalFileStorageAdapter implements FileStoragePort {
             log.error("Failed to store file: {}", file.getOriginalFilename(), e);
             throw new RuntimeException("Failed to store file", e);
         }
-        return directory + "/" + storedFilename;
+        return storedDir + "/" + storedFilename;
     }
 
     @Override

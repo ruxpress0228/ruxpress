@@ -11,7 +11,11 @@ export function usePurchase() {
   const PURCHASE_BASE = "/v1/purchases";
 
   const createPurchaseRequest = (payload: PurchaseRequestCreatePayload): Promise<PurchaseRequestDetail> => {
-    return api.post<PurchaseRequestDetail>(PURCHASE_BASE, payload).then((res) => {
+    return api
+      .post<PurchaseRequestDetail>(PURCHASE_BASE, payload, {
+        multipart: { jsonFieldName: "purchase", filesFieldName: "files" },
+      })
+      .then((res) => {
       if (res.code !== 200 || res.data == null) {
         throw new Error(res.message || "Failed to create purchase request");
       }

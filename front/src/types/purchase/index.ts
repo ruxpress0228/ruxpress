@@ -12,6 +12,7 @@ export interface PurchaseRequestCreatePayload {
   totalAmountKrw?: number;
   memo?: string;
   status?: PurchaseRequestStatus;
+  files?: File[];
 }
 
 export interface PurchaseRequestListItem {

@@ -63,12 +63,60 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<ApiR
   return response.json();
 }
 
+function toFormDataWithJsonAndFiles(
+  jsonFieldName: string,
+  jsonBody: unknown,
+  filesFieldName: string,
+  files: File[]
+): FormData {
+  const formData = new FormData();
+  formData.append(
+    jsonFieldName,
+    new Blob([JSON.stringify(jsonBody)], { type: 'application/json' })
+  );
+  files.forEach((file) => formData.append(filesFieldName, file));
+  return formData;
+}
+
 export const api = {
   get<T>(path: string): Promise<ApiResponse<T>> {
     return request<T>(path);
   },
 
-  post<T>(path: string, body?: unknown): Promise<ApiResponse<T>> {
+  post<T>(
+    path: string,
+    body?: unknown,
+    options?: {
+      multipart?: {
+        /** 서버 @RequestPart JSON 파트 이름 (ex: "purchaseReq", "inquiryReq") */
+        jsonFieldName: string;
+        /** 서버 @RequestPart 파일 파트 이름 (기본값: "files") */
+        filesFieldName?: string;
+      };
+    }
+  ): Promise<ApiResponse<T>> {
+    // 기존 사용처는 options 없이 그대로 JSON POST로 동작
+    if (body instanceof FormData) {
+      return api.upload<T>(path, body);
+    }
+
+    const multipart = options?.multipart;
+    if (multipart) {
+      const filesFieldName = multipart.filesFieldName ?? 'files';
+      const filesFromBody = Array.isArray((body as { files?: unknown })?.files)
+        ? (((body as { files?: unknown }).files as unknown[]) ?? []).filter(Boolean)
+        : [];
+      const files = filesFromBody.filter((f): f is File => f instanceof File);
+
+      if (files.length > 0) {
+        const payload = (body && typeof body === 'object') ? (body as Record<string, unknown>) : {};
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const { files: _files, ...jsonPayload } = payload;
+        const formData = toFormDataWithJsonAndFiles(multipart.jsonFieldName, jsonPayload, filesFieldName, files);
+        return api.upload<T>(path, formData);
+      }
+    }
+
     return request<T>(path, {
       method: 'POST',
       body: body ? JSON.stringify(body) : undefined,
