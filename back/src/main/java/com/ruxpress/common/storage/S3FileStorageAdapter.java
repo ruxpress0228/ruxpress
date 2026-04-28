@@ -127,6 +127,30 @@ public class S3FileStorageAdapter implements FileStoragePort {
     }
 
     @Override
+    public String getViewUrl(String storedUrl) {
+        if (storedUrl == null || storedUrl.isBlank()) {
+            return null;
+        }
+        try {
+            S3Location loc = parseStoredUrl(storedUrl);
+            GetObjectRequest getObjectRequest = GetObjectRequest.builder()
+                    .bucket(loc.bucket())
+                    .key(loc.key())
+                    .build();
+            PresignedGetObjectRequest presigned = getS3Presigner().presignGetObject(
+                    GetObjectPresignRequest.builder()
+                            .signatureDuration(Duration.ofSeconds(3600))
+                            .getObjectRequest(getObjectRequest)
+                            .build()
+            );
+            return presigned.url().toString();
+        } catch (Exception e) {
+            log.warn("Failed to generate view URL for: {}", storedUrl, e);
+            return null;
+        }
+    }
+
+    @Override
     public void delete(String storedUrl) {
         if (storedUrl == null || storedUrl.isBlank()) {
             return;

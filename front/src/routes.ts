@@ -9,6 +9,7 @@ import ForgotPassword from "./pages/user/ForgotPassword";
 import ResetPassword from "./pages/user/ResetPassword";
 import PurchaseRequestForm from "./pages/user/PurchaseRequestForm";
 import PurchaseRequestList from "./pages/user/PurchaseRequestList";
+import PurchaseRequestDetail from "./pages/user/PurchaseRequestDetail.tsx";
 import InquiryList from "./pages/user/InquiryList";
 import InquiryForm from "./pages/user/InquiryForm";
 import InquiryDetail from "./pages/user/InquiryDetail";
@@ -22,6 +23,7 @@ import BankTransferReceipt from "./pages/user/BankTransferReceipt";
 import AdminLogin from "./pages/admin/AdminLogin";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminPurchaseRequests from "./pages/admin/AdminPurchaseRequests";
+import AdminPurchaseRequestDetail from "./pages/admin/AdminPurchaseRequestDetail";
 import AdminInquiries from "./pages/admin/AdminInquiries";
 import AdminNotices from "./pages/admin/AdminNotices";
 import AdminExchangeRate from "./pages/admin/AdminExchangeRate";
@@ -89,6 +91,7 @@ export const router = createBrowserRouter([
           { path: "signup", Component: Signup },
           { path: "purchase/new", Component: PurchaseRequestForm, loader: requireUserAuth },
           { path: "purchase", Component: PurchaseRequestList, loader: requireUserAuth },
+          { path: "purchase/:id", Component: PurchaseRequestDetail, loader: requireUserAuth },
           { path: "inquiry", Component: InquiryList, loader: requireUserAuth },
           { path: "inquiry/new", Component: InquiryForm, loader: requireUserAuth },
           { path: "inquiry/:id", Component: InquiryDetail, loader: requireUserAuth },
@@ -109,6 +112,7 @@ export const router = createBrowserRouter([
           { path: "login", Component: AdminLogin },
           { path: "", Component: AdminDashboard, loader: requireAdminAuth },
           { path: "purchase-requests", Component: AdminPurchaseRequests, loader: requireAdminAuth },
+          { path: "purchase-requests/:id", Component: AdminPurchaseRequestDetail, loader: requireAdminAuth },
           { path: "inquiries", Component: AdminInquiries, loader: requireAdminAuth },
           { path: "notices", Component: AdminNotices, loader: requireAdminAuth },
           { path: "exchange-rate", Component: AdminExchangeRate, loader: requireAdminAuth },

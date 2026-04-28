@@ -80,6 +80,11 @@ public class LocalFileStorageAdapter implements FileStoragePort {
     }
 
     @Override
+    public String getViewUrl(String storedUrl) {
+        return null;
+    }
+
+    @Override
     public void delete(String storedUrl) {
         try {
             Path file = rootLocation.resolve(storedUrl).normalize();

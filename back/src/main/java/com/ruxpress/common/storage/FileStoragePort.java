@@ -23,6 +23,12 @@ public interface FileStoragePort {
     Resource loadAsResource(String storedUrl);
 
     /**
+     * storedUrl에 해당하는 파일을 브라우저에서 직접 열 수 있는 HTTPS URL로 반환한다.
+     * S3: Presigned URL, Local: null
+     */
+    String getViewUrl(String storedUrl);
+
+    /**
      * storedUrl에 해당하는 파일을 삭제한다.
      */
     void delete(String storedUrl);

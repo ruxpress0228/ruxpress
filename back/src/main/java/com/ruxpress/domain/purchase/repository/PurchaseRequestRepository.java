@@ -19,4 +19,8 @@ public interface PurchaseRequestRepository extends JpaRepository<PurchaseRequest
     );
 
     List<PurchaseRequest> findTop3ByUserIdAndDeletedAtIsNullOrderByCreatedAtDesc(Long userId);
+
+    Page<PurchaseRequest> findByDeletedAtIsNull(Pageable pageable);
+
+    Page<PurchaseRequest> findByStatusAndDeletedAtIsNull(PurchaseRequestStatus status, Pageable pageable);
 }

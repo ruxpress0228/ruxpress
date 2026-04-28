@@ -176,9 +176,11 @@ export default function PurchaseRequestList() {
                     수량: {request.quantity}개
                   </div>
                   <div className="flex space-x-2">
-                    <Button variant="outline" size="sm">
-                      상세보기
-                    </Button>
+                    <Link to={`/purchase/${request.id}`}>
+                      <Button variant="outline" size="sm">
+                        상세보기
+                      </Button>
+                    </Link>
                   </div>
                 </div>
               </CardContent>

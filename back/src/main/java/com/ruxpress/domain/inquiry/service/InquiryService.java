@@ -247,6 +247,7 @@ public class InquiryService {
                         a.getOriginalFilename(),
                         a.getStoredUrl(),
                         a.getThumbnailUrl(),
+                        fileStoragePort.getViewUrl(a.getStoredUrl()),
                         a.getFileSize(),
                         a.getMimeType()
                 ))
