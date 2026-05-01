@@ -75,7 +75,6 @@ export default function AdminPurchaseRequests() {
   const [statusMemo, setStatusMemo] = useState("");
 
   const [walletAmount, setWalletAmount] = useState("");
-  const [walletSettled, setWalletSettled] = useState("");
   const [walletMemo, setWalletMemo] = useState("");
   const [walletIdem, setWalletIdem] = useState("");
 
@@ -114,7 +113,6 @@ export default function AdminPurchaseRequests() {
     setNewStatus(r.status);
     setStatusMemo(r.adminMemo ?? "");
     setWalletAmount("");
-    setWalletSettled("");
     setWalletMemo("");
     setWalletIdem(`purchase-${r.id}-${Date.now()}`);
     setDialogOpen(true);
@@ -143,9 +141,8 @@ export default function AdminPurchaseRequests() {
       toast.error(t("admin.bank.invalidAmount"));
       return;
     }
-    const settledRaw = walletSettled.trim();
     const settled =
-      settledRaw === "" ? undefined : parseFloat(settledRaw.replace(/,/g, ""));
+      selected.chargedAmountKrw != null ? selected.chargedAmountKrw - amount : undefined;
     try {
       await adminCreditPurchaseWallet(selected.id, {
         amount,
@@ -368,13 +365,11 @@ export default function AdminPurchaseRequests() {
                     </div>
                     <div className="space-y-2">
                       <Label>{t("adminPurchase.walletSettled")}</Label>
-                      <Input
-                        type="number"
-                        min="0"
-                        step="1"
-                        value={walletSettled}
-                        onChange={(e) => setWalletSettled(e.target.value)}
-                      />
+                      <p className="text-sm font-semibold border rounded-md px-3 py-2 bg-gray-50">
+                        {selected.chargedAmountKrw != null && walletAmount !== ""
+                          ? `₩${formatNumber(selected.chargedAmountKrw - parseFloat(walletAmount.replace(/,/g, "") || "0"), locale, num0)}`
+                          : "—"}
+                      </p>
                     </div>
                     <div className="space-y-2">
                       <Label>Idempotency key</Label>

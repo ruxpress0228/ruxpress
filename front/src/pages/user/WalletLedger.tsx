@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../components/ui/table";
 import { Button } from "../../components/ui/button";
@@ -6,7 +6,6 @@ import { useTranslation } from "../../hooks/useTranslation";
 import { useBalance } from "../../hooks/balance/useBalance";
 import { getMyWalletLedger, type WalletLedgerEntry } from "../../api/balance";
 import { formatDate, formatNumber } from "../../utils/format";
-import { USER_BALANCE_CHANGE_EVENT, USER_BALANCE_UPDATED_EVENT } from "../../utils/constants";
 import type { PageResponse } from "../../types";
 
 function entryLabel(t: (k: string) => string, type: string): string {
@@ -18,6 +17,7 @@ function entryLabel(t: (k: string) => string, type: string): string {
 export default function WalletLedger() {
   const { t, locale } = useTranslation();
   const { balance } = useBalance();
+  const prevBalanceRef = useRef(balance);
   const [page, setPage] = useState(0);
   const [data, setData] = useState<PageResponse<WalletLedgerEntry> | null>(null);
   const [loading, setLoading] = useState(true);
@@ -45,16 +45,11 @@ export default function WalletLedger() {
   }, []);
 
   useEffect(() => {
-    const onBalanceChanged = () => {
+    if (prevBalanceRef.current !== balance && prevBalanceRef.current != null) {
       void load(page, { silent: true });
-    };
-    window.addEventListener(USER_BALANCE_CHANGE_EVENT, onBalanceChanged);
-    window.addEventListener(USER_BALANCE_UPDATED_EVENT, onBalanceChanged);
-    return () => {
-      window.removeEventListener(USER_BALANCE_CHANGE_EVENT, onBalanceChanged);
-      window.removeEventListener(USER_BALANCE_UPDATED_EVENT, onBalanceChanged);
-    };
-  }, [page]);
+    }
+    prevBalanceRef.current = balance;
+  }, [balance, page]);
 
   const rows = data?.content ?? [];
   const numOpt = { minimumFractionDigits: 0, maximumFractionDigits: 0 };
