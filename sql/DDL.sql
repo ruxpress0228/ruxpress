@@ -72,6 +72,8 @@ CREATE TABLE `purchase_requests` (
 	`exchange_rate_id`	BIGINT	NULL	COMMENT '적용 환율 ID',
 	`fee_amount`	DECIMAL(18, 2)	NULL	COMMENT '수수료',
 	`total_amount_krw`	DECIMAL(18, 2)	NULL	COMMENT '총 예상 금액 (원화)',
+	`charged_amount_krw`	DECIMAL(18, 2)	NULL	COMMENT '지갑 선차감',
+	`settled_amount_krw`	DECIMAL(18, 2)	NULL	COMMENT '확정 실제 비용',
 	`memo`	TEXT	NULL	COMMENT '특이사항 메모',
 	`status`	ENUM('DRAFT', 'SUBMITTED', 'REVIEWING', 'CONFIRMED', 'PURCHASING', 'PURCHASED', 'SHIPPING', 'DELIVERED', 'CANCELLED', 'REFUNDED')	NOT NULL	DEFAULT 'DRAFT'	COMMENT '상태',
 	`admin_memo`	TEXT	NULL	COMMENT '관리자 내부 메모',
@@ -265,7 +267,7 @@ CREATE TABLE IF NOT EXISTS `user_wallets` (
 CREATE TABLE IF NOT EXISTS `wallet_ledger_entries` (
 	`id`	BIGINT	NOT NULL AUTO_INCREMENT,
 	`user_id`	BIGINT	NOT NULL	COMMENT '회원 ID',
-	`entry_type`	VARCHAR(50)	NOT NULL	COMMENT '원장 유형',
+	`entry_type`	ENUM('CREDIT_BANK_DEPOSIT','CREDIT_CARD','CREDIT_PURCHASE_REFUND','CREDIT_PURCHASE_ADJUSTMENT','DEBIT_PURCHASE','DEBIT_BANK_REFUND')	NOT NULL	COMMENT '원장 유형',
 	`amount`	DECIMAL(18, 2)	NOT NULL	COMMENT '금액 (양수)',
 	`currency`	VARCHAR(3)	NOT NULL	DEFAULT 'KRW',
 	`idempotency_key`	VARCHAR(100)	NOT NULL	COMMENT '멱등 키',

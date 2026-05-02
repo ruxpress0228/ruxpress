@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Search, Filter, ChevronLeft, ChevronRight } from "lucide-react";
 import { useNavigate } from 'react-router';
 import { Button } from "../../components/ui/button";
@@ -7,9 +7,7 @@ import { Badge } from "../../components/ui/badge";
 import { Card, CardContent } from "../../components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../components/ui/table";
-import { usePurchase } from "../../hooks/purchase/usePurchase";
 import type { PurchaseRequestStatus } from "../../types";
-import type { PurchaseRequestListItem } from "../../types/purchase";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "../../components/ui/dialog";
 import { Label } from "../../components/ui/label";
 import { Textarea } from "../../components/ui/textarea";
@@ -21,7 +19,7 @@ import {
   adminCreditPurchaseWallet,
 } from "../../api/adminPurchase";
 import { useTranslation } from "../../hooks/useTranslation";
-import { formatDate, formatNumber } from "../../utils/format";
+import { formatNumber } from "../../utils/format";
 
 function getAdminRole(): string | null {
   try {
@@ -49,60 +47,6 @@ const statusLabels: Record<
   REFUNDED: { label: "환불됨", variant: "destructive" },
 };
 
-// const PAGE_SIZE = 20;
-
-// export default function AdminPurchaseRequests() {
-//   const navigate = useNavigate();
-//   const { getAdminPurchaseRequests } = usePurchase();
-//   const [requests, setRequests] = useState<PurchaseRequestListItem[]>([]);
-//   const [totalElements, setTotalElements] = useState(0);
-//   const [totalPages, setTotalPages] = useState(0);
-//   const [page, setPage] = useState(0);
-//   const [statusFilter, setStatusFilter] = useState<PurchaseRequestStatus | "all">("all");
-//   const [sort, setSort] = useState<"createdAt,desc" | "createdAt,asc">("createdAt,desc");
-//   const [search, setSearch] = useState("");
-//   const [loading, setLoading] = useState(false);
-
-//   const fetchRequests = useCallback(async () => {
-//     setLoading(true);
-//     try {
-//       const res = await getAdminPurchaseRequests({
-//         page,
-//         size: PAGE_SIZE,
-//         sort,
-//         status: statusFilter !== "all" ? statusFilter : undefined,
-//       });
-//       setRequests(res.content);
-//       setTotalElements(res.totalElements);
-//       setTotalPages(res.totalPages);
-//     } catch {
-//       setRequests([]);
-//     } finally {
-//       setLoading(false);
-//     }
-//   }, [page, sort, statusFilter]);
-
-//   useEffect(() => {
-//     fetchRequests();
-//   }, [fetchRequests]);
-
-//   const handleStatusFilter = (value: string) => {
-//     setStatusFilter(value as PurchaseRequestStatus | "all");
-//     setPage(0);
-//   };
-
-//   const handleSort = (value: string) => {
-//     setSort(value as "createdAt,desc" | "createdAt,asc");
-//     setPage(0);
-//   };
-
-//   const filtered = search.trim()
-//     ? requests.filter((r) =>
-//         r.requestNumber.includes(search) ||
-//         r.productName.toLowerCase().includes(search.toLowerCase())
-//       )
-//     : requests;
-
 const ALL_STATUSES: PurchaseRequestStatus[] = [
   "DRAFT",
   "SUBMITTED",
@@ -119,10 +63,9 @@ const ALL_STATUSES: PurchaseRequestStatus[] = [
 export default function AdminPurchaseRequests() {
   const { t, locale } = useTranslation();
   const isSuper = getAdminRole() === "SUPER_ADMIN";
-  const [requests, setRequests] = useState<PurchaseRequestListItem[]>([]);
   const [rows, setRows] = useState<PurchaseRequestDetail[]>([]);
   const [loading, setLoading] = useState(true);
-  const [statusFilter, setStatusFilter] = useState<string>("");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
   const [page, setPage] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
   const [sort, setSort] = useState<"createdAt,desc" | "createdAt,asc">("createdAt,desc");
@@ -144,12 +87,15 @@ export default function AdminPurchaseRequests() {
     async (p: number, status: string) => {
       setLoading(true);
       try {
+        const statusParam =
+          status && status !== "all" ? (status as PurchaseRequestStatus) : undefined;
         const res = await adminListPurchaseRequests({
           page: p,
           size: 20,
-          status: status ? (status as PurchaseRequestStatus) : undefined,
+          status: statusParam,
+          sort,
         });
-        setRows((res.content ?? []) as PurchaseRequestDetail[]);
+        setRows(res.content ?? []);
         setTotalPages(res.totalPages ?? 0);
         setTotalElements(res.totalElements);
         setPage(res.page ?? p);
@@ -160,19 +106,19 @@ export default function AdminPurchaseRequests() {
         setLoading(false);
       }
     },
-    [t]
+    [t, sort]
   );
 
   useEffect(() => {
     void fetchPage(0, statusFilter);
-  }, [statusFilter, fetchPage]);
+  }, [statusFilter, sort, fetchPage]);
 
   const changePage = (next: number) => {
     void fetchPage(next, statusFilter);
   };
 
   const handleStatusFilter = (value: string) => {
-    setStatusFilter(value as PurchaseRequestStatus | "all");
+    setStatusFilter(value);
     setPage(0);
   };
 
@@ -231,20 +177,23 @@ export default function AdminPurchaseRequests() {
     }
   };
 
-  const filteredRows =
-    emailSearch.trim() === ""
-      ? rows
-      : rows.filter((r) => String(r.userId).includes(emailSearch.trim()));
-
   const num0 = { maximumFractionDigits: 0 };
-  
-  const filtered = search.trim()
-    ? requests.filter((r) =>
-        r.requestNumber.includes(search) ||
-        r.productName.toLowerCase().includes(search.toLowerCase())
-      )
-    : requests;
 
+  const filtered = useMemo(() => {
+    let list = rows;
+    if (emailSearch.trim() !== "") {
+      list = list.filter((r) => String(r.userId).includes(emailSearch.trim()));
+    }
+    if (search.trim() !== "") {
+      const q = search.trim().toLowerCase();
+      list = list.filter(
+        (r) =>
+          r.requestNumber.includes(search.trim()) ||
+          r.productName.toLowerCase().includes(q)
+      );
+    }
+    return list;
+  }, [rows, emailSearch, search]);
 
   return (
     <div className="space-y-6">
@@ -258,8 +207,8 @@ export default function AdminPurchaseRequests() {
 
       <Card>
         <CardContent className="pt-6">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div className="relative col-span-2">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
+            <div className="relative lg:col-span-2">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
               <Input
                 placeholder="요청번호, 상품명 검색"
@@ -268,6 +217,11 @@ export default function AdminPurchaseRequests() {
                 onChange={(e) => setSearch(e.target.value)}
               />
             </div>
+            <Input
+              placeholder="회원 ID"
+              value={emailSearch}
+              onChange={(e) => setEmailSearch(e.target.value)}
+            />
             <Select value={statusFilter} onValueChange={handleStatusFilter}>
               <SelectTrigger>
                 <Filter className="w-4 h-4 mr-2" />
@@ -335,7 +289,7 @@ export default function AdminPurchaseRequests() {
                   <TableRow
                     key={request.id}
                     className="cursor-pointer hover:bg-gray-50"
-                    onClick={() => navigate(`/admin/purchase-requests/${request.id}`)}
+                    onClick={() => openManage(request)}
                   >
                     <TableCell className="font-medium text-sm">{request.requestNumber}</TableCell>
                     <TableCell className="font-medium">{request.productName}</TableCell>
@@ -351,13 +305,19 @@ export default function AdminPurchaseRequests() {
                     <TableCell className="text-sm text-gray-500">
                       {new Date(request.createdAt).toLocaleDateString("ko-KR")}
                     </TableCell>
-                  </TableRow>)}
-                )}
-              </TableBody>
-            </Table>
-          )}
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
           <div className="flex items-center justify-between p-4 border-t">
-            <Button type="button" variant="outline" size="sm" disabled={page <= 0} onClick={() => changePage(page - 1)}>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={page <= 0}
+              onClick={() => changePage(page - 1)}
+            >
               이전
             </Button>
             <span className="text-sm text-gray-500">
@@ -367,7 +327,7 @@ export default function AdminPurchaseRequests() {
               type="button"
               variant="outline"
               size="sm"
-              disabled={page >= totalPages - 1}
+              disabled={totalPages <= 0 || page >= totalPages - 1}
               onClick={() => changePage(page + 1)}
             >
               다음
@@ -382,7 +342,7 @@ export default function AdminPurchaseRequests() {
             variant="outline"
             size="icon"
             disabled={page === 0}
-            onClick={() => setPage((p) => p - 1)}
+            onClick={() => changePage(page - 1)}
           >
             <ChevronLeft className="w-4 h-4" />
           </Button>
@@ -392,8 +352,8 @@ export default function AdminPurchaseRequests() {
           <Button
             variant="outline"
             size="icon"
-            disabled={page >= totalPages - 1}
-            onClick={() => setPage((p) => p + 1)}
+            disabled={totalPages <= 0 || page >= totalPages - 1}
+            onClick={() => changePage(page + 1)}
           >
             <ChevronRight className="w-4 h-4" />
           </Button>
@@ -407,6 +367,14 @@ export default function AdminPurchaseRequests() {
           </DialogHeader>
           {selected && (
             <div className="space-y-4">
+              <Button
+                type="button"
+                variant="link"
+                className="h-auto p-0 text-sm"
+                onClick={() => navigate(`/admin/purchase-requests/${selected.id}`)}
+              >
+                상세 페이지로 이동 →
+              </Button>
               <div className="text-sm space-y-1">
                 <p>
                   <span className="text-gray-500">회원</span> #{selected.userId}

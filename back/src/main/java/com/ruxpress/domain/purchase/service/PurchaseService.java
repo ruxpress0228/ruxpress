@@ -31,37 +31,37 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.math.BigDecimal;
-import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
 @Slf4j
 @RequiredArgsConstructor
-@SuppressWarnings("null")
 public class PurchaseService {
 
     private final PurchaseRequestRepository purchaseRequestRepository;
     private final AttachmentRepository attachmentRepository;
     private final FileStoragePort fileStoragePort;
     private final JsonUtils jsonUtils;
+    private final BalanceService balanceService;
+    private final NotificationService notificationService;
 
     @Transactional
     public PurchaseRequestResponse createPurchaseRequest(Long userId, PurchaseRequestCreateRequest request) {
-        PurchaseRequest entity = saveEntity(userId, request);
-        return toResponse(entity);
+        PurchaseRequest saved = createAndPersistPurchaseRequest(userId, request);
+        return toResponse(saved);
     }
 
     @Transactional
-    public PurchaseRequestResponse createPurchaseRequest(Long userId, PurchaseRequestCreateRequest request, List<MultipartFile> files) {
+    public PurchaseRequestResponse createPurchaseRequest(Long userId, PurchaseRequestCreateRequest request,
+            List<MultipartFile> files) {
         List<MultipartFile> fileList = files != null ? files : List.of();
         log.info("Purchase create (with files) start. userId={}, fileCount={}", userId, fileList.size());
         if (fileList.size() > FileStorageUtil.MAX_IMAGE_COUNT) {
             throw new BusinessException(ErrorCode.FILE_COUNT_EXCEEDED);
         }
 
-        PurchaseRequest entity = saveEntity(userId, request);
+        PurchaseRequest entity = createAndPersistPurchaseRequest(userId, request);
 
         if (!fileList.isEmpty()) {
             saveAttachments(entity.getId(), fileList);
@@ -69,29 +69,21 @@ public class PurchaseService {
 
         log.info("Purchase create (with files) done. userId={}, purchaseId={}", userId, entity.getId());
         return toResponse(entity);
+    }
 
-    private final ObjectMapper objectMapper;
-    private final BalanceService balanceService;
-    private final NotificationService notificationService;
-
-    @Transactional
-    public PurchaseRequestResponse createPurchaseRequest(Long userId, PurchaseRequestCreateRequest request) {
+    private PurchaseRequest createAndPersistPurchaseRequest(Long userId, PurchaseRequestCreateRequest request) {
+        request.isValid();
         PurchaseRequestStatus effectiveStatus = request.getStatus() != null
-                ? request.getStatus() : PurchaseRequestStatus.DRAFT;
-        if (effectiveStatus == PurchaseRequestStatus.SUBMITTED) {
-            if (request.getTotalAmountKrw() == null || request.getTotalAmountKrw().compareTo(BigDecimal.ZERO) <= 0) {
-                throw new BusinessException(ErrorCode.INVALID_INPUT, "차감 금액은 양수여야 합니다.");
-            }
-        }
-
+                ? request.getStatus()
+                : PurchaseRequestStatus.DRAFT;
         String requestNumber = IDGenerateUtil.generatePurchaseRequestNumber();
         PurchaseRequest purchaseRequest = PurchaseRequest.create(
                 userId,
                 requestNumber,
                 request.getProductName(),
                 request.getQuantity(),
-                writeJson(request.getUrls()),
-                writeJson(request.getOptions()),
+                jsonUtils.toJson(request.getUrls()),
+                jsonUtils.toJson(request.getOptions()),
                 request.getPriceRub(),
                 request.getPriceKrw(),
                 request.getExchangeRateId(),
@@ -105,7 +97,7 @@ public class PurchaseService {
             saved.recordChargedAmount(request.getTotalAmountKrw());
             saved = purchaseRequestRepository.save(saved);
         }
-        return toResponse(saved);
+        return saved;
     }
 
     @Transactional(readOnly = true)
@@ -121,7 +113,8 @@ public class PurchaseService {
                 .map(this::toListResponse)
                 .collect(Collectors.toList());
 
-        return new PageResponse<>(content, page.getTotalElements(), page.getTotalPages(), page.getNumber(), page.getSize());
+        return new PageResponse<>(content, page.getTotalElements(), page.getTotalPages(), page.getNumber(),
+                page.getSize());
     }
 
     @Transactional(readOnly = true)
@@ -134,7 +127,8 @@ public class PurchaseService {
         List<PurchaseRequestListResponse> content = page.getContent().stream()
                 .map(this::toListResponse)
                 .collect(Collectors.toList());
-        return new PageResponse<>(content, page.getTotalElements(), page.getTotalPages(), page.getNumber(), page.getSize());
+        return new PageResponse<>(content, page.getTotalElements(), page.getTotalPages(), page.getNumber(),
+                page.getSize());
     }
 
     @Transactional(readOnly = true)
@@ -192,34 +186,17 @@ public class PurchaseService {
         return attachment.getOriginalFilename();
     }
 
-    private PurchaseRequest saveEntity(Long userId, PurchaseRequestCreateRequest request) {
-        String requestNumber = IDGenerateUtil.generatePurchaseRequestNumber();
-        PurchaseRequest entity = PurchaseRequest.create(
-                userId,
-                requestNumber,
-                request.getProductName(),
-                request.getQuantity(),
-                jsonUtils.toJson(request.getUrls()),
-                jsonUtils.toJson(request.getOptions()),
-                request.getPriceRub(),
-                request.getPriceKrw(),
-                request.getExchangeRateId(),
-                request.getFeeAmount(),
-                request.getTotalAmountKrw(),
-                request.getMemo(),
-                request.getStatus());
-        return purchaseRequestRepository.save(entity);
-    }
-
     private void saveAttachments(Long purchaseId, List<MultipartFile> files) {
         String directory = ModulePrefix.PURCHASE;
         for (int i = 0; i < files.size(); i++) {
             MultipartFile file = files.get(i);
             try {
-                log.info("Purchase attachment upload start. purchaseId={}, idx={}, filename={}, sizeBytes={}, contentType={}",
+                log.info(
+                        "Purchase attachment upload start. purchaseId={}, idx={}, filename={}, sizeBytes={}, contentType={}",
                         purchaseId, i, file.getOriginalFilename(), file.getSize(), file.getContentType());
                 String storedUrl = fileStoragePort.store(directory, file);
-                log.info("Purchase attachment upload done. purchaseId={}, idx={}, storedUrl={}", purchaseId, i, storedUrl);
+                log.info("Purchase attachment upload done. purchaseId={}, idx={}, storedUrl={}", purchaseId, i,
+                        storedUrl);
                 Attachment attachment = Attachment.create(
                         AttachmentRefType.PURCHASE,
                         purchaseId,
@@ -227,8 +204,7 @@ public class PurchaseService {
                         storedUrl,
                         (int) file.getSize(),
                         file.getContentType() != null ? file.getContentType() : "application/octet-stream",
-                        i
-                );
+                        i);
                 attachmentRepository.save(attachment);
             } catch (Exception e) {
                 log.error("Purchase attachment upload failed. purchaseId={}, idx={}", purchaseId, i, e);
@@ -237,15 +213,7 @@ public class PurchaseService {
         }
     }
 
-    private PurchaseRequestListResponse toListResponse(PurchaseRequest entity) {
-        return new PurchaseRequestListResponse(
-                entity.getId(),
-                entity.getRequestNumber(),
-                entity.getProductName(),
-                entity.getQuantity(),
-                entity.getTotalAmountKrw(),
-                entity.getStatus(),
-                entity.getCreatedAt());
+    @Transactional(readOnly = true)
     public PageResponse<PurchaseRequestResponse> getAdminPurchaseRequests(
             PurchaseRequestStatus status, Pageable pageable) {
         Page<PurchaseRequest> page = status == null
@@ -254,7 +222,8 @@ public class PurchaseService {
         List<PurchaseRequestResponse> content = page.getContent().stream()
                 .map(this::toResponse)
                 .collect(Collectors.toList());
-        return new PageResponse<>(content, page.getTotalElements(), page.getTotalPages(), page.getNumber(), page.getSize());
+        return new PageResponse<>(content, page.getTotalElements(), page.getTotalPages(), page.getNumber(),
+                page.getSize());
     }
 
     @Transactional(readOnly = true)
@@ -266,7 +235,8 @@ public class PurchaseService {
     }
 
     @Transactional
-    public PurchaseRequestResponse updatePurchaseRequestStatus(Long id, Long adminId, AdminPurchaseStatusRequest request) {
+    public PurchaseRequestResponse updatePurchaseRequestStatus(Long id, Long adminId,
+            AdminPurchaseStatusRequest request) {
         PurchaseRequest pr = purchaseRequestRepository.findById(id)
                 .filter(p -> p.getDeletedAt() == null)
                 .orElseThrow(() -> new BusinessException(ErrorCode.PURCHASE_NOT_FOUND));
@@ -317,24 +287,23 @@ public class PurchaseService {
         return toResponse(purchaseRequestRepository.findById(id).orElse(pr));
     }
 
-    private PurchaseRequestListResponse toListResponse(PurchaseRequest purchaseRequest) {
+    private PurchaseRequestListResponse toListResponse(PurchaseRequest entity) {
         return new PurchaseRequestListResponse(
-                purchaseRequest.getId(),
-                purchaseRequest.getRequestNumber(),
-                purchaseRequest.getProductName(),
-                purchaseRequest.getQuantity(),
-                purchaseRequest.getTotalAmountKrw(),
-                purchaseRequest.getChargedAmountKrw(),
-                purchaseRequest.getSettledAmountKrw(),
-                purchaseRequest.getStatus(),
-                purchaseRequest.getCreatedAt());
+                entity.getId(),
+                entity.getRequestNumber(),
+                entity.getProductName(),
+                entity.getQuantity(),
+                entity.getTotalAmountKrw(),
+                entity.getChargedAmountKrw(),
+                entity.getSettledAmountKrw(),
+                entity.getStatus(),
+                entity.getCreatedAt());
     }
 
     private PurchaseRequestResponse toResponse(PurchaseRequest entity) {
         List<Attachment> attachments = attachmentRepository.findByRefTypeAndRefIdOrderBySortOrder(
                 AttachmentRefType.PURCHASE,
-                entity.getId()
-        );
+                entity.getId());
         List<AttachmentResponse> attachmentResponses = attachments.stream()
                 .map(a -> new AttachmentResponse(
                         a.getId(),
@@ -343,8 +312,7 @@ public class PurchaseService {
                         a.getThumbnailUrl(),
                         fileStoragePort.getViewUrl(a.getStoredUrl()),
                         a.getFileSize(),
-                        a.getMimeType()
-                ))
+                        a.getMimeType()))
                 .collect(Collectors.toList());
         return new PurchaseRequestResponse(
                 entity.getId(),
@@ -359,6 +327,8 @@ public class PurchaseService {
                 entity.getExchangeRateId(),
                 entity.getFeeAmount(),
                 entity.getTotalAmountKrw(),
+                entity.getChargedAmountKrw(),
+                entity.getSettledAmountKrw(),
                 entity.getMemo(),
                 entity.getStatus(),
                 entity.getAdminMemo(),
@@ -366,59 +336,5 @@ public class PurchaseService {
                 attachmentResponses,
                 entity.getCreatedAt(),
                 entity.getUpdatedAt());
-                purchaseRequest.getId(),
-                purchaseRequest.getUserId(),
-                purchaseRequest.getRequestNumber(),
-                purchaseRequest.getProductName(),
-                purchaseRequest.getQuantity(),
-                readUrls(purchaseRequest.getUrls()),
-                readJsonNode(purchaseRequest.getOptions()),
-                purchaseRequest.getPriceRub(),
-                purchaseRequest.getPriceKrw(),
-                purchaseRequest.getExchangeRateId(),
-                purchaseRequest.getFeeAmount(),
-                purchaseRequest.getTotalAmountKrw(),
-                purchaseRequest.getChargedAmountKrw(),
-                purchaseRequest.getSettledAmountKrw(),
-                purchaseRequest.getMemo(),
-                purchaseRequest.getStatus(),
-                purchaseRequest.getAdminMemo(),
-                purchaseRequest.getAssignedAdminId(),
-                purchaseRequest.getCreatedAt(),
-                purchaseRequest.getUpdatedAt());
-    }
-
-    private String writeJson(Object value) {
-        if (value == null) {
-            return null;
-        }
-        try {
-            return objectMapper.writeValueAsString(value);
-        } catch (JsonProcessingException e) {
-            throw new BusinessException(ErrorCode.INVALID_INPUT);
-        }
-    }
-
-    private List<String> readUrls(String json) {
-        if (json == null || json.isBlank()) {
-            return Collections.emptyList();
-        }
-        try {
-            return objectMapper.readValue(json, new TypeReference<>() {
-            });
-        } catch (JsonProcessingException e) {
-            return Collections.emptyList();
-        }
-    }
-
-    private JsonNode readJsonNode(String json) {
-        if (json == null || json.isBlank()) {
-            return null;
-        }
-        try {
-            return objectMapper.readTree(json);
-        } catch (JsonProcessingException e) {
-            return null;
-        }
     }
 }

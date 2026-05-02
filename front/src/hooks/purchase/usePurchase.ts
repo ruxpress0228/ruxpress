@@ -61,7 +61,7 @@ export function usePurchase() {
   };
 
   const getAdminPurchaseRequest = (id: number): Promise<PurchaseRequestDetail> => {
-    return api.get<PurchaseRequestDetail>(`/v1/admin/purchase-requests/${id}`).then((res) => {
+    return api.get<PurchaseRequestDetail>(`/v1/admin/purchases/${id}`).then((res) => {
       if (res.code !== 200 || res.data == null) {
         throw new Error(res.message || "Failed to fetch purchase request");
       }
@@ -77,7 +77,7 @@ export function usePurchase() {
     if (params?.status) {
       query.set("status", params.status);
     }
-    return api.get<PageResponse<PurchaseRequestListItem>>(`/v1/admin/purchase-requests?${query.toString()}`).then((res) => {
+    return api.get<PageResponse<PurchaseRequestListItem>>(`/v1/admin/purchases?${query.toString()}`).then((res) => {
       if (res.code !== 200 || res.data == null) {
         throw new Error(res.message || "Failed to fetch purchase requests");
       }

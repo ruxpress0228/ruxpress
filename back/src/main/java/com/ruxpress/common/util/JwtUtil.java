@@ -50,11 +50,6 @@ public class JwtUtil {
                 .getPayload();
     }
 
-    public static Long getUserId(String token) {
-        String sub = parseToken(token).getSubject();
-        return sub == null ? null : Long.parseLong(sub);
-    }
-
     /**
      * Authorization 헤더에서 일반 회원 JWT의 userId를 반환한다. 관리자 JWT(role 클레임 존재)는 null.
      */
