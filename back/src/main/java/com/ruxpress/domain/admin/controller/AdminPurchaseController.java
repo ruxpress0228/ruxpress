@@ -8,7 +8,9 @@ import com.ruxpress.domain.purchase.dto.response.PurchaseRequestResponse;
 import com.ruxpress.domain.purchase.entity.PurchaseRequestStatus;
 import com.ruxpress.domain.purchase.service.PurchaseService;
 import lombok.RequiredArgsConstructor;
+
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -27,12 +29,12 @@ public class AdminPurchaseController {
             @RequestParam(required = false) PurchaseRequestStatus status,
             @RequestParam(defaultValue = "createdAt,desc") String sort,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size
-    ) {
-        Sort parsedSort = parseSort(sort);
+            @RequestParam(defaultValue = "20") int size) {
+
+        Sort parsedSort = SortUtils.parseSort(sort);
         return ApiResponse.success(
-                purchaseService.getAllPurchaseRequests(status, PageRequest.of(page, size, SortUtils.parseCreatedAt(sort)))
-        );
+                purchaseService.getAllPurchaseRequests(status,
+                        PageRequest.of(page, size, parsedSort)));
     }
 
     @GetMapping("/{id}")
