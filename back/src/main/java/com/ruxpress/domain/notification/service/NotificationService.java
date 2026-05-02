@@ -51,4 +51,15 @@ public class NotificationService {
                 "{\"entryId\":" + entryId + ",\"parentEntryId\":" + parentEntryId + "}"));
         pushKafkaOutboxService.scheduleDispatchAfterCommit(saved);
     }
+
+    public void notifyWalletPurchaseAdjustment(Long userId, Long purchaseRequestId, BigDecimal amount) {
+        String body = String.format("구매 요청 #%d 관련 잔액 %s원이 지갑으로 환급되었습니다.", purchaseRequestId, amount.toPlainString());
+        Notification saved = notificationRepository.save(Notification.create(
+                userId,
+                NotificationType.BALANCE,
+                "구매 차액 환급",
+                body,
+                "{\"purchaseRequestId\":" + purchaseRequestId + ",\"amount\":\"" + amount.toPlainString() + "\"}"));
+        pushKafkaOutboxService.scheduleDispatchAfterCommit(saved);
+    }
 }

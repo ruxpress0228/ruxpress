@@ -17,6 +17,7 @@ import NoticeList from "./pages/user/NoticeList";
 import NoticeDetail from "./pages/user/NoticeDetail";
 import MyPage from "./pages/user/MyPage";
 import BankTransfer from "./pages/user/BankTransfer";
+import WalletLedger from "./pages/user/WalletLedger";
 import BankTransferReceipt from "./pages/user/BankTransferReceipt";
 
 // Admin Pages
@@ -101,6 +102,7 @@ export const router = createBrowserRouter([
           { path: "forgot-password", Component: ForgotPassword },
           { path: "reset-password", Component: ResetPassword },
           { path: "bank-transfer", Component: BankTransfer, loader: requireUserAuth },
+          { path: "wallet", Component: WalletLedger, loader: requireUserAuth },
           { path: "bank-transfer/receipt/:id", Component: BankTransferReceipt, loader: requireUserAuth },
           { path: "example1", Component: ExamplePage },
         ],

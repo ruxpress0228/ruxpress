@@ -249,3 +249,32 @@ CREATE TABLE `transfer_ledger_entries` (
 	KEY `IX_TRANSFER_LEDGER_REF` (`ref_type`, `ref_id`),
 	UNIQUE KEY `UK_TRANSFER_IDEMPOTENCY` (`idempotency_key`)
 );
+
+-- REQ-016: 지갑·원장 
+CREATE TABLE IF NOT EXISTS `user_wallets` (
+	`id`	BIGINT	NOT NULL AUTO_INCREMENT,
+	`user_id`	BIGINT	NOT NULL	COMMENT '회원 ID',
+	`balance`	DECIMAL(18, 2)	NOT NULL	DEFAULT 0	COMMENT '가용 잔액 (KRW)',
+	`version`	INT	NOT NULL	DEFAULT 0	COMMENT '낙관적 락',
+	`created_at`	DATETIME	NOT NULL,
+	`updated_at`	DATETIME	NOT NULL	DEFAULT CURRENT_TIMESTAMP,
+	PRIMARY KEY (`id`),
+	UNIQUE KEY `UK_USER_WALLET_USER` (`user_id`)
+);
+
+CREATE TABLE IF NOT EXISTS `wallet_ledger_entries` (
+	`id`	BIGINT	NOT NULL AUTO_INCREMENT,
+	`user_id`	BIGINT	NOT NULL	COMMENT '회원 ID',
+	`entry_type`	VARCHAR(50)	NOT NULL	COMMENT '원장 유형',
+	`amount`	DECIMAL(18, 2)	NOT NULL	COMMENT '금액 (양수)',
+	`currency`	VARCHAR(3)	NOT NULL	DEFAULT 'KRW',
+	`idempotency_key`	VARCHAR(100)	NOT NULL	COMMENT '멱등 키',
+	`transfer_ledger_entry_id`	BIGINT	NULL,
+	`purchase_request_id`	BIGINT	NULL,
+	`transfer_refund_entry_id`	BIGINT	NULL,
+	`memo`	VARCHAR(500)	NULL,
+	`created_at`	DATETIME	NOT NULL,
+	PRIMARY KEY (`id`),
+	UNIQUE KEY `UK_WALLET_LEDGER_IDEM` (`idempotency_key`),
+	KEY `IX_WALLET_LEDGER_USER` (`user_id`)
+);

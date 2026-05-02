@@ -31,6 +31,8 @@ export interface PurchaseRequestListItem {
   productName: string;
   quantity: number;
   totalAmountKrw?: number;
+  chargedAmountKrw?: number;
+  settledAmountKrw?: number;
   status: PurchaseRequestStatus;
   createdAt: string;
 }

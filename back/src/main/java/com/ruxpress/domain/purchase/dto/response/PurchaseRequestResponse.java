@@ -26,6 +26,8 @@ public class PurchaseRequestResponse {
     private final Long exchangeRateId;
     private final BigDecimal feeAmount;
     private final BigDecimal totalAmountKrw;
+    private final BigDecimal chargedAmountKrw;
+    private final BigDecimal settledAmountKrw;
     private final String memo;
     private final PurchaseRequestStatus status;
     private final String adminMemo;
