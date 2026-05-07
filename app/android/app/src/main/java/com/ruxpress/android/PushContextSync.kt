@@ -15,7 +15,8 @@ import java.util.concurrent.TimeUnit
 private const val PREFS_AUTH = "ruxpress_auth"
 private const val PREFS_FCM = "fcm"
 
-private const val API_ORIGIN = "http://10.0.2.2:80"
+/** WebView와 동일: `local.properties`의 `ruxpress.web.devBaseUrl` → [BuildConfig.WEB_DEV_BASE_URL]. */
+private fun apiBaseUrl(): String = BuildConfig.WEB_DEV_BASE_URL.trimEnd('/')
 
 private val jsonMediaType = "application/json; charset=utf-8".toMediaType()
 
@@ -86,7 +87,7 @@ object PushContextSync {
     private fun postHttpBlocking(appContext: Context, jwt: String, merged: JSONObject) {
         val body = buildPushBody(appContext, merged).toRequestBody(jsonMediaType)
         val request = Request.Builder()
-            .url("$API_ORIGIN/api/v1/users/me/push-context")
+            .url("${apiBaseUrl()}/api/v1/users/me/push-context")
             .header("Authorization", "Bearer $jwt")
             .post(body)
             .build()
