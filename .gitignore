@@ -28,3 +28,6 @@ logs/
 
 # Docker
 .docker/
+
+# Firebase Admin SDK for mobilePush (do not commit)
+secrets/firebase-admin.json

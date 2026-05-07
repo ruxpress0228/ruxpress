@@ -50,7 +50,7 @@ public class FcmDispatchService {
                 builder.putAllData(data);
             }
             String id = FirebaseMessaging.getInstance(app).send(builder.build());
-            log.debug("FCM sent messageId={} tokenPrefix={}", id, prefix(deviceToken));
+            log.info("FCM sent ok messageId={} title={} tokenPrefix={}", id, title, prefix(deviceToken));
             return id;
         } catch (FirebaseMessagingException e) {
             log.warn("FCM send failed: {} tokenPrefix={}", e.getMessage(), prefix(deviceToken));
