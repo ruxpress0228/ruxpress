@@ -44,7 +44,7 @@ function getAdminRole(): string | null {
 function isRootDeposit(e: TransferLedgerEntry) {
   return (
     e.parentEntryId == null &&
-    (e.entryType === "DEPOSIT" || e.entryType === "ESCROW_HOLD")
+    e.entryType === "DEPOSIT"
   );
 }
 
@@ -182,7 +182,6 @@ export default function AdminBankTransfers() {
               <SelectContent>
                 <SelectItem value="ALL">{t("admin.bank.all")}</SelectItem>
                 <SelectItem value="DEPOSIT">DEPOSIT</SelectItem>
-                <SelectItem value="ESCROW_HOLD">ESCROW_HOLD</SelectItem>
                 <SelectItem value="SETTLEMENT">SETTLEMENT</SelectItem>
                 <SelectItem value="REFUND">REFUND</SelectItem>
               </SelectContent>

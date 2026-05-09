@@ -87,7 +87,7 @@ CREATE TABLE `purchase_requests` (
 CREATE TABLE `notifications` (
 	`id`	BIGINT	NOT NULL AUTO_INCREMENT,
 	`user_id`	BIGINT	NOT NULL	COMMENT '수신자 ID',
-	`type`	ENUM('SIGNUP', 'NEW_DEVICE', 'INQUIRY_REPLY', 'NOTICE', 'PROMOTION', 'PURCHASE_STATUS', 'BALANCE', 'BANK_DEPOSIT', 'ESCROW_STATUS')	NOT NULL	COMMENT '알림 유형',
+	`type`	ENUM('SIGNUP', 'NEW_DEVICE', 'INQUIRY_REPLY', 'NOTICE', 'PROMOTION', 'PURCHASE_STATUS', 'BALANCE', 'BANK_DEPOSIT')	NOT NULL	COMMENT '알림 유형',
 	`channel`	ENUM('PUSH', 'SMS', 'EMAIL')	NOT NULL	DEFAULT 'PUSH'	COMMENT '발송 채널',
 	`title`	VARCHAR(200)	NOT NULL	COMMENT '제목',
 	`body`	TEXT	NOT NULL	COMMENT '본문',
@@ -207,7 +207,7 @@ CREATE TABLE `exchange_rates` (
 	PRIMARY KEY (`id`)
 );
 
--- REQ-017: 정산(에스크로) 입금 계좌 (관리자 등록)
+-- REQ-017: 입금 계좌 (관리자 등록)
 CREATE TABLE `settlement_accounts` (
 	`id`	BIGINT	NOT NULL AUTO_INCREMENT,
 	`bank_name`	VARCHAR(100)	NOT NULL	COMMENT '은행명',
@@ -222,12 +222,12 @@ CREATE TABLE `settlement_accounts` (
 	PRIMARY KEY (`id`)
 );
 
--- REQ-017: 이체·에스크로 공통 원장 (ref_type/ref_id로 purchase_requests 등 후속 연결)
+-- REQ-017: 이체 원장 (ref_type/ref_id로 purchase_requests 등 후속 연결)
 CREATE TABLE `transfer_ledger_entries` (
 	`id`	BIGINT	NOT NULL AUTO_INCREMENT,
 	`user_id`	BIGINT	NOT NULL	COMMENT '회원 ID',
 	`settlement_account_id`	BIGINT	NOT NULL	COMMENT '입금 대상 계좌',
-	`entry_type`	ENUM('DEPOSIT', 'ESCROW_HOLD', 'SETTLEMENT', 'REFUND')	NOT NULL	COMMENT '원장 유형',
+	`entry_type`	ENUM('DEPOSIT', 'SETTLEMENT', 'REFUND')	NOT NULL	COMMENT '원장 유형',
 	`status`	ENUM('PENDING', 'CONFIRMED', 'FAILED', 'CANCELLED')	NOT NULL	DEFAULT 'PENDING',
 	`amount`	DECIMAL(18, 2)	NOT NULL	COMMENT '금액',
 	`currency`	VARCHAR(3)	NOT NULL	DEFAULT 'KRW',
@@ -236,7 +236,7 @@ CREATE TABLE `transfer_ledger_entries` (
 	`admin_memo`	VARCHAR(500)	NULL	COMMENT '관리자 메모',
 	`ref_type`	VARCHAR(50)	NULL	COMMENT '참조 도메인 (예: PURCHASE_REQUEST)',
 	`ref_id`	BIGINT	NULL	COMMENT '참조 ID',
-	`parent_entry_id`	BIGINT	NULL	COMMENT '에스크로 본건(ID) — 정산/환불 행이 가리킴',
+	`parent_entry_id`	BIGINT	NULL	COMMENT '부모 입금 원장 ID — 정산/환불 행이 가리킴',
 	`confirmed_at`	DATETIME	NULL,
 	`confirmed_by_admin_id`	BIGINT	NULL,
 	`idempotency_key`	VARCHAR(100)	NULL	COMMENT 'PG/웹훅 멱등 키',

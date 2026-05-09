@@ -45,7 +45,7 @@ export default function BankTransfer() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [accountId, setAccountId] = useState<string>("");
-  const [entryType, setEntryType] = useState<"DEPOSIT" | "ESCROW_HOLD">("ESCROW_HOLD");
+  const entryType = "DEPOSIT" as const;
   const [amount, setAmount] = useState("");
   const [depositorName, setDepositorName] = useState("");
   const [depositorMemo, setDepositorMemo] = useState("");
@@ -154,21 +154,6 @@ export default function BankTransfer() {
                         {a.bankName} · {a.accountNumber}
                       </SelectItem>
                     ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>{t("bankTransfer.field.type")}</Label>
-                <Select
-                  value={entryType}
-                  onValueChange={(v) => setEntryType(v as "DEPOSIT" | "ESCROW_HOLD")}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="ESCROW_HOLD">{t("bankTransfer.type.escrow")}</SelectItem>
-                    <SelectItem value="DEPOSIT">{t("bankTransfer.type.deposit")}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

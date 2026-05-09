@@ -1,4 +1,4 @@
-export type TransferLedgerEntryType = 'DEPOSIT' | 'ESCROW_HOLD' | 'SETTLEMENT' | 'REFUND';
+export type TransferLedgerEntryType = 'DEPOSIT' | 'SETTLEMENT' | 'REFUND';
 export type TransferLedgerStatus = 'PENDING' | 'CONFIRMED' | 'FAILED' | 'CANCELLED';
 
 export interface SettlementAccount {

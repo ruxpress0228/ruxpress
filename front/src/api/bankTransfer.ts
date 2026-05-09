@@ -14,7 +14,7 @@ export async function getPublicSettlementAccounts(): Promise<SettlementAccount[]
 
 export async function reportDeposit(body: {
   settlementAccountId: number;
-  entryType: "DEPOSIT" | "ESCROW_HOLD";
+  entryType: "DEPOSIT";
   amount: number;
   currency?: string;
   depositorName?: string;

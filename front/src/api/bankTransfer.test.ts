@@ -60,7 +60,7 @@ describe("bankTransfer API", () => {
       id: 10,
       userId: 1,
       settlementAccountId: 2,
-      entryType: "ESCROW_HOLD" as const,
+      entryType: "DEPOSIT" as const,
       status: "PENDING" as const,
       amount: 5000,
       currency: "KRW",
@@ -79,7 +79,7 @@ describe("bankTransfer API", () => {
 
     const body = {
       settlementAccountId: 2,
-      entryType: "ESCROW_HOLD" as const,
+      entryType: "DEPOSIT" as const,
       amount: 5000,
     };
     const result = await reportDeposit(body);
@@ -102,12 +102,12 @@ describe("bankTransfer API", () => {
       page: 1,
       size: 30,
       status: "PENDING",
-      entryType: "ESCROW_HOLD",
+      entryType: "DEPOSIT",
       userEmail: "buyer@test.com",
     });
 
     expect(api.get).toHaveBeenCalledWith(
-      "/v1/admin/bank-transfers?page=1&size=30&status=PENDING&entryType=ESCROW_HOLD&userEmail=buyer%40test.com"
+      "/v1/admin/bank-transfers?page=1&size=30&status=PENDING&entryType=DEPOSIT&userEmail=buyer%40test.com"
     );
   });
 

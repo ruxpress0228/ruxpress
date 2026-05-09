@@ -201,7 +201,7 @@ public class BankTransferService {
                 request.getAdminMemo(),
                 adminId);
         TransferLedgerEntry saved = entryRepository.save(child);
-        notificationService.notifyEscrowSettled(saved.getUserId(), saved.getId(), parent.getId(), saved.getAmount());
+        notificationService.notifySettled(saved.getUserId(), saved.getId(), parent.getId(), saved.getAmount());
         return toResponse(saved, false, resolveUserEmail(saved.getUserId()));
     }
 
@@ -230,7 +230,7 @@ public class BankTransferService {
                 request.getAdminMemo(),
                 adminId);
         TransferLedgerEntry saved = entryRepository.save(child);
-        notificationService.notifyEscrowRefunded(saved.getUserId(), saved.getId(), parent.getId(), saved.getAmount());
+        notificationService.notifyRefunded(saved.getUserId(), saved.getId(), parent.getId(), saved.getAmount());
         return toResponse(saved, false, resolveUserEmail(saved.getUserId()));
     }
 

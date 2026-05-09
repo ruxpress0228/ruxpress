@@ -30,23 +30,23 @@ public class NotificationService {
         pushKafkaOutboxService.scheduleDispatchAfterCommit(saved);
     }
 
-    public void notifyEscrowSettled(Long userId, Long entryId, Long parentEntryId, BigDecimal amount) {
-        String body = String.format("거래 #%d 정산 금액 %s원이 처리되었습니다. (원 건 #%d)", entryId, amount.toPlainString(), parentEntryId);
+    public void notifySettled(Long userId, Long entryId, Long parentEntryId, BigDecimal amount) {
+        String body = String.format("입금 #%d 정산 금액 %s원이 처리되었습니다. (원 건 #%d)", entryId, amount.toPlainString(), parentEntryId);
         Notification saved = notificationRepository.save(Notification.create(
                 userId,
-                NotificationType.ESCROW_STATUS,
-                "에스크로 정산 완료",
+                NotificationType.BANK_DEPOSIT,
+                "정산 완료",
                 body,
                 "{\"entryId\":" + entryId + ",\"parentEntryId\":" + parentEntryId + "}"));
         pushKafkaOutboxService.scheduleDispatchAfterCommit(saved);
     }
 
-    public void notifyEscrowRefunded(Long userId, Long entryId, Long parentEntryId, BigDecimal amount) {
-        String body = String.format("거래 #%d 환불 금액 %s원이 처리되었습니다. (원 건 #%d)", entryId, amount.toPlainString(), parentEntryId);
+    public void notifyRefunded(Long userId, Long entryId, Long parentEntryId, BigDecimal amount) {
+        String body = String.format("입금 #%d 환불 금액 %s원이 처리되었습니다. (원 건 #%d)", entryId, amount.toPlainString(), parentEntryId);
         Notification saved = notificationRepository.save(Notification.create(
                 userId,
-                NotificationType.ESCROW_STATUS,
-                "에스크로 환불 완료",
+                NotificationType.BANK_DEPOSIT,
+                "환불 완료",
                 body,
                 "{\"entryId\":" + entryId + ",\"parentEntryId\":" + parentEntryId + "}"));
         pushKafkaOutboxService.scheduleDispatchAfterCommit(saved);

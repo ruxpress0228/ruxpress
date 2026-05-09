@@ -85,7 +85,7 @@ class BankTransferServiceTest {
         TransferLedgerEntry existing = TransferLedgerEntry.createRootEntry(
                 1L,
                 10L,
-                TransferLedgerEntryType.ESCROW_HOLD,
+                TransferLedgerEntryType.DEPOSIT,
                 new BigDecimal("1000"),
                 "KRW",
                 "입금자",
@@ -101,7 +101,7 @@ class BankTransferServiceTest {
 
         DepositReportRequest request = new DepositReportRequest();
         request.setSettlementAccountId(10L);
-        request.setEntryType(TransferLedgerEntryType.ESCROW_HOLD);
+        request.setEntryType(TransferLedgerEntryType.DEPOSIT);
         request.setAmount(new BigDecimal("1000"));
         request.setIdempotencyKey("idem-1");
 
@@ -117,7 +117,7 @@ class BankTransferServiceTest {
         TransferLedgerEntry pending = TransferLedgerEntry.createRootEntry(
                 1L,
                 10L,
-                TransferLedgerEntryType.ESCROW_HOLD,
+                TransferLedgerEntryType.DEPOSIT,
                 new BigDecimal("5000"),
                 "KRW",
                 "김",
@@ -152,7 +152,7 @@ class BankTransferServiceTest {
         TransferLedgerEntry parent = TransferLedgerEntry.createRootEntry(
                 2L,
                 10L,
-                TransferLedgerEntryType.ESCROW_HOLD,
+                TransferLedgerEntryType.DEPOSIT,
                 new BigDecimal("10000"),
                 "KRW",
                 null,
@@ -184,7 +184,7 @@ class BankTransferServiceTest {
 
         assertThat(response.getEntryType()).isEqualTo(TransferLedgerEntryType.SETTLEMENT);
         assertThat(response.getUserEmail()).isEqualTo("user2@test.com");
-        verify(notificationService).notifyEscrowSettled(eq(2L), eq(201L), eq(100L), eq(new BigDecimal("10000")));
+        verify(notificationService).notifySettled(eq(2L), eq(201L), eq(100L), eq(new BigDecimal("10000")));
     }
 
     @Test
@@ -192,7 +192,7 @@ class BankTransferServiceTest {
         TransferLedgerEntry parent = TransferLedgerEntry.createRootEntry(
                 1L,
                 10L,
-                TransferLedgerEntryType.ESCROW_HOLD,
+                TransferLedgerEntryType.DEPOSIT,
                 new BigDecimal("100"),
                 "KRW",
                 null,
@@ -226,7 +226,7 @@ class BankTransferServiceTest {
         TransferLedgerEntry parent = TransferLedgerEntry.createRootEntry(
                 1L,
                 10L,
-                TransferLedgerEntryType.ESCROW_HOLD,
+                TransferLedgerEntryType.DEPOSIT,
                 new BigDecimal("1000"),
                 "KRW",
                 null,
