@@ -19,6 +19,7 @@ import com.ruxpress.domain.user.dto.ChangePasswordRequest;
 import com.ruxpress.domain.user.dto.EmailSignupRequest;
 import com.ruxpress.domain.user.dto.LoginRequest;
 import com.ruxpress.domain.user.dto.LoginResponse;
+import com.ruxpress.domain.user.dto.UpdateProfileRequest;
 import com.ruxpress.domain.user.dto.response.UserResponse;
 import com.ruxpress.domain.user.dto.response.UserStatsResponse;
 
@@ -221,5 +222,36 @@ public class UserService {
         }
         user.changePasswordHash(passwordEncoder.encode(request.getNewPassword()));
         userRepository.save(user);
+    }
+
+    /**
+     * 로그인한 회원의 프로필(닉네임/주소) 수정.
+     */
+    @Transactional
+    public UserResponse updateProfile(Long userId, UpdateProfileRequest request) {
+        User user = userRepository.findById(userId)
+                .filter(u -> u.getDeletedAt() == null)
+                .orElseThrow(() -> new BusinessException(ErrorCode.UNAUTHORIZED, "회원 정보를 찾을 수 없습니다."));
+        if (user.getStatus() != UserStatus.ACTIVE) {
+            throw new BusinessException(ErrorCode.FORBIDDEN, "이용할 수 없는 계정입니다.");
+        }
+
+        String nickname = request.getNickname() == null ? null : request.getNickname().trim();
+        if (nickname == null || nickname.isEmpty()) {
+            throw new BusinessException(ErrorCode.INVALID_INPUT, "닉네임을 입력하세요.");
+        }
+        String line1 = request.getAddressLine1() == null ? null : request.getAddressLine1().trim();
+        if (line1 == null || line1.isEmpty()) {
+            throw new BusinessException(ErrorCode.INVALID_INPUT, "주소를 입력하세요.");
+        }
+        String postal = request.getAddressPostalCode() == null ? null : request.getAddressPostalCode().trim();
+        String line2 = request.getAddressLine2() == null ? null : request.getAddressLine2().trim();
+
+        user.updateProfile(
+                nickname,
+                postal == null || postal.isEmpty() ? null : postal,
+                line1,
+                line2 == null || line2.isEmpty() ? null : line2);
+        return UserResponse.from(userRepository.save(user));
     }
 }

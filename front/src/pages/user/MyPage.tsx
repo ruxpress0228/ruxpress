@@ -56,6 +56,12 @@ export default function MyPage() {
   const [newPwd, setNewPwd] = useState("");
   const [newPwdConfirm, setNewPwdConfirm] = useState("");
   const [pwdSubmitting, setPwdSubmitting] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
+  const [editNickname, setEditNickname] = useState("");
+  const [editPostal, setEditPostal] = useState("");
+  const [editLine1, setEditLine1] = useState("");
+  const [editLine2, setEditLine2] = useState("");
+  const [editSubmitting, setEditSubmitting] = useState(false);
 
   const loadProfile = useCallback(async () => {
     const token = localStorage.getItem(STORAGE_KEYS.TOKEN);
@@ -97,6 +103,50 @@ export default function MyPage() {
     clearUserSession();
     toast.success("로그아웃되었습니다");
     navigate("/login", { replace: true });
+  };
+
+  const openEditDialog = () => {
+    if (!profile) return;
+    setEditNickname(profile.nickname ?? "");
+    setEditPostal(profile.addressPostalCode ?? "");
+    setEditLine1(profile.addressLine1 ?? "");
+    setEditLine2(profile.addressLine2 ?? "");
+    setEditOpen(true);
+  };
+
+  const submitProfileEdit = async () => {
+    const nickname = editNickname.trim();
+    const line1 = editLine1.trim();
+    if (!nickname) {
+      toast.error("닉네임을 입력하세요");
+      return;
+    }
+    if (!line1) {
+      toast.error("주소를 입력하세요");
+      return;
+    }
+    setEditSubmitting(true);
+    try {
+      const res = await api.patch<UserProfile>("/v1/users/me", {
+        nickname,
+        addressPostalCode: editPostal.trim() || null,
+        addressLine1: line1,
+        addressLine2: editLine2.trim() || null,
+      });
+      if (res.code === 200 && res.data) {
+        setProfile(res.data);
+        localStorage.setItem(STORAGE_KEYS.USER_NICKNAME, res.data.nickname);
+        notifyUserAuthChange();
+        toast.success(res.message ?? "프로필이 수정되었습니다");
+        setEditOpen(false);
+      } else {
+        toast.error(res.message ?? "프로필 수정에 실패했습니다");
+      }
+    } catch {
+      toast.error("프로필 수정에 실패했습니다");
+    } finally {
+      setEditSubmitting(false);
+    }
   };
 
   const resetPwdForm = () => {
@@ -185,7 +235,7 @@ export default function MyPage() {
                   <Badge variant="outline">{signupTypeLabel(profile.signupType)}</Badge>
                 </div>
               </div>
-              <Button type="button" variant="outline" disabled>
+              <Button type="button" variant="outline" onClick={openEditDialog}>
                 프로필 수정
               </Button>
             </div>
@@ -362,19 +412,47 @@ export default function MyPage() {
               <Shield className="w-4 h-4 mr-2" />
               비밀번호 변경
             </Button>
-            <Button variant="outline" className="w-full justify-start" asChild>
-              <Link to="/forgot-password">비밀번호를 잊으셨나요? (이메일 재설정)</Link>
-            </Button>
             <Button type="button" variant="outline" className="w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50" onClick={handleLogout}>
               <LogOut className="w-4 h-4 mr-2" />
               로그아웃
             </Button>
-            <Separator />
-            <Button variant="ghost" className="w-full justify-start text-gray-500 hover:text-gray-700" disabled>
-              회원 탈퇴
-            </Button>
           </CardContent>
         </Card>
+
+        <Dialog open={editOpen} onOpenChange={setEditOpen}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>프로필 수정</DialogTitle>
+              <DialogDescription>닉네임과 배송지 주소를 수정할 수 있습니다.</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-3 py-2">
+              <div className="space-y-2">
+                <Label htmlFor="edit-nickname">닉네임</Label>
+                <Input id="edit-nickname" maxLength={50} value={editNickname} onChange={(e) => setEditNickname(e.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-postal">우편번호</Label>
+                <Input id="edit-postal" maxLength={10} value={editPostal} onChange={(e) => setEditPostal(e.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-line1">주소</Label>
+                <Input id="edit-line1" maxLength={255} value={editLine1} onChange={(e) => setEditLine1(e.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-line2">상세주소</Label>
+                <Input id="edit-line2" maxLength={255} value={editLine2} onChange={(e) => setEditLine2(e.target.value)} />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setEditOpen(false)} disabled={editSubmitting}>
+                취소
+              </Button>
+              <Button type="button" onClick={() => void submitProfileEdit()} disabled={editSubmitting}>
+                {editSubmitting ? "처리 중…" : "저장"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
         <Dialog
           open={pwdOpen}

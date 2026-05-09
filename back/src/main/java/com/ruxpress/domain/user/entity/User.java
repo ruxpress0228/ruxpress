@@ -129,4 +129,11 @@ public class User {
     public void changePasswordHash(String passwordHash) {
         this.passwordHash = passwordHash;
     }
+
+    public void updateProfile(String nickname, String addressPostalCode, String addressLine1, String addressLine2) {
+        this.nickname = nickname;
+        this.addressPostalCode = addressPostalCode;
+        this.addressLine1 = addressLine1;
+        this.addressLine2 = addressLine2;
+    }
 }

@@ -13,6 +13,7 @@ import com.ruxpress.domain.user.dto.LoginRequest;
 import com.ruxpress.domain.user.dto.LoginResponse;
 import com.ruxpress.domain.user.dto.PushContextRequest;
 import com.ruxpress.domain.user.dto.ResetPasswordRequest;
+import com.ruxpress.domain.user.dto.UpdateProfileRequest;
 import com.ruxpress.domain.user.dto.response.UserResponse;
 import com.ruxpress.domain.user.entity.DeviceType;
 import com.ruxpress.domain.user.service.EmailVerificationService;
@@ -116,6 +117,20 @@ public class UserController {
                     userId, token, DeviceType.ANDROID, deviceName, ip);
         }
         return ApiResponse.success("수신되었습니다.", null);
+    }
+
+    /**
+     * 로그인한 회원의 프로필(닉네임/주소) 수정.
+     */
+    @PatchMapping("/me")
+    public ApiResponse<UserResponse> updateProfile(
+            HttpServletRequest request,
+            @Valid @RequestBody UpdateProfileRequest body) {
+        Long userId = JwtUtil.getUserId(request);
+        if (userId == null) {
+            throw new BusinessException(ErrorCode.UNAUTHORIZED, "로그인이 필요합니다.");
+        }
+        return ApiResponse.success("프로필이 수정되었습니다.", userService.updateProfile(userId, body));
     }
 
     @PostMapping("/me/password")
