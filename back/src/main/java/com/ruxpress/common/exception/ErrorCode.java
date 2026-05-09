@@ -29,7 +29,10 @@ public enum ErrorCode {
     INVALID_LEDGER_STATE(400, "error.invalid_ledger_state"),
     CONCURRENT_UPDATE(409, "error.concurrent_update"),
     LEDGER_AMOUNT_INVALID(400, "error.ledger_amount_invalid"),
-    DUPLICATE_IDEMPOTENCY_KEY(409, "error.duplicate_idempotency_key");
+    DUPLICATE_IDEMPOTENCY_KEY(409, "error.duplicate_idempotency_key"),
+    INSUFFICIENT_BALANCE(400, "error.insufficient_balance"),
+    PURCHASE_NOT_FOUND(404, "error.purchase_not_found"),
+    INVALID_PURCHASE_STATE(400, "error.invalid_purchase_state");
 
     private final int status;
     private final String messageKey;

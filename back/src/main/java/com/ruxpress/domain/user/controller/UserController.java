@@ -23,7 +23,6 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.HttpHeaders;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 
@@ -37,7 +36,6 @@ public class UserController {
     private final UserService userService;
     private final PasswordResetService passwordResetService;
     private final UserDeviceService userDeviceService;
-    private final JwtUtil jwtUtil;
 
     /**
      * 이메일 인증 코드 발송 (실제 메일 발송)
@@ -70,14 +68,12 @@ public class UserController {
      * 현재 로그인한 회원 정보 (Bearer: 일반 회원 JWT)
      */
     @GetMapping("/me")
-    public ApiResponse<UserResponse> me(
-            @RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String authorization) {
-        Long userId = jwtUtil.resolveUserIdFromAuthorizationHeader(authorization);
+    public ApiResponse<UserResponse> me(HttpServletRequest request) {
+        Long userId = JwtUtil.getUserId(request);
         if (userId == null) {
             throw new BusinessException(ErrorCode.UNAUTHORIZED, "로그인이 필요합니다.");
         }
-        UserResponse profile = userService.getProfileForCurrentUser(userId);
-        return ApiResponse.success(profile);
+        return ApiResponse.success(userService.getProfileForCurrentUser(userId));
     }
 
     /**
@@ -85,10 +81,9 @@ public class UserController {
      */
     @PostMapping("/me/push-context")
     public ApiResponse<Void> pushContext(
-            @RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String authorization,
             @RequestBody(required = false) PushContextRequest body,
             HttpServletRequest request) {
-        Long userId = jwtUtil.resolveUserIdFromAuthorizationHeader(authorization);
+        Long userId = JwtUtil.getUserId(request);
         if (userId == null) {
             throw new BusinessException(ErrorCode.UNAUTHORIZED, "로그인이 필요합니다.");
         }
@@ -123,36 +118,15 @@ public class UserController {
         return ApiResponse.success("수신되었습니다.", null);
     }
 
-    private static String buildDeviceDisplayName(PushContextRequest body) {
-        String m = body.getManufacturer() == null ? "" : body.getManufacturer().trim();
-        String model = body.getModel() == null ? "" : body.getModel().trim();
-        String name = (m + " " + model).trim();
-        return StringUtils.hasText(name) ? name : "Android";
-    }
-
-    private static String resolveClientIp(HttpServletRequest request) {
-        if (request == null) {
-            return null;
-        }
-        String xff = request.getHeader("X-Forwarded-For");
-        if (StringUtils.hasText(xff)) {
-            return xff.split(",")[0].trim();
-        }
-        return request.getRemoteAddr();
-    }
-
-    /**
-     * 비밀번호 변경 (로그인 상태, 현재 비밀번호 확인)
-     */
     @PostMapping("/me/password")
     public ApiResponse<Void> changePassword(
-            @RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String authorization,
-            @Valid @RequestBody ChangePasswordRequest request) {
-        Long userId = jwtUtil.resolveUserIdFromAuthorizationHeader(authorization);
+            HttpServletRequest request,
+            @Valid @RequestBody ChangePasswordRequest changePasswordRequest) {
+        Long userId = JwtUtil.getUserId(request);
         if (userId == null) {
             throw new BusinessException(ErrorCode.UNAUTHORIZED, "로그인이 필요합니다.");
         }
-        userService.changePassword(userId, request);
+        userService.changePassword(userId, changePasswordRequest);
         return ApiResponse.success("비밀번호가 변경되었습니다.", null);
     }
 
@@ -181,5 +155,19 @@ public class UserController {
     public ApiResponse<Void> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
         passwordResetService.resetPassword(request.getToken(), request.getNewPassword());
         return ApiResponse.success("비밀번호가 변경되었습니다. 로그인해 주세요.", null);
+    }
+
+    private static String buildDeviceDisplayName(PushContextRequest body) {
+        String m = body.getManufacturer() == null ? "" : body.getManufacturer().trim();
+        String model = body.getModel() == null ? "" : body.getModel().trim();
+        String name = (m + " " + model).trim();
+        return StringUtils.hasText(name) ? name : "Android";
+    }
+
+    private static String resolveClientIp(HttpServletRequest request) {
+        if (request == null)
+            return null;
+        String xff = request.getHeader("X-Forwarded-For");
+        return StringUtils.hasText(xff) ? xff.split(",")[0].trim() : request.getRemoteAddr();
     }
 }

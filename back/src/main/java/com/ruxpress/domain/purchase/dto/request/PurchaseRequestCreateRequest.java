@@ -1,6 +1,8 @@
 package com.ruxpress.domain.purchase.dto.request;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.ruxpress.common.exception.BusinessException;
+import com.ruxpress.common.exception.ErrorCode;
 import com.ruxpress.domain.purchase.entity.PurchaseRequestStatus;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
@@ -42,4 +44,13 @@ public class PurchaseRequestCreateRequest {
     private String memo;
 
     private PurchaseRequestStatus status;
+
+    public boolean isValid() {
+        if (status == PurchaseRequestStatus.SUBMITTED) {
+            if (totalAmountKrw == null || totalAmountKrw.compareTo(BigDecimal.ZERO) <= 0) {
+                throw new BusinessException(ErrorCode.INVALID_INPUT, "차감 금액은 양수여야 합니다.");
+            }
+        }
+        return true;
+    }
 }

@@ -1,23 +1,30 @@
-storage:
-  type: s3
-  s3:
-    bucket: ${S3_BUCKET}
-    region: ${S3_REGION:ap-northeast-2}
-    access-key: ${S3_ACCESS_KEY}
-    secret-key: ${S3_SECRET_KEY}
+server:
+  port: 8080
 
 spring:
-  mail:
-      host: ${MAIL_HOST:}
-      port: ${MAIL_PORT:}
-      username: ${MAIL_USERNAME:}
-      password: ${MAIL_PASSWORD:}
-      properties:
-        mail:
-          smtp:
-            auth: true
-            starttls:
-              enable: true
+  application:
+    name: ruxpress-back
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 60MB
+  task:
+    scheduling:
+      enabled: true
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+      acks: all
+    consumer:
+      group-id: ruxpress-back-push-result
+      auto-offset-reset: latest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+  messages:
+    basename: messages/messages
+    encoding: UTF-8
   datasource:
     url: jdbc:mariadb://${DB_HOST}:${DB_PORT:3306}/${DB_NAME}
     driver-class-name: org.mariadb.jdbc.Driver
@@ -27,13 +34,63 @@ spring:
     database-platform: org.hibernate.dialect.MariaDBDialect
     hibernate:
       ddl-auto: none
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+  mail:
+    host: ${MAIL_HOST:smtp.local}
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
 
 ruxpress:
+  dev-verify-api-enabled: ${RUXPRESS_DEV_VERIFY_API:false}
   kafka:
     publish-events: ${RUXPRESS_KAFKA_PUBLISH:true}
     consume-results: ${RUXPRESS_KAFKA_CONSUME_RESULTS:true}
+    topics:
+      dispatch: ruxpress.notification.push.dispatch
+      device-sync: ruxpress.user.device.sync
+      result: ruxpress.notification.push.result
+
+app:
+  frontend:
+    base-url: ${FRONTEND_BASE_URL:http://localhost}
+  mail:
+    from: ${MAIL_FROM:}
+    verification:
+      subject: ${MAIL_VERIFICATION_SUBJECT:}
+    password-reset:
+      subject: ${MAIL_PASSWORD_RESET_SUBJECT:Ruxpress 비밀번호 재설정}
+  jwt:
+    secret: ${JWT_SECRET:local-dev-only-change-me-use-strong-secret-in-production-min-32chars}
+    expiration: ${JWT_EXPIRATION:86400000}
+
+storage:
+  type: s3
+  s3:
+    bucket: ${S3_BUCKET}
+    region: ${S3_REGION:ap-northeast-2}
+    access-key: ${S3_ACCESS_KEY}
+    secret-key: ${S3_SECRET_KEY}
+  local:
+    upload-dir: ./uploads
 
 logging:
+  file:
+    name: logs/ruxpress-back.log
+  logback:
+    rollingpolicy:
+      max-file-size: 20MB
+      max-history: 14
   level:
     root: WARN
     com.ruxpress: INFO
+    org.springframework.security: INFO
