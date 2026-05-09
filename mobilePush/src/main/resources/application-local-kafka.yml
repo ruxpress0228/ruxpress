@@ -1,0 +1,18 @@
+# 로컬 PC에 ZooKeeper/Kafka만 띄운 경우 no-docker와 함께 사용.
+# 예: mvn spring-boot:run -Dspring-boot.run.profiles=no-docker,local-kafka
+#
+# - Kafka 리스너 자동 기동 (device-sync / dispatch 소비)
+# - Actuator Kafka health 활성화
+# - 단계 1과 함께 NewTopic 빈으로 토픽 자동 생성 (KafkaTopicConfig)
+spring:
+  config:
+    activate:
+      on-profile: local-kafka
+  kafka:
+    listener:
+      auto-startup: true
+
+management:
+  health:
+    kafka:
+      enabled: true

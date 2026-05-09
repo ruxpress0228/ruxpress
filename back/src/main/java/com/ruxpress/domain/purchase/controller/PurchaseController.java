@@ -2,22 +2,29 @@ package com.ruxpress.domain.purchase.controller;
 
 import com.ruxpress.common.dto.ApiResponse;
 import com.ruxpress.common.dto.PageResponse;
+import com.ruxpress.common.exception.BusinessException;
+import com.ruxpress.common.exception.ErrorCode;
+import com.ruxpress.common.util.JwtUtil;
+import com.ruxpress.common.util.SortUtils;
 import com.ruxpress.domain.purchase.dto.request.PurchaseRequestCreateRequest;
 import com.ruxpress.domain.purchase.dto.response.PurchaseRequestListResponse;
 import com.ruxpress.domain.purchase.dto.response.PurchaseRequestResponse;
 import com.ruxpress.domain.purchase.entity.PurchaseRequestStatus;
 import com.ruxpress.domain.purchase.service.PurchaseService;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Sort;
+import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -28,52 +35,60 @@ public class PurchaseController {
 
     private final PurchaseService purchaseService;
 
-    @PostMapping
+    @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
     public ApiResponse<PurchaseRequestResponse> createPurchaseRequest(
-            @RequestHeader(value = "X-User-Id", required = false) Long userId,
-            @RequestBody @Valid PurchaseRequestCreateRequest request
+            HttpServletRequest request,
+            @RequestBody @Valid PurchaseRequestCreateRequest body
     ) {
-        Long effectiveUserId = userId != null ? userId : 1L; // TODO: JWT에서 추출
-        PurchaseRequestResponse response = purchaseService.createPurchaseRequest(effectiveUserId, request);
-        return ApiResponse.success(response);
+        Long userId = resolveUserId(request);
+        return ApiResponse.success(purchaseService.createPurchaseRequest(userId, body));
+    }
+
+    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ApiResponse<PurchaseRequestResponse> createPurchaseRequestWithFiles(
+            HttpServletRequest request,
+            @RequestPart("purchase") @Valid PurchaseRequestCreateRequest body,
+            @RequestPart(value = "files", required = false) List<MultipartFile> files
+    ) {
+        Long userId = resolveUserId(request);
+        return ApiResponse.success(purchaseService.createPurchaseRequest(userId, body, files));
     }
 
     @GetMapping
     public ApiResponse<PageResponse<PurchaseRequestListResponse>> getMyPurchaseRequests(
-            @RequestHeader(value = "X-User-Id", required = false) Long userId,
+            HttpServletRequest request,
             @RequestParam(required = false) PurchaseRequestStatus status,
             @RequestParam(defaultValue = "createdAt,desc") String sort,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size
     ) {
-        Long effectiveUserId = userId != null ? userId : 1L; // TODO: JWT에서 추출
-        Sort parsedSort = parseSort(sort);
-        PageResponse<PurchaseRequestListResponse> response = purchaseService.getMyPurchaseRequests(
-                effectiveUserId,
-                status,
-                PageRequest.of(page, size, parsedSort)
-        );
-        return ApiResponse.success(response);
+        Long userId = resolveUserId(request);
+        return ApiResponse.success(purchaseService.getMyPurchaseRequests(
+                userId, status, PageRequest.of(page, size, SortUtils.parseCreatedAt(sort))));
     }
 
     @GetMapping("/recent")
     public ApiResponse<List<PurchaseRequestListResponse>> getRecentMyPurchaseRequests(
-            @RequestHeader(value = "X-User-Id", required = false) Long userId
+            HttpServletRequest request
     ) {
-        Long effectiveUserId = userId != null ? userId : 1L; // TODO: JWT에서 추출
-        List<PurchaseRequestListResponse> response = purchaseService.getRecentMyPurchaseRequests(effectiveUserId);
-        return ApiResponse.success(response);
+        Long userId = resolveUserId(request);
+        return ApiResponse.success(purchaseService.getRecentMyPurchaseRequests(userId));
     }
 
-    private Sort parseSort(String sort) {
-        String[] tokens = sort.split(",");
-        String property = tokens.length > 0 ? tokens[0] : "createdAt";
-        String direction = tokens.length > 1 ? tokens[1] : "desc";
+    @GetMapping("/{purchaseRequestId}")
+    public ApiResponse<PurchaseRequestResponse> getMyPurchaseRequest(
+            HttpServletRequest request,
+            @PathVariable Long purchaseRequestId
+    ) {
+        Long userId = resolveUserId(request);
+        return ApiResponse.success(purchaseService.getMyPurchaseRequest(userId, purchaseRequestId));
+    }
 
-        if (!"createdAt".equals(property)) {
-            property = "createdAt";
+    private Long resolveUserId(HttpServletRequest request) {
+        Long userId = JwtUtil.getUserId(request);
+        if (userId == null) {
+            throw new BusinessException(ErrorCode.UNAUTHORIZED);
         }
-        Sort.Direction sortDirection = "asc".equalsIgnoreCase(direction) ? Sort.Direction.ASC : Sort.Direction.DESC;
-        return Sort.by(sortDirection, property);
+        return userId;
     }
 }

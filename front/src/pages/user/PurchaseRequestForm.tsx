@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import { Plus, X, Upload } from "lucide-react";
 import { Button } from "../../components/ui/button";
@@ -12,15 +12,20 @@ import { useTranslation } from "../../hooks/useTranslation";
 import { useExchangeRate } from "../../hooks/exchange/useExchangeRate";
 import { usePurchase } from "../../hooks/purchase/usePurchase";
 import { formatDate, formatNumber } from "../../utils/format";
+import { USER_BALANCE_CHANGE_EVENT } from "../../utils/constants";
 import type { ExchangeRate, PurchaseRequestStatus } from "../../types";
 
 const FEE_PERCENT = 12;
+const MAX_IMAGES = 10;
+const MAX_IMAGE_SIZE = 5 * 1024 * 1024; // 5MB
+const ALLOWED_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 
 export default function PurchaseRequestForm() {
   const { t, locale } = useTranslation();
   const navigate = useNavigate();
   const { getCurrentExchangeRate } = useExchangeRate();
   const { createPurchaseRequest } = usePurchase();
+  const imageInputRef = useRef<HTMLInputElement>(null);
   const [currentExchangeRate, setCurrentExchangeRate] = useState<ExchangeRate | null>(null);
   const [urls, setUrls] = useState<Array<{ url: string; shop: string }>>([{ url: "", shop: "" }]);
   const [options, setOptions] = useState<Array<{ name: string; value: string }>>([]);
@@ -28,6 +33,8 @@ export default function PurchaseRequestForm() {
   const [productName, setProductName] = useState("");
   const [quantity, setQuantity] = useState(1);
   const [memo, setMemo] = useState("");
+  const [images, setImages] = useState<File[]>([]);
+  const [isDragOver, setIsDragOver] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
@@ -35,6 +42,16 @@ export default function PurchaseRequestForm() {
       .then(setCurrentExchangeRate)
       .catch(() => setCurrentExchangeRate(null));
   }, []);
+
+  const imagePreviews = useMemo(() => {
+    return images.map((file) => ({ file, url: URL.createObjectURL(file) }));
+  }, [images]);
+
+  useEffect(() => {
+    return () => {
+      imagePreviews.forEach((p) => URL.revokeObjectURL(p.url));
+    };
+  }, [imagePreviews]);
 
   const addUrl = () => {
     setUrls([...urls, { url: "", shop: "" }]);
@@ -83,6 +100,52 @@ export default function PurchaseRequestForm() {
     };
   };
 
+  const addImages = (selectedFiles: File[]) => {
+    if (selectedFiles.length === 0) return;
+
+    const next: File[] = [];
+    for (const file of selectedFiles) {
+      if (!ALLOWED_IMAGE_TYPES.has(file.type)) {
+        continue;
+      }
+      if (file.size > MAX_IMAGE_SIZE) {
+        continue;
+      }
+      next.push(file);
+    }
+
+    const combined = [...images, ...next].slice(0, MAX_IMAGES);
+
+    const tooMany = images.length + next.length > MAX_IMAGES;
+    const droppedByTypeOrSize = next.length < selectedFiles.length;
+    if (droppedByTypeOrSize) {
+      toast.error(t("purchase.image.desc"));
+    }
+    if (tooMany) {
+      toast.error(t("purchase.image.desc"));
+    }
+
+    setImages(combined);
+  };
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selected = Array.from(e.target.files || []);
+    addImages(selected);
+    e.target.value = "";
+  };
+
+  const removeImage = (index: number) => {
+    setImages((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDragOver(false);
+    const dropped = Array.from(e.dataTransfer.files || []);
+    addImages(dropped);
+  };
+  const totals = calculateTotal();
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (submitting) return;
@@ -100,9 +163,9 @@ export default function PurchaseRequestForm() {
       const rate = currentExchangeRate ? Number(currentExchangeRate.rate) : 0;
       const priceRub = rate > 0 ? priceKrw / rate : undefined;
       const feeAmount = totals.feeKrw;
-      const status: PurchaseRequestStatus = "DRAFT";
+      const status: PurchaseRequestStatus = "SUBMITTED";
 
-      await createPurchaseRequest({
+      const payload = {
         productName: productName.trim(),
         quantity,
         urls: filteredUrls.length ? filteredUrls : undefined,
@@ -114,7 +177,11 @@ export default function PurchaseRequestForm() {
         totalAmountKrw: totals.totalKrw,
         memo: memo.trim() || undefined,
         status,
-      });
+        files: images.length > 0 ? images : undefined,
+      };
+
+      await createPurchaseRequest(payload);
+      window.dispatchEvent(new Event(USER_BALANCE_CHANGE_EVENT));
       toast.success(t('purchase.toastSuccess'));
       navigate("/purchase");
     } catch {
@@ -124,7 +191,6 @@ export default function PurchaseRequestForm() {
     }
   };
 
-  const totals = calculateTotal();
   const numOpt = { minimumFractionDigits: 2, maximumFractionDigits: 2 };
 
   return (
@@ -271,12 +337,69 @@ export default function PurchaseRequestForm() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-blue-500 cursor-pointer transition-colors">
+            <div
+              className={[
+                "border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors",
+                isDragOver ? "border-blue-500 bg-blue-50" : "border-gray-300 hover:border-blue-500",
+              ].join(" ")}
+              onClick={() => imageInputRef.current?.click()}
+              onDragEnter={(e) => {
+                e.preventDefault();
+                setIsDragOver(true);
+              }}
+              onDragOver={(e) => {
+                e.preventDefault();
+                setIsDragOver(true);
+              }}
+              onDragLeave={(e) => {
+                e.preventDefault();
+                setIsDragOver(false);
+              }}
+              onDrop={handleDrop}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") imageInputRef.current?.click();
+              }}
+            >
+              <input
+                ref={imageInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                multiple
+                className="hidden"
+                onChange={handleImageChange}
+              />
               <Upload className="w-12 h-12 mx-auto text-gray-400 mb-2" />
               <p className="text-sm text-gray-600">
                 {t('purchase.image.upload')}
               </p>
             </div>
+            {imagePreviews.length > 0 && (
+              <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                {imagePreviews.map((p, index) => (
+                  <div key={`${p.file.name}-${p.file.size}-${index}`} className="relative group">
+                    <img
+                      src={p.url}
+                      alt={p.file.name}
+                      className="h-28 w-full object-cover rounded border"
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="absolute top-1 right-1 h-8 w-8 bg-white/80 hover:bg-white"
+                      onClick={() => removeImage(index)}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                    <div className="mt-1 text-xs text-gray-600 truncate">
+                      {p.file.name}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -316,6 +439,9 @@ export default function PurchaseRequestForm() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
+            <p className="text-sm text-amber-900 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
+              {t("purchase.summary.adminWalletNote")}
+            </p>
             <div className="flex justify-between text-sm">
               <span className="text-gray-600">{t('purchase.summary.productPrice')}</span>
               <span className="font-medium">

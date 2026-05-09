@@ -16,6 +16,8 @@ public class PurchaseRequestListResponse {
     private final String productName;
     private final Integer quantity;
     private final BigDecimal totalAmountKrw;
+    private final BigDecimal chargedAmountKrw;
+    private final BigDecimal settledAmountKrw;
     private final PurchaseRequestStatus status;
     private final LocalDateTime createdAt;
 }

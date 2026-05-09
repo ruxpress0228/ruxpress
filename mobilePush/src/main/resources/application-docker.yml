@@ -1,0 +1,30 @@
+spring:
+  config:
+    activate:
+      on-profile: docker
+  datasource:
+    url: jdbc:postgresql://push-postgres:5432/ruxpress_push
+    username: push
+    password: push
+  jpa:
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    hibernate:
+      ddl-auto: validate
+  flyway:
+    enabled: true
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:kafka:29092}
+    listener:
+      auto-startup: true
+
+management:
+  health:
+    kafka:
+      enabled: true
+
+push:
+  dev-api-enabled: false
+
+logging:
+  level:
+    com.ruxpress.push: INFO

@@ -16,6 +16,7 @@ import com.ruxpress.domain.banktransfer.entity.TransferLedgerStatus;
 import com.ruxpress.domain.banktransfer.repository.SettlementAccountRepository;
 import com.ruxpress.domain.banktransfer.repository.TransferLedgerEntryRepository;
 import com.ruxpress.domain.banktransfer.repository.TransferLedgerSpecifications;
+import com.ruxpress.domain.balance.service.BalanceService;
 import com.ruxpress.domain.notification.service.NotificationService;
 import com.ruxpress.domain.user.entity.User;
 import com.ruxpress.domain.user.repository.UserRepository;
@@ -40,6 +41,7 @@ public class BankTransferService {
     private final SettlementAccountRepository settlementAccountRepository;
     private final UserRepository userRepository;
     private final NotificationService notificationService;
+    private final BalanceService balanceService;
 
     public List<SettlementAccountResponse> listActiveSettlementAccountsForUser() {
         return settlementAccountRepository.findByActiveTrueAndDeletedAtIsNullOrderByIdAsc().stream()
@@ -169,6 +171,7 @@ public class BankTransferService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.BANK_LEDGER_NOT_FOUND));
         entry.applyConfirm(adminId, request != null ? request.getAdminMemo() : null);
         TransferLedgerEntry saved = entryRepository.save(entry);
+        balanceService.creditForBankDeposit(saved.getUserId(), saved.getAmount(), saved.getId());
         notificationService.notifyBankDepositConfirmed(saved.getUserId(), saved.getId(), saved.getAmount());
         return toResponse(saved, false, resolveUserEmail(saved.getUserId()));
     }

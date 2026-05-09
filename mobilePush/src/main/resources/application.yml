@@ -1,0 +1,52 @@
+server:
+  port: 8081
+
+spring:
+  application:
+    name: ruxpress-mobile-push
+  profiles:
+    active: local
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    consumer:
+      group-id: ruxpress-push
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      properties:
+        spring.json.trusted.packages: "*"
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+
+push:
+  # local / no-docker 전용 YAML 에서 true 로 덮어씀. POST /internal/dev/* 테스트 API.
+  dev-api-enabled: false
+  kafka:
+    topics:
+      dispatch: ruxpress.notification.push.dispatch
+      device-sync: ruxpress.user.device.sync
+      result: ruxpress.notification.push.result
+      dispatch-dlq: ruxpress.notification.push.dispatch.dlq
+      device-sync-dlq: ruxpress.user.device.sync.dlq
+  fcm:
+    # 앱 google-services.json 의 project_id / package_name 과 맞춤 (서버는 서비스 계정 JSON 필요 — google-services.json 그대로 사용 불가)
+    enabled: ${FCM_ENABLED:false}
+    project-id: ${FCM_PROJECT_ID:ruxpress-ff3b3}
+    android-package-name: ${FCM_ANDROID_PACKAGE:com.ruxpress.android}
+    credentials-path: ${FCM_CREDENTIALS_PATH:}
+    credentials-json: ${FCM_CREDENTIALS_JSON:}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
