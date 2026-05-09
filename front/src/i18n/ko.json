@@ -336,5 +336,24 @@
   "admin.bank.settlement.saveError": "저장에 실패했습니다",
   "admin.bank.settlement.deleteConfirm": "이 계좌를 비활성(삭제)할까요?",
   "admin.bank.settlement.deleted": "삭제되었습니다",
-  "admin.bank.settlement.deleteError": "삭제에 실패했습니다"
+  "admin.bank.settlement.deleteError": "삭제에 실패했습니다",
+
+  "nav.chat": "채팅",
+  "nav.admin.chat": "채팅 상담",
+  "chat.title": "고객 채팅",
+  "chat.connected": "연결됨",
+  "chat.connecting": "연결 중...",
+  "chat.empty": "메시지를 입력해서 상담을 시작하세요",
+  "chat.inputPlaceholder": "메시지 입력...",
+  "chat.send": "전송",
+  "chat.admin": "관리자",
+  "chat.user": "나",
+  "chat.tab.current": "현재 대화",
+  "chat.tab.history": "이전 대화",
+  "chat.history.empty": "종료된 대화가 없습니다",
+  "chat.history.room": "대화",
+  "chat.history.back": "목록으로",
+  "chat.history.readonly": "조회 전용",
+  "chat.history.noMessages": "메시지가 없습니다",
+  "chat.status.closed": "종료"
 }

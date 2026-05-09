@@ -264,6 +264,35 @@ CREATE TABLE IF NOT EXISTS `user_wallets` (
 	UNIQUE KEY `UK_USER_WALLET_USER` (`user_id`)
 );
 
+CREATE TABLE `chat_room` (
+	`chat_room_id`	VARCHAR(12)	NOT NULL	COMMENT '채팅방 ID (CR + 10자리 랜덤)',
+	`user_id`	BIGINT	NOT NULL	COMMENT '참여 회원 ID',
+	`admin_id`	BIGINT	NULL	COMMENT '담당 관리자 ID (최초 응답 시 배정)',
+	`status`	ENUM('OPEN', 'CLOSED')	NOT NULL	DEFAULT 'OPEN'	COMMENT '방 상태',
+	`created_at`	DATETIME(6)	NOT NULL,
+	`updated_at`	DATETIME(6)	NOT NULL	DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
+	PRIMARY KEY (`chat_room_id`),
+	KEY `idx_chat_room_user_status` (`user_id`, `status`),
+	KEY `idx_chat_room_status_updated` (`status`, `updated_at` DESC),
+	KEY `idx_chat_room_admin_id` (`admin_id`),
+	CONSTRAINT `fk_chat_room_user` FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE CASCADE,
+	CONSTRAINT `fk_chat_room_admin` FOREIGN KEY (`admin_id`) REFERENCES `admins`(`id`) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='고객-관리자 실시간 채팅방';
+
+CREATE TABLE `chat_message` (
+	`chat_message_id`	VARCHAR(12)	NOT NULL	COMMENT '메시지 ID (CM + 10자리 랜덤)',
+	`chat_room_id`	VARCHAR(12)	NOT NULL	COMMENT '채팅방 ID',
+	`sender_id`	BIGINT	NOT NULL	COMMENT '발신자 ID (users.id 또는 admins.id — sender_type으로 구분)',
+	`sender_type`	ENUM('USER', 'ADMIN')	NOT NULL	COMMENT '발신자 구분',
+	`content`	TEXT	NOT NULL	COMMENT '메시지 본문 (최대 2000자)',
+	`is_read`	TINYINT(1)	NOT NULL	DEFAULT 0	COMMENT '상대방 읽음 여부',
+	`created_at`	DATETIME(6)	NOT NULL,
+	PRIMARY KEY (`chat_message_id`),
+	KEY `idx_chat_message_room_created` (`chat_room_id`, `created_at`),
+	KEY `idx_chat_message_sender` (`sender_type`, `sender_id`),
+	CONSTRAINT `fk_chat_message_room` FOREIGN KEY (`chat_room_id`) REFERENCES `chat_room`(`chat_room_id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='채팅 메시지 저장 (종료된 방의 메시지도 보존됨)';
+
 CREATE TABLE IF NOT EXISTS `wallet_ledger_entries` (
 	`id`	BIGINT	NOT NULL AUTO_INCREMENT,
 	`user_id`	BIGINT	NOT NULL	COMMENT '회원 ID',

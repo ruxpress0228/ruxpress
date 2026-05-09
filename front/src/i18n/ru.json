@@ -336,5 +336,24 @@
   "admin.bank.settlement.saveError": "Ошибка сохранения",
   "admin.bank.settlement.deleteConfirm": "Удалить счёт?",
   "admin.bank.settlement.deleted": "Удалено",
-  "admin.bank.settlement.deleteError": "Ошибка удаления"
+  "admin.bank.settlement.deleteError": "Ошибка удаления",
+
+  "nav.chat": "Чат",
+  "nav.admin.chat": "Чат-поддержка",
+  "chat.title": "Чат с поддержкой",
+  "chat.connected": "Подключено",
+  "chat.connecting": "Подключение...",
+  "chat.empty": "Начните чат — напишите сообщение",
+  "chat.inputPlaceholder": "Введите сообщение...",
+  "chat.send": "Отправить",
+  "chat.admin": "Поддержка",
+  "chat.user": "Я",
+  "chat.tab.current": "Текущий",
+  "chat.tab.history": "История",
+  "chat.history.empty": "Нет завершённых диалогов",
+  "chat.history.room": "Диалог",
+  "chat.history.back": "К списку",
+  "chat.history.readonly": "Только просмотр",
+  "chat.history.noMessages": "Нет сообщений",
+  "chat.status.closed": "Закрыт"
 }

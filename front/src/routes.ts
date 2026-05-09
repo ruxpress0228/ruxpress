@@ -19,6 +19,7 @@ import MyPage from "./pages/user/MyPage";
 import BankTransfer from "./pages/user/BankTransfer";
 import WalletLedger from "./pages/user/WalletLedger";
 import BankTransferReceipt from "./pages/user/BankTransferReceipt";
+import Chat from "./pages/user/Chat";
 
 // Admin Pages
 import AdminLogin from "./pages/admin/AdminLogin";
@@ -32,6 +33,7 @@ import AdminUsers from "./pages/admin/AdminUsers";
 import AdminAdmins from "./pages/admin/AdminAdmins";
 import AdminBankTransfers from "./pages/admin/AdminBankTransfers";
 import AdminSettlementAccounts from "./pages/admin/AdminSettlementAccounts";
+import AdminChat from "./pages/admin/AdminChat";
 import NotFound from "./pages/NotFound";
 import ExamplePage from "./pages/ExamplePage";
 import { STORAGE_KEYS } from "./utils/constants";
@@ -104,6 +106,7 @@ export const router = createBrowserRouter([
           { path: "bank-transfer", Component: BankTransfer, loader: requireUserAuth },
           { path: "wallet", Component: WalletLedger, loader: requireUserAuth },
           { path: "bank-transfer/receipt/:id", Component: BankTransferReceipt, loader: requireUserAuth },
+          { path: "chat", Component: Chat, loader: requireUserAuth },
           { path: "example1", Component: ExamplePage },
         ],
       },
@@ -122,6 +125,7 @@ export const router = createBrowserRouter([
           { path: "admins", Component: AdminAdmins, loader: requireAdminAuth },
           { path: "bank-transfers", Component: AdminBankTransfers, loader: requireAdminAuth },
           { path: "settlement-accounts", Component: AdminSettlementAccounts, loader: requireAdminAuth },
+          { path: "chat", Component: AdminChat, loader: requireAdminAuth },
         ],
       },
       { path: "*", Component: NotFound },

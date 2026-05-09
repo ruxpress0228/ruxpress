@@ -30,6 +30,9 @@ public enum ErrorCode {
     CONCURRENT_UPDATE(409, "error.concurrent_update"),
     LEDGER_AMOUNT_INVALID(400, "error.ledger_amount_invalid"),
     DUPLICATE_IDEMPOTENCY_KEY(409, "error.duplicate_idempotency_key"),
+    CHAT_ROOM_NOT_FOUND(404, "error.chat_room_not_found"),
+    CHAT_ACCESS_DENIED(403, "error.chat_access_denied"),
+    CHAT_ROOM_CLOSED(400, "error.chat_room_closed");
     INSUFFICIENT_BALANCE(400, "error.insufficient_balance"),
     PURCHASE_NOT_FOUND(404, "error.purchase_not_found"),
     INVALID_PURCHASE_STATE(400, "error.invalid_purchase_state");
