@@ -74,7 +74,7 @@ app:
     expiration: ${JWT_EXPIRATION:86400000}
 
 storage:
-  type: local
+  type: s3
   local:
     upload-dir: ./uploads
   s3:
