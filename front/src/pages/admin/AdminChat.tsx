@@ -59,7 +59,7 @@ export default function AdminChat() {
     setSelectedRoomId(room.id);
   }
 
-  async function handleCloseRoom(roomId: number) {
+  async function handleCloseRoom(roomId: string) {
     const res = await adminCloseRoom(roomId);
     if (res.code === 200 && res.data) {
       setRooms((prev) => prev.map((r) => (r.id === roomId ? res.data! : r)));
