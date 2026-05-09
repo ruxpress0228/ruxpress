@@ -105,6 +105,7 @@
   "home.exchange.rub": "Ruble (RUB)",
   "home.exchange.krw": "Won (KRW)",
   "home.exchange.placeholder": "Calculated on input",
+  "home.exchange.swap": "Swap KRW and RUB input direction",
   "home.exchange.loading": "Loading exchange rate...",
   "home.quick.purchase.title": "Purchase request",
   "home.quick.purchase.desc": "Enter the Korean product URL to start your purchase request",

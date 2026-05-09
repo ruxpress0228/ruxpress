@@ -105,6 +105,7 @@
   "home.exchange.rub": "Рубль (RUB)",
   "home.exchange.krw": "Вона (KRW)",
   "home.exchange.placeholder": "Рассчитается при вводе",
+  "home.exchange.swap": "Поменять направление KRW и RUB",
   "home.exchange.loading": "Загрузка курса...",
   "home.quick.purchase.title": "Запрос на покупку",
   "home.quick.purchase.desc": "Введите ссылку на корейский товар и оформите заявку",

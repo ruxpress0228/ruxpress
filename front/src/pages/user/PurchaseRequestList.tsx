@@ -66,28 +66,28 @@ export default function PurchaseRequestList() {
 
   return (
     <div>
-      <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
-        <div>
+      <div className="mb-6 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+        <div className="min-w-0">
           <h1 className="text-3xl font-bold text-gray-900">구매 요청</h1>
           <p className="text-gray-600 mt-1">내 구매 요청 내역을 확인하세요</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex w-full shrink-0 items-center justify-between gap-3 md:w-auto md:justify-end">
           <Link
             to="/wallet"
-            className="flex items-center gap-2 rounded-lg border border-blue-100 bg-blue-50 px-4 py-2 hover:bg-blue-100 transition-colors"
+            className="flex min-w-0 items-center gap-2 rounded-lg border border-blue-100 bg-blue-50 px-3 py-2 hover:bg-blue-100 transition-colors sm:px-4"
             title="지갑·내역으로 이동"
           >
-            <Wallet className="w-5 h-5 text-blue-700" />
-            <div className="text-right leading-tight">
+            <Wallet className="h-5 w-5 shrink-0 text-blue-700" />
+            <div className="min-w-0 text-right leading-tight">
               <p className="text-xs text-blue-700">현재 잔액</p>
-              <p className="text-lg font-bold text-blue-700">
+              <p className="truncate text-lg font-bold text-blue-700">
                 ₩{(balance ?? 0).toLocaleString("ko-KR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </p>
             </div>
           </Link>
-          <Link to="/purchase/new">
+          <Link to="/purchase/new" className="shrink-0">
             <Button size="lg">
-              <Plus className="w-5 h-5 mr-2" />
+              <Plus className="mr-2 h-5 w-5" />
               새 요청
             </Button>
           </Link>
