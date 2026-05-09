@@ -187,7 +187,9 @@ export default function PurchaseRequestDetail() {
           <div className="flex items-start justify-between gap-4">
             <div className="min-w-0">
               <CardTitle className="text-2xl">{data.productName}</CardTitle>
-              <p className="text-sm text-gray-500 mt-1">요청번호: {data.requestNumber}</p>
+              <p className="text-sm text-gray-500 mt-1 break-words">
+                요청번호: {data.requestNumber}
+              </p>
             </div>
             <Badge variant={statusInfo.variant}>{statusInfo.label}</Badge>
           </div>

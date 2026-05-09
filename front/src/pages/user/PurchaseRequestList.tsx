@@ -143,9 +143,14 @@ export default function PurchaseRequestList() {
           ) : (
             <div className="space-y-2">
               {recentRequests.map((item) => (
-                <div key={item.id} className="flex items-center justify-between text-sm">
-                  <span>{item.productName}</span>
-                  <span className="text-gray-500">{item.requestNumber}</span>
+                <div key={item.id} className="flex items-center justify-between gap-2 text-sm min-w-0">
+                  <span className="truncate min-w-0">{item.productName}</span>
+                  <span
+                    className="text-gray-500 truncate min-w-0 max-w-[45%] text-right"
+                    title={item.requestNumber}
+                  >
+                    {item.requestNumber}
+                  </span>
                 </div>
               ))}
             </div>
@@ -160,8 +165,8 @@ export default function PurchaseRequestList() {
           return (
             <Card key={request.id} className="hover:shadow-lg transition-shadow">
               <CardContent className="p-6">
-                <div className="flex items-start justify-between mb-4">
-                  <div className="flex-1">
+                <div className="flex items-start justify-between mb-4 gap-4">
+                  <div className="flex-1 min-w-0">
                     <div className="flex items-center space-x-3 mb-2">
                       <h3 className="text-lg font-semibold text-gray-900">
                         {request.productName}
@@ -170,8 +175,11 @@ export default function PurchaseRequestList() {
                         {statusInfo.label}
                       </Badge>
                     </div>
-                    <p className="text-sm text-gray-500">
-                      요청번호: {request.requestNumber}
+                    <p className="text-sm text-gray-500 flex gap-x-1 min-w-0 items-baseline">
+                      <span className="shrink-0">요청번호:</span>
+                      <span className="truncate min-w-0" title={request.requestNumber}>
+                        {request.requestNumber}
+                      </span>
                     </p>
                     <p className="text-sm text-gray-500">
                       {new Date(request.createdAt).toLocaleDateString('ko-KR', {
@@ -181,7 +189,7 @@ export default function PurchaseRequestList() {
                       })}
                     </p>
                   </div>
-                  <div className="text-right">
+                  <div className="text-right shrink-0">
                     <p className="text-2xl font-bold text-gray-900">
                       ₩{(request.totalAmountKrw ?? 0).toLocaleString()}
                     </p>

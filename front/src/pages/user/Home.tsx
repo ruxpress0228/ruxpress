@@ -233,31 +233,38 @@ export default function Home() {
             <div className="space-y-4">
               {myRequests.map((request) => (
                 <Link key={request.id} to={`/purchase/${request.id}`}>
-                  <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
-                    <div className="flex-1">
-                      <div className="flex items-center space-x-2 mb-1">
-                        <span className="font-semibold text-gray-900">
-                          {request.productName}
-                        </span>
-                        <Badge variant={
-                          request.status === 'DELIVERED' ? 'default' :
-                          request.status === 'PURCHASING' ? 'secondary' :
-                          'outline'
-                        }>
-                          {request.status === 'REVIEWING' && t('home.status.reviewing')}
-                          {request.status === 'PURCHASING' && t('home.status.purchasing')}
-                          {request.status === 'DELIVERED' && t('home.status.delivered')}
-                          {request.status !== 'REVIEWING' && request.status !== 'PURCHASING' && request.status !== 'DELIVERED' && request.status}
-                        </Badge>
+                  <div className="flex flex-col gap-2 p-4 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center space-x-2">
+                          <span className="font-semibold text-gray-900">
+                            {request.productName}
+                          </span>
+                          <Badge variant={
+                            request.status === 'DELIVERED' ? 'default' :
+                            request.status === 'PURCHASING' ? 'secondary' :
+                            'outline'
+                          }>
+                            {request.status === 'REVIEWING' && t('home.status.reviewing')}
+                            {request.status === 'PURCHASING' && t('home.status.purchasing')}
+                            {request.status === 'DELIVERED' && t('home.status.delivered')}
+                            {request.status !== 'REVIEWING' && request.status !== 'PURCHASING' && request.status !== 'DELIVERED' && request.status}
+                          </Badge>
+                        </div>
                       </div>
-                      <p className="text-sm text-gray-500">
-                        {request.requestNumber} · {formatDate(request.createdAt, locale)}
-                      </p>
+                      <div className="text-right shrink-0">
+                        <p className="font-semibold text-gray-900">
+                          ₩{request.totalAmountKrw != null ? formatNumber(request.totalAmountKrw, locale) : ""}
+                        </p>
+                      </div>
                     </div>
-                    <div className="text-right">
-                      <p className="font-semibold text-gray-900">
-                        ₩{request.totalAmountKrw != null ? formatNumber(request.totalAmountKrw, locale) : ""}
-                      </p>
+                    <div className="flex items-center justify-between gap-3 text-sm text-gray-500 min-w-0">
+                      <span className="truncate min-w-0" title={request.requestNumber}>
+                        {request.requestNumber}
+                      </span>
+                      <span className="shrink-0 tabular-nums">
+                        {formatDate(request.createdAt, locale)}
+                      </span>
                     </div>
                   </div>
                 </Link>

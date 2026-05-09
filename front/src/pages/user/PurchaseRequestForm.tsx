@@ -444,19 +444,36 @@ export default function PurchaseRequestForm() {
             </p>
             <div className="flex justify-between text-sm">
               <span className="text-gray-600">{t('purchase.summary.productPrice')}</span>
-              <span className="font-medium">
-                ₩{formatNumber(totals.priceKrw, locale, numOpt)} ≈ {formatNumber(totals.priceRub, locale, numOpt)} RUB
-              </span>
+              <div className="flex flex-col items-end gap-0.5">
+                <span className="font-medium">
+                  {formatNumber(totals.priceKrw, locale, numOpt)}원
+                </span>
+                <span className="text-xs text-gray-500">
+                  ≈ {formatNumber(totals.priceRub, locale, numOpt)} RUB
+                </span>
+              </div>
             </div>
             <div className="flex justify-between text-sm">
               <span className="text-gray-600">{t('purchase.summary.feeLabel').replace('{{percent}}', String(FEE_PERCENT))}</span>
-              <span className="font-medium">{formatNumber(totals.feeRub, locale, numOpt)} RUB</span>
+              <div className="flex flex-col items-end gap-0.5">
+                <span className="font-medium">
+                  {formatNumber(totals.feeKrw, locale, numOpt)}원
+                </span>
+                <span className="text-xs text-gray-500">
+                  ≈ {formatNumber(totals.feeRub, locale, numOpt)} RUB
+                </span>
+              </div>
             </div>
             <div className="border-t pt-3 flex justify-between">
               <span className="font-semibold text-lg">{t('purchase.summary.total')}</span>
-              <span className="font-bold text-xl text-blue-600">
-                {formatNumber(totals.totalRub, locale, numOpt)} RUB
-              </span>
+              <div className="flex flex-col items-end gap-0.5">
+                <span className="font-bold text-xl text-blue-600">
+                  {formatNumber(totals.totalKrw, locale, numOpt)}원
+                </span>
+                <span className="text-xs font-normal text-gray-500">
+                  ≈ {formatNumber(totals.totalRub, locale, numOpt)} RUB
+                </span>
+              </div>
             </div>
             <p className="text-xs text-gray-500">
               {t('purchase.summary.disclaimer')}
