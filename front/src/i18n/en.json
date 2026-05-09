@@ -293,5 +293,24 @@
   "admin.bank.settlement.saveError": "Save failed",
   "admin.bank.settlement.deleteConfirm": "Delete this account?",
   "admin.bank.settlement.deleted": "Deleted",
-  "admin.bank.settlement.deleteError": "Delete failed"
+  "admin.bank.settlement.deleteError": "Delete failed",
+
+  "nav.chat": "Chat",
+  "nav.admin.chat": "Chat Support",
+  "chat.title": "Customer Chat",
+  "chat.connected": "Connected",
+  "chat.connecting": "Connecting...",
+  "chat.empty": "Type a message to start the conversation",
+  "chat.inputPlaceholder": "Type a message...",
+  "chat.send": "Send",
+  "chat.admin": "Support",
+  "chat.user": "Me",
+  "chat.tab.current": "Current",
+  "chat.tab.history": "History",
+  "chat.history.empty": "No closed conversations",
+  "chat.history.room": "Conversation",
+  "chat.history.back": "Back to list",
+  "chat.history.readonly": "Read only",
+  "chat.history.noMessages": "No messages",
+  "chat.status.closed": "Closed"
 }

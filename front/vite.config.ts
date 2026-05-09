@@ -20,11 +20,14 @@ export default defineConfig({
     // npm run dev로 도커 실행 없을 경우 해당 옵션 적용함
     port: Number(process.env.VITE_PORT) || 3000,
     proxy: {
-      // /api -> 백엔드
       '/api': {
         target: API_TARGET,
         changeOrigin: true,
-        // 개발 서버에서도 /api 프리픽스를 그대로 유지 (rewrite 없음)
+      },
+      '/ws': {
+        target: API_TARGET,
+        changeOrigin: true,
+        ws: true,
       },
     },
   },
