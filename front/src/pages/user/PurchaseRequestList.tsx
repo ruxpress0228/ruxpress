@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router";
-import { Plus, Search, Filter } from "lucide-react";
+import { Plus, Search, Filter, Wallet } from "lucide-react";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import { Badge } from "../../components/ui/badge";
 import { Card, CardContent } from "../../components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../components/ui/select";
 import { usePurchase } from "../../hooks/purchase/usePurchase";
+import { useBalance } from "../../hooks/balance/useBalance";
 import type { PurchaseRequestStatus } from "../../types";
 import type { PurchaseRequestListItem } from "../../types/purchase";
 import { toast } from "sonner";
@@ -26,6 +27,7 @@ const statusLabels: Record<PurchaseRequestStatus, { label: string; variant: 'def
 
 export default function PurchaseRequestList() {
   const { getMyPurchaseRequests, getRecentPurchaseRequests } = usePurchase();
+  const { balance } = useBalance();
   const [requests, setRequests] = useState<PurchaseRequestListItem[]>([]);
   const [recentRequests, setRecentRequests] = useState<PurchaseRequestListItem[]>([]);
   const [searchKeyword, setSearchKeyword] = useState("");
@@ -64,17 +66,32 @@ export default function PurchaseRequestList() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">구매 요청</h1>
           <p className="text-gray-600 mt-1">내 구매 요청 내역을 확인하세요</p>
         </div>
-        <Link to="/purchase/new">
-          <Button size="lg">
-            <Plus className="w-5 h-5 mr-2" />
-            새 요청
-          </Button>
-        </Link>
+        <div className="flex items-center gap-3">
+          <Link
+            to="/wallet"
+            className="flex items-center gap-2 rounded-lg border border-blue-100 bg-blue-50 px-4 py-2 hover:bg-blue-100 transition-colors"
+            title="지갑·내역으로 이동"
+          >
+            <Wallet className="w-5 h-5 text-blue-700" />
+            <div className="text-right leading-tight">
+              <p className="text-xs text-blue-700">현재 잔액</p>
+              <p className="text-lg font-bold text-blue-700">
+                ₩{(balance ?? 0).toLocaleString("ko-KR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </p>
+            </div>
+          </Link>
+          <Link to="/purchase/new">
+            <Button size="lg">
+              <Plus className="w-5 h-5 mr-2" />
+              새 요청
+            </Button>
+          </Link>
+        </div>
       </div>
 
       {/* Filters */}

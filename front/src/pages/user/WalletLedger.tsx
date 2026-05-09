@@ -52,7 +52,7 @@ export default function WalletLedger() {
   }, [balance, page]);
 
   const rows = data?.content ?? [];
-  const numOpt = { minimumFractionDigits: 0, maximumFractionDigits: 0 };
+  const numOpt = { minimumFractionDigits: 2, maximumFractionDigits: 2 };
 
   return (
     <div className="max-w-5xl mx-auto space-y-6">
