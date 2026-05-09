@@ -1,15 +1,8 @@
 import { Outlet, Link, useLocation, useNavigate } from "react-router";
 import { useState, useRef, useEffect } from "react";
-import { Bell, Menu, User, ShoppingCart, MessageSquare, FileText, Home, Globe, LogOut, Landmark, Wallet, MessageCircle } from "lucide-react";
+import { Bell, User, ShoppingCart, MessageSquare, FileText, Home, Globe, LogOut, Landmark, MessageCircle } from "lucide-react";
 import { Button } from "../ui/button";
 import { Badge } from "../ui/badge";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from "../ui/sheet";
 import { useTranslation } from "../../hooks/useTranslation";
 import { LOCALES, STORAGE_KEYS, USER_AUTH_CHANGE_EVENT } from "../../utils/constants";
 import { clearUserSession } from "../../utils/api";
@@ -51,7 +44,6 @@ export default function UserLayout() {
   const navigation = [
     { nameKey: "nav.home", path: "/", icon: Home },
     { nameKey: "nav.purchase", path: "/purchase", icon: ShoppingCart },
-    { nameKey: "nav.wallet", path: "/wallet", icon: Wallet },
     { nameKey: "nav.inquiry", path: "/inquiry", icon: MessageSquare },
     { nameKey: "nav.notice", path: "/notice", icon: FileText },
     { nameKey: "nav.bankTransfer", path: "/bank-transfer", icon: Landmark },
@@ -156,50 +148,34 @@ export default function UserLayout() {
                 </Link>
               )}
 
-              <Sheet>
-                <SheetTrigger asChild className="md:hidden">
-                  <Button variant="ghost" size="icon">
-                    <Menu className="w-5 h-5" />
-                  </Button>
-                </SheetTrigger>
-                <SheetContent>
-                  <SheetHeader>
-                    <SheetTitle>{t("nav.menu")}</SheetTitle>
-                  </SheetHeader>
-                  <nav className="flex flex-col space-y-2 mt-6">
-                    {navigation.map((item) => {
-                      const Icon = item.icon;
-                      return (
-                        <Link key={item.path} to={item.path}>
-                          <Button
-                            variant={isActive(item.path) ? "default" : "ghost"}
-                            className="w-full justify-start"
-                          >
-                            <Icon className="w-4 h-4 mr-2" />
-                            {t(item.nameKey)}
-                          </Button>
-                        </Link>
-                      );
-                    })}
-                    <Button
-                      variant="ghost"
-                      className="w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50"
-                      onClick={handleLogout}
-                    >
-                      <LogOut className="w-4 h-4 mr-2" />
-                      {t("nav.admin.logout")}
-                    </Button>
-                  </nav>
-                </SheetContent>
-              </Sheet>
             </div>
           </div>
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-24 md:pb-8">
         <Outlet />
       </main>
+
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-gray-50 border-t border-gray-200 shadow-[0_-1px_2px_rgba(0,0,0,0.04)]">
+        <ul className="grid grid-cols-6">
+          {navigation.map((item) => {
+            const Icon = item.icon;
+            const active = isActive(item.path);
+            return (
+              <li key={item.path}>
+                <Link
+                  to={item.path}
+                  className={`flex flex-col items-center justify-center gap-0.5 py-2 text-[10px] leading-tight ${active ? "text-blue-600 font-semibold" : "text-gray-600"}`}
+                >
+                  <Icon className="w-5 h-5" />
+                  <span className="truncate max-w-full px-1">{t(item.nameKey)}</span>
+                </Link>
+              </li>
+            );
+          })}
+        </ul>
+      </nav>
 
       <footer className="bg-white border-t border-gray-200 mt-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
