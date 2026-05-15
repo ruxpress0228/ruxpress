@@ -59,7 +59,7 @@ class MainActivity : AppCompatActivity() {
                     }
                     newWebView.addJavascriptInterface(WebAppInterface(this@MainActivity), "Android")
                     setContentView(newWebView)
-                    newWebView.loadUrl("http://10.0.2.2:80")
+                    newWebView.loadUrl(BuildConfig.WEB_DEV_BASE_URL)
                 }
                 return true
             }
@@ -68,7 +68,7 @@ class MainActivity : AppCompatActivity() {
             javaScriptEnabled = true
             domStorageEnabled = true
         }
-        webView.loadUrl("http://10.0.2.2:80")
+        webView.loadUrl(BuildConfig.WEB_DEV_BASE_URL)
     }
 
     private fun requestNotificationPermission() {

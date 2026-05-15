@@ -1,7 +1,21 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.google.services)
 }
+
+// 실기기·무선 디버깅: app/android/local.properties 에
+//   ruxpress.web.devBaseUrl=http://<PC_LAN_IP>:80
+// 예) http://192.168.0.12:80  (Docker Nginx 80 포트). 에뮬은 기본 10.0.2.2.
+val localProperties = Properties().apply {
+    val f = rootProject.file("local.properties")
+    if (f.exists()) {
+        f.inputStream().use { load(it) }
+    }
+}
+val webDevBaseUrl =
+    localProperties.getProperty("ruxpress.web.devBaseUrl", "http://10.0.2.2:80").trim()
 
 android {
     namespace = "com.ruxpress.android"
@@ -19,6 +33,15 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        buildConfigField(
+            "String",
+            "WEB_DEV_BASE_URL",
+            "\"" + webDevBaseUrl.replace("\\", "\\\\").replace("\"", "\\\"") + "\"",
+        )
+    }
+
+    buildFeatures {
+        buildConfig = true
     }
 
     buildTypes {
