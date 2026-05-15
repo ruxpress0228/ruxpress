@@ -21,7 +21,7 @@ public class NotificationService {
 
     public void notifyBankDepositConfirmed(Long userId, Long entryId, BigDecimal amount) {
         String body = String.format("입금 #%d 금액 %s원이 확인되었습니다.", entryId, amount.toPlainString());
-        Notification saved = notificationRepository.save(Notification.create(
+        Notification saved = notificationRepository.saveAndFlush(Notification.create(
                 userId,
                 NotificationType.BANK_DEPOSIT,
                 "입금 확인 완료",
@@ -32,7 +32,7 @@ public class NotificationService {
 
     public void notifySettled(Long userId, Long entryId, Long parentEntryId, BigDecimal amount) {
         String body = String.format("입금 #%d 정산 금액 %s원이 처리되었습니다. (원 건 #%d)", entryId, amount.toPlainString(), parentEntryId);
-        Notification saved = notificationRepository.save(Notification.create(
+        Notification saved = notificationRepository.saveAndFlush(Notification.create(
                 userId,
                 NotificationType.BANK_DEPOSIT,
                 "정산 완료",
@@ -43,7 +43,7 @@ public class NotificationService {
 
     public void notifyRefunded(Long userId, Long entryId, Long parentEntryId, BigDecimal amount) {
         String body = String.format("입금 #%d 환불 금액 %s원이 처리되었습니다. (원 건 #%d)", entryId, amount.toPlainString(), parentEntryId);
-        Notification saved = notificationRepository.save(Notification.create(
+        Notification saved = notificationRepository.saveAndFlush(Notification.create(
                 userId,
                 NotificationType.BANK_DEPOSIT,
                 "환불 완료",

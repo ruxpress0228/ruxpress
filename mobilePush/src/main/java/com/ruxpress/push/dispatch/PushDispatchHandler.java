@@ -38,6 +38,13 @@ public class PushDispatchHandler {
         List<PushDevice> devices = pushDeviceRepository.findByUserIdAndActiveTrueAndDeviceTypeIn(
                 event.userId(), PUSH_TYPES);
 
+        log.info(
+                "dispatch handling notificationId={} userId={} title={} activeDevices={}",
+                event.notificationId(),
+                event.userId(),
+                event.title(),
+                devices.size());
+
         if (devices.isEmpty()) {
             log.info("No active push devices for userId={} notificationId={}", event.userId(), event.notificationId());
             safeSendResult(
@@ -86,6 +93,13 @@ public class PushDispatchHandler {
         }
 
         String aggregate = fail == 0 ? "SENT" : (ok > 0 ? "SENT" : "FAILED");
+        log.info(
+                "dispatch done notificationId={} userId={} aggregate={} fcmOk={} fcmFail={}",
+                event.notificationId(),
+                event.userId(),
+                aggregate,
+                ok,
+                fail);
         safeSendResult(
                 new PushResultEvent(
                         UUID.randomUUID(),

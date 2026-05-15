@@ -30,7 +30,11 @@ public class PushKafkaOutboxService {
     private final RuxpressKafkaProperties kafkaProperties;
 
     public void scheduleDispatchAfterCommit(Notification notification) {
-        if (!kafkaProperties.isPublishEvents() || notification.getId() == null) {
+        if (!kafkaProperties.isPublishEvents()) {
+            return;
+        }
+        if (notification.getId() == null) {
+            log.warn("Kafka dispatch skipped: notification id is null (use saveAndFlush before schedule)");
             return;
         }
         long id = notification.getId();
@@ -44,7 +48,11 @@ public class PushKafkaOutboxService {
     }
 
     public void scheduleDeviceSyncAfterCommit(UserDevice device) {
-        if (!kafkaProperties.isPublishEvents() || device.getId() == null) {
+        if (!kafkaProperties.isPublishEvents()) {
+            return;
+        }
+        if (device.getId() == null) {
+            log.warn("Kafka device-sync skipped: user_device id is null after save");
             return;
         }
         long userId = device.getUserId();

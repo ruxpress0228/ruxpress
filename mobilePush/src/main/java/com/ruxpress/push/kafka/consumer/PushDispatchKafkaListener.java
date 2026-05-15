@@ -22,6 +22,11 @@ public class PushDispatchKafkaListener {
     public void onMessage(String payload) {
         try {
             PushDispatchEvent event = objectMapper.readValue(payload, PushDispatchEvent.class);
+            log.info(
+                    "dispatch Kafka message received notificationId={} userId={} type={}",
+                    event.notificationId(),
+                    event.userId(),
+                    event.type());
             pushDispatchHandler.handle(event);
         } catch (Exception e) {
             log.error("Dispatch consume failed: {}", e.getMessage(), e);
