@@ -1,10 +1,16 @@
 package com.ruxpress.android
 
 import android.Manifest
+import android.app.Activity
+import android.content.ActivityNotFoundException
+import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.webkit.RenderProcessGoneDetail
+import android.webkit.ValueCallback
+import android.webkit.WebChromeClient
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.activity.enableEdgeToEdge
@@ -24,6 +30,33 @@ class MainActivity : AppCompatActivity() {
 
     private val notificationPermissionLauncher =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { /* 결과 무시 */ }
+
+    private var fileUploadCallback: ValueCallback<Array<Uri>>? = null
+
+    private val fileChooserLauncher =
+        registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+            val cb = fileUploadCallback ?: return@registerForActivityResult
+            fileUploadCallback = null
+            if (result.resultCode != Activity.RESULT_OK) {
+                cb.onReceiveValue(null)
+                return@registerForActivityResult
+            }
+            val data = result.data
+            if (data == null) {
+                cb.onReceiveValue(null)
+                return@registerForActivityResult
+            }
+            val clip = data.clipData
+            val single = data.data
+            when {
+                clip != null && clip.itemCount > 0 -> {
+                    val uris = Array(clip.itemCount) { clip.getItemAt(it).uri }
+                    cb.onReceiveValue(uris)
+                }
+                single != null -> cb.onReceiveValue(arrayOf(single))
+                else -> cb.onReceiveValue(null)
+            }
+        }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
@@ -53,6 +86,7 @@ class MainActivity : AppCompatActivity() {
     private fun setupWebView() {
         webView = findViewById(R.id.webView)
         webView.addJavascriptInterface(WebAppInterface(this), "Android")
+        bindWebChromeClient(webView)
         webView.webViewClient = object : WebViewClient() {
             override fun onRenderProcessGone(view: WebView, detail: RenderProcessGoneDetail): Boolean {
                 webView.destroy()
@@ -63,8 +97,11 @@ class MainActivity : AppCompatActivity() {
                 webView.settings.apply {
                     javaScriptEnabled = true
                     domStorageEnabled = true
+                    allowFileAccess = true
+                    allowContentAccess = true
                 }
                 webView.addJavascriptInterface(WebAppInterface(this@MainActivity), "Android")
+                bindWebChromeClient(webView)
                 webView.loadUrl(BuildConfig.WEB_DEV_BASE_URL)
                 return true
             }
@@ -72,8 +109,37 @@ class MainActivity : AppCompatActivity() {
         webView.settings.apply {
             javaScriptEnabled = true
             domStorageEnabled = true
+            allowFileAccess = true
+            allowContentAccess = true
         }
         webView.loadUrl(BuildConfig.WEB_DEV_BASE_URL)
+    }
+
+    private fun bindWebChromeClient(target: WebView) {
+        target.webChromeClient = object : WebChromeClient() {
+            override fun onShowFileChooser(
+                webView: WebView,
+                filePathCallback: ValueCallback<Array<Uri>>,
+                fileChooserParams: WebChromeClient.FileChooserParams,
+            ): Boolean = openFileChooser(filePathCallback, fileChooserParams)
+        }
+    }
+
+    private fun openFileChooser(
+        callback: ValueCallback<Array<Uri>>,
+        params: WebChromeClient.FileChooserParams,
+    ): Boolean {
+        fileUploadCallback?.onReceiveValue(null)
+        fileUploadCallback = callback
+        val intent = params.createIntent()
+        return try {
+            fileChooserLauncher.launch(Intent.createChooser(intent, null))
+            true
+        } catch (_: ActivityNotFoundException) {
+            fileUploadCallback?.onReceiveValue(null)
+            fileUploadCallback = null
+            false
+        }
     }
 
     private fun applySafeAreaInsets(root: android.view.View) {
@@ -101,6 +167,8 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onDestroy() {
+        fileUploadCallback?.onReceiveValue(null)
+        fileUploadCallback = null
         if (instance === this) instance = null
         super.onDestroy()
     }
