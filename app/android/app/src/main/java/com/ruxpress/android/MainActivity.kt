@@ -7,10 +7,13 @@ import android.os.Bundle
 import android.webkit.RenderProcessGoneDetail
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import androidx.activity.enableEdgeToEdge
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 
 class MainActivity : AppCompatActivity() {
     private lateinit var webView: WebView
@@ -23,9 +26,11 @@ class MainActivity : AppCompatActivity() {
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { /* 결과 무시 */ }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        enableEdgeToEdge()
         super.onCreate(savedInstanceState)
         instance = this
         setContentView(R.layout.activity_main)
+        applySafeAreaInsets(findViewById(R.id.main))
 
         requestNotificationPermission()
         setupWebView()
@@ -51,16 +56,16 @@ class MainActivity : AppCompatActivity() {
         webView.webViewClient = object : WebViewClient() {
             override fun onRenderProcessGone(view: WebView, detail: RenderProcessGoneDetail): Boolean {
                 webView.destroy()
-                webView = WebView(this@MainActivity).also { newWebView ->
-                    newWebView.webViewClient = this
-                    newWebView.settings.apply {
-                        javaScriptEnabled = true
-                        domStorageEnabled = true
-                    }
-                    newWebView.addJavascriptInterface(WebAppInterface(this@MainActivity), "Android")
-                    setContentView(newWebView)
-                    newWebView.loadUrl(BuildConfig.WEB_DEV_BASE_URL)
+                setContentView(R.layout.activity_main)
+                applySafeAreaInsets(findViewById(R.id.main))
+                webView = findViewById(R.id.webView)
+                webView.webViewClient = this
+                webView.settings.apply {
+                    javaScriptEnabled = true
+                    domStorageEnabled = true
                 }
+                webView.addJavascriptInterface(WebAppInterface(this@MainActivity), "Android")
+                webView.loadUrl(BuildConfig.WEB_DEV_BASE_URL)
                 return true
             }
         }
@@ -69,6 +74,17 @@ class MainActivity : AppCompatActivity() {
             domStorageEnabled = true
         }
         webView.loadUrl(BuildConfig.WEB_DEV_BASE_URL)
+    }
+
+    private fun applySafeAreaInsets(root: android.view.View) {
+        ViewCompat.setOnApplyWindowInsetsListener(root) { v, insets ->
+            val bars = insets.getInsets(
+                WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout(),
+            )
+            v.setPadding(bars.left, bars.top, bars.right, bars.bottom)
+            insets
+        }
+        ViewCompat.requestApplyInsets(root)
     }
 
     private fun requestNotificationPermission() {

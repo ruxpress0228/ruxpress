@@ -17,6 +17,15 @@ val localProperties = Properties().apply {
 val webDevBaseUrl =
     localProperties.getProperty("ruxpress.web.devBaseUrl", "http://10.0.2.2:80").trim()
 
+val keystorePropertiesFile = rootProject.file("keystore.properties")
+val keystoreProperties = Properties()
+val releaseKeystoreConfigured =
+    keystorePropertiesFile.exists().also { exists ->
+        if (exists) {
+            keystorePropertiesFile.inputStream().use { keystoreProperties.load(it) }
+        }
+    }
+
 android {
     namespace = "com.ruxpress.android"
     compileSdk {
@@ -44,13 +53,27 @@ android {
         buildConfig = true
     }
 
+    signingConfigs {
+        if (releaseKeystoreConfigured) {
+            create("release") {
+                keyAlias = keystoreProperties.getProperty("keyAlias")
+                keyPassword = keystoreProperties.getProperty("keyPassword")
+                storePassword = keystoreProperties.getProperty("storePassword")
+                storeFile = rootProject.file(requireNotNull(keystoreProperties.getProperty("storeFile")))
+            }
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro"
+                "proguard-rules.pro",
             )
+            if (releaseKeystoreConfigured) {
+                signingConfig = signingConfigs.getByName("release")
+            }
         }
     }
     compileOptions {
