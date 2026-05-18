@@ -12,6 +12,7 @@ import com.ruxpress.domain.banktransfer.entity.TransferLedgerEntryType;
 import com.ruxpress.domain.banktransfer.entity.TransferLedgerStatus;
 import com.ruxpress.domain.banktransfer.repository.SettlementAccountRepository;
 import com.ruxpress.domain.banktransfer.repository.TransferLedgerEntryRepository;
+import com.ruxpress.domain.balance.service.BalanceService;
 import com.ruxpress.domain.notification.service.NotificationService;
 import com.ruxpress.domain.user.entity.SignupType;
 import com.ruxpress.domain.user.entity.User;
@@ -47,6 +48,9 @@ class BankTransferServiceTest {
     @Mock
     private UserRepository userRepository;
 
+    @Mock
+    private BalanceService balanceService;
+
     @InjectMocks
     private BankTransferService bankTransferService;
 
@@ -81,7 +85,7 @@ class BankTransferServiceTest {
         TransferLedgerEntry existing = TransferLedgerEntry.createRootEntry(
                 1L,
                 10L,
-                TransferLedgerEntryType.ESCROW_HOLD,
+                TransferLedgerEntryType.DEPOSIT,
                 new BigDecimal("1000"),
                 "KRW",
                 "입금자",
@@ -97,7 +101,7 @@ class BankTransferServiceTest {
 
         DepositReportRequest request = new DepositReportRequest();
         request.setSettlementAccountId(10L);
-        request.setEntryType(TransferLedgerEntryType.ESCROW_HOLD);
+        request.setEntryType(TransferLedgerEntryType.DEPOSIT);
         request.setAmount(new BigDecimal("1000"));
         request.setIdempotencyKey("idem-1");
 
@@ -113,7 +117,7 @@ class BankTransferServiceTest {
         TransferLedgerEntry pending = TransferLedgerEntry.createRootEntry(
                 1L,
                 10L,
-                TransferLedgerEntryType.ESCROW_HOLD,
+                TransferLedgerEntryType.DEPOSIT,
                 new BigDecimal("5000"),
                 "KRW",
                 "김",
@@ -139,6 +143,7 @@ class BankTransferServiceTest {
 
         assertThat(response.getStatus()).isEqualTo(TransferLedgerStatus.CONFIRMED);
         assertThat(response.getUserEmail()).isEqualTo("user1@test.com");
+        verify(balanceService).creditForBankDeposit(eq(1L), eq(new BigDecimal("5000")), eq(77L));
         verify(notificationService).notifyBankDepositConfirmed(eq(1L), eq(77L), eq(new BigDecimal("5000")));
     }
 
@@ -147,7 +152,7 @@ class BankTransferServiceTest {
         TransferLedgerEntry parent = TransferLedgerEntry.createRootEntry(
                 2L,
                 10L,
-                TransferLedgerEntryType.ESCROW_HOLD,
+                TransferLedgerEntryType.DEPOSIT,
                 new BigDecimal("10000"),
                 "KRW",
                 null,
@@ -179,7 +184,7 @@ class BankTransferServiceTest {
 
         assertThat(response.getEntryType()).isEqualTo(TransferLedgerEntryType.SETTLEMENT);
         assertThat(response.getUserEmail()).isEqualTo("user2@test.com");
-        verify(notificationService).notifyEscrowSettled(eq(2L), eq(201L), eq(100L), eq(new BigDecimal("10000")));
+        verify(notificationService).notifySettled(eq(2L), eq(201L), eq(100L), eq(new BigDecimal("10000")));
     }
 
     @Test
@@ -187,7 +192,7 @@ class BankTransferServiceTest {
         TransferLedgerEntry parent = TransferLedgerEntry.createRootEntry(
                 1L,
                 10L,
-                TransferLedgerEntryType.ESCROW_HOLD,
+                TransferLedgerEntryType.DEPOSIT,
                 new BigDecimal("100"),
                 "KRW",
                 null,
@@ -221,7 +226,7 @@ class BankTransferServiceTest {
         TransferLedgerEntry parent = TransferLedgerEntry.createRootEntry(
                 1L,
                 10L,
-                TransferLedgerEntryType.ESCROW_HOLD,
+                TransferLedgerEntryType.DEPOSIT,
                 new BigDecimal("1000"),
                 "KRW",
                 null,

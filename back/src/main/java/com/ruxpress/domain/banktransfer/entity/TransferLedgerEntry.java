@@ -68,9 +68,6 @@ public class TransferLedgerEntry extends BaseEntity {
     @Column(nullable = false)
     private int version;
 
-    /**
-     * 사용자 입금 신청으로 만들 수 있는 루트 행만 허용 ({@link TransferLedgerEntryType#DEPOSIT}, {@link TransferLedgerEntryType#ESCROW_HOLD}).
-     */
     public static TransferLedgerEntry createRootEntry(
             Long userId,
             Long settlementAccountId,
@@ -82,7 +79,7 @@ public class TransferLedgerEntry extends BaseEntity {
             String refType,
             Long refId,
             String idempotencyKey) {
-        if (entryType != TransferLedgerEntryType.DEPOSIT && entryType != TransferLedgerEntryType.ESCROW_HOLD) {
+        if (entryType != TransferLedgerEntryType.DEPOSIT) {
             throw new BusinessException(ErrorCode.INVALID_INPUT);
         }
         TransferLedgerEntry e = new TransferLedgerEntry();
@@ -125,12 +122,11 @@ public class TransferLedgerEntry extends BaseEntity {
     }
 
     public boolean isRootDeposit() {
-        return parentEntryId == null
-                && (entryType == TransferLedgerEntryType.DEPOSIT || entryType == TransferLedgerEntryType.ESCROW_HOLD);
+        return parentEntryId == null && entryType == TransferLedgerEntryType.DEPOSIT;
     }
 
     /**
-     * 루트 입금·에스크로 행만 PENDING → CONFIRMED 전이.
+     * 루트 입금 행만 PENDING → CONFIRMED 전이.
      */
     public void applyConfirm(Long adminId, String adminMemo) {
         if (!isRootDeposit()) {
@@ -148,7 +144,7 @@ public class TransferLedgerEntry extends BaseEntity {
     }
 
     /**
-     * 루트 입금·에스크로 행만 PENDING → CANCELLED 전이.
+     * 루트 입금 행만 PENDING → CANCELLED 전이.
      */
     public void applyCancel(String adminMemo) {
         if (!isRootDeposit()) {
@@ -164,7 +160,7 @@ public class TransferLedgerEntry extends BaseEntity {
     }
 
     /**
-     * 정산·환불 원장 행의 부모로 쓸 수 있는지: 루트 입금/에스크로이며 입금이 관리자 확정된 상태.
+     * 정산·환불 원장 행의 부모로 쓸 수 있는지: 루트 입금이며 관리자 확정된 상태.
      */
     public void assertConfirmedRootForChildLedger() {
         if (!isRootDeposit()) {

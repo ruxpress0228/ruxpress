@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router";
-import { Plus, Search, Filter } from "lucide-react";
+import { Plus, Search, Filter, Wallet } from "lucide-react";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import { Badge } from "../../components/ui/badge";
 import { Card, CardContent } from "../../components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../components/ui/select";
 import { usePurchase } from "../../hooks/purchase/usePurchase";
+import { useBalance } from "../../hooks/balance/useBalance";
 import type { PurchaseRequestStatus } from "../../types";
 import type { PurchaseRequestListItem } from "../../types/purchase";
 import { toast } from "sonner";
@@ -26,6 +27,7 @@ const statusLabels: Record<PurchaseRequestStatus, { label: string; variant: 'def
 
 export default function PurchaseRequestList() {
   const { getMyPurchaseRequests, getRecentPurchaseRequests } = usePurchase();
+  const { balance } = useBalance();
   const [requests, setRequests] = useState<PurchaseRequestListItem[]>([]);
   const [recentRequests, setRecentRequests] = useState<PurchaseRequestListItem[]>([]);
   const [searchKeyword, setSearchKeyword] = useState("");
@@ -64,17 +66,32 @@ export default function PurchaseRequestList() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
-        <div>
+      <div className="mb-6 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+        <div className="min-w-0">
           <h1 className="text-3xl font-bold text-gray-900">구매 요청</h1>
           <p className="text-gray-600 mt-1">내 구매 요청 내역을 확인하세요</p>
         </div>
-        <Link to="/purchase/new">
-          <Button size="lg">
-            <Plus className="w-5 h-5 mr-2" />
-            새 요청
-          </Button>
-        </Link>
+        <div className="flex w-full shrink-0 items-center justify-between gap-3 md:w-auto md:justify-end">
+          <Link
+            to="/wallet"
+            className="flex min-w-0 items-center gap-2 rounded-lg border border-blue-100 bg-blue-50 px-3 py-2 hover:bg-blue-100 transition-colors sm:px-4"
+            title="지갑·내역으로 이동"
+          >
+            <Wallet className="h-5 w-5 shrink-0 text-blue-700" />
+            <div className="min-w-0 text-right leading-tight">
+              <p className="text-xs text-blue-700">현재 잔액</p>
+              <p className="truncate text-lg font-bold text-blue-700">
+                ₩{(balance ?? 0).toLocaleString("ko-KR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </p>
+            </div>
+          </Link>
+          <Link to="/purchase/new" className="shrink-0">
+            <Button size="lg">
+              <Plus className="mr-2 h-5 w-5" />
+              새 요청
+            </Button>
+          </Link>
+        </div>
       </div>
 
       {/* Filters */}
@@ -126,9 +143,14 @@ export default function PurchaseRequestList() {
           ) : (
             <div className="space-y-2">
               {recentRequests.map((item) => (
-                <div key={item.id} className="flex items-center justify-between text-sm">
-                  <span>{item.productName}</span>
-                  <span className="text-gray-500">{item.requestNumber}</span>
+                <div key={item.id} className="flex items-center justify-between gap-2 text-sm min-w-0">
+                  <span className="truncate min-w-0">{item.productName}</span>
+                  <span
+                    className="text-gray-500 truncate min-w-0 max-w-[45%] text-right"
+                    title={item.requestNumber}
+                  >
+                    {item.requestNumber}
+                  </span>
                 </div>
               ))}
             </div>
@@ -143,8 +165,8 @@ export default function PurchaseRequestList() {
           return (
             <Card key={request.id} className="hover:shadow-lg transition-shadow">
               <CardContent className="p-6">
-                <div className="flex items-start justify-between mb-4">
-                  <div className="flex-1">
+                <div className="flex items-start justify-between mb-4 gap-4">
+                  <div className="flex-1 min-w-0">
                     <div className="flex items-center space-x-3 mb-2">
                       <h3 className="text-lg font-semibold text-gray-900">
                         {request.productName}
@@ -153,8 +175,11 @@ export default function PurchaseRequestList() {
                         {statusInfo.label}
                       </Badge>
                     </div>
-                    <p className="text-sm text-gray-500">
-                      요청번호: {request.requestNumber}
+                    <p className="text-sm text-gray-500 flex gap-x-1 min-w-0 items-baseline">
+                      <span className="shrink-0">요청번호:</span>
+                      <span className="truncate min-w-0" title={request.requestNumber}>
+                        {request.requestNumber}
+                      </span>
                     </p>
                     <p className="text-sm text-gray-500">
                       {new Date(request.createdAt).toLocaleDateString('ko-KR', {
@@ -164,7 +189,7 @@ export default function PurchaseRequestList() {
                       })}
                     </p>
                   </div>
-                  <div className="text-right">
+                  <div className="text-right shrink-0">
                     <p className="text-2xl font-bold text-gray-900">
                       ₩{(request.totalAmountKrw ?? 0).toLocaleString()}
                     </p>
@@ -176,9 +201,11 @@ export default function PurchaseRequestList() {
                     수량: {request.quantity}개
                   </div>
                   <div className="flex space-x-2">
-                    <Button variant="outline" size="sm">
-                      상세보기
-                    </Button>
+                    <Link to={`/purchase/${request.id}`}>
+                      <Button variant="outline" size="sm">
+                        상세보기
+                      </Button>
+                    </Link>
                   </div>
                 </div>
               </CardContent>

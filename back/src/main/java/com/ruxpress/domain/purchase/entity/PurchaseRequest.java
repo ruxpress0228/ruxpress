@@ -51,6 +51,14 @@ public class PurchaseRequest extends BaseEntity {
     @Column(name = "total_amount_krw", precision = 18, scale = 2)
     private BigDecimal totalAmountKrw;
 
+    /** 제출 시 지갑에서 실제 차감한 금액(예상 배송비 포함 선차감 등). 미설정 시 totalAmountKrw와 동일하게 취급 */
+    @Column(name = "charged_amount_krw", precision = 18, scale = 2)
+    private BigDecimal chargedAmountKrw;
+
+    /** 관리자가 확정한 실제 비용(참고) */
+    @Column(name = "settled_amount_krw", precision = 18, scale = 2)
+    private BigDecimal settledAmountKrw;
+
     @Column(columnDefinition = "TEXT")
     private String memo;
 
@@ -94,5 +102,37 @@ public class PurchaseRequest extends BaseEntity {
         pr.memo = memo;
         pr.status = status != null ? status : PurchaseRequestStatus.DRAFT;
         return pr;
+    }
+
+    public void changeStatus(PurchaseRequestStatus newStatus) {
+        this.status = newStatus;
+    }
+
+    public void updateAdminMemo(String adminMemo) {
+        if (adminMemo != null) {
+            this.adminMemo = adminMemo;
+        }
+    }
+
+    public void assignAdmin(Long adminId) {
+        this.assignedAdminId = adminId;
+    }
+
+    public void recordChargedAmount(BigDecimal amount) {
+        this.chargedAmountKrw = amount;
+    }
+
+    public void recordSettledAmount(BigDecimal amount) {
+        if (amount != null) {
+            this.settledAmountKrw = amount;
+        }
+    }
+
+    /** 지갑 차감·환급 한도 계산에 사용 */
+    public BigDecimal resolveChargeAmountKrw() {
+        if (chargedAmountKrw != null) {
+            return chargedAmountKrw;
+        }
+        return totalAmountKrw;
     }
 }

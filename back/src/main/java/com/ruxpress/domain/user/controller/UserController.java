@@ -11,16 +11,23 @@ import com.ruxpress.domain.user.dto.EmailVerifyRequest;
 import com.ruxpress.domain.user.dto.ForgotPasswordRequest;
 import com.ruxpress.domain.user.dto.LoginRequest;
 import com.ruxpress.domain.user.dto.LoginResponse;
+import com.ruxpress.domain.user.dto.PushContextRequest;
 import com.ruxpress.domain.user.dto.ResetPasswordRequest;
+import com.ruxpress.domain.user.dto.UpdateProfileRequest;
 import com.ruxpress.domain.user.dto.response.UserResponse;
+import com.ruxpress.domain.user.entity.DeviceType;
 import com.ruxpress.domain.user.service.EmailVerificationService;
 import com.ruxpress.domain.user.service.PasswordResetService;
+import com.ruxpress.domain.user.service.UserDeviceService;
 import com.ruxpress.domain.user.service.UserService;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpHeaders;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 
+@Slf4j
 @RestController
 @RequestMapping("/api/v1/users")
 @RequiredArgsConstructor
@@ -29,7 +36,7 @@ public class UserController {
     private final EmailVerificationService emailVerificationService;
     private final UserService userService;
     private final PasswordResetService passwordResetService;
-    private final JwtUtil jwtUtil;
+    private final UserDeviceService userDeviceService;
 
     /**
      * 이메일 인증 코드 발송 (실제 메일 발송)
@@ -62,27 +69,79 @@ public class UserController {
      * 현재 로그인한 회원 정보 (Bearer: 일반 회원 JWT)
      */
     @GetMapping("/me")
-    public ApiResponse<UserResponse> me(@RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String authorization) {
-        Long userId = jwtUtil.resolveUserIdFromAuthorizationHeader(authorization);
+    public ApiResponse<UserResponse> me(HttpServletRequest request) {
+        Long userId = JwtUtil.getUserId(request);
         if (userId == null) {
             throw new BusinessException(ErrorCode.UNAUTHORIZED, "로그인이 필요합니다.");
         }
-        UserResponse profile = userService.getProfileForCurrentUser(userId);
-        return ApiResponse.success(profile);
+        return ApiResponse.success(userService.getProfileForCurrentUser(userId));
     }
 
     /**
-     * 비밀번호 변경 (로그인 상태, 현재 비밀번호 확인)
+     * 앱 FCM 토큰 수신 end-point
      */
-    @PostMapping("/me/password")
-    public ApiResponse<Void> changePassword(
-            @RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String authorization,
-            @Valid @RequestBody ChangePasswordRequest request) {
-        Long userId = jwtUtil.resolveUserIdFromAuthorizationHeader(authorization);
+    @PostMapping("/me/push-context")
+    public ApiResponse<Void> pushContext(
+            @RequestBody(required = false) PushContextRequest body,
+            HttpServletRequest request) {
+        Long userId = JwtUtil.getUserId(request);
         if (userId == null) {
             throw new BusinessException(ErrorCode.UNAUTHORIZED, "로그인이 필요합니다.");
         }
-        userService.changePassword(userId, request);
+        if (body == null) {
+            body = new PushContextRequest();
+        }
+        log.info(
+                "[push-context] userId={} fcmToken={} notificationsEnabled={} manufacturer={} model={} brand={} device={} sdkInt={} versionRelease={}",
+                userId,
+                body.getFcmToken(),
+                body.getNotificationsEnabled(),
+                body.getManufacturer(),
+                body.getModel(),
+                body.getBrand(),
+                body.getDevice(),
+                body.getSdkInt(),
+                body.getVersionRelease());
+
+        String token = body.getFcmToken() == null ? "" : body.getFcmToken().trim();
+        if (!StringUtils.hasText(token)) {
+            return ApiResponse.success("수신되었습니다.", null);
+        }
+
+        String ip = resolveClientIp(request);
+        if (Boolean.FALSE.equals(body.getNotificationsEnabled())) {
+            userDeviceService.deactivateAndEnqueueSync(userId, token);
+        } else {
+            String deviceName = buildDeviceDisplayName(body);
+            userDeviceService.upsertAndEnqueueSync(
+                    userId, token, DeviceType.ANDROID, deviceName, ip);
+        }
+        return ApiResponse.success("수신되었습니다.", null);
+    }
+
+    /**
+     * 로그인한 회원의 프로필(닉네임/주소) 수정.
+     */
+    @PatchMapping("/me")
+    public ApiResponse<UserResponse> updateProfile(
+            HttpServletRequest request,
+            @Valid @RequestBody UpdateProfileRequest body) {
+        Long userId = JwtUtil.getUserId(request);
+        if (userId == null) {
+            throw new BusinessException(ErrorCode.UNAUTHORIZED, "로그인이 필요합니다.");
+        }
+        return ApiResponse.success("프로필이 수정되었습니다.", userService.updateProfile(userId, body));
+    }
+
+    @PostMapping("/me/password")
+    public ApiResponse<Void> changePassword(
+            HttpServletRequest request,
+            @Valid @RequestBody ChangePasswordRequest changePasswordRequest) {
+        Long userId = JwtUtil.getUserId(request);
+        if (userId == null) {
+            throw new BusinessException(ErrorCode.UNAUTHORIZED, "로그인이 필요합니다.");
+        }
+        userService.changePassword(userId, changePasswordRequest);
         return ApiResponse.success("비밀번호가 변경되었습니다.", null);
     }
 
@@ -111,5 +170,19 @@ public class UserController {
     public ApiResponse<Void> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
         passwordResetService.resetPassword(request.getToken(), request.getNewPassword());
         return ApiResponse.success("비밀번호가 변경되었습니다. 로그인해 주세요.", null);
+    }
+
+    private static String buildDeviceDisplayName(PushContextRequest body) {
+        String m = body.getManufacturer() == null ? "" : body.getManufacturer().trim();
+        String model = body.getModel() == null ? "" : body.getModel().trim();
+        String name = (m + " " + model).trim();
+        return StringUtils.hasText(name) ? name : "Android";
+    }
+
+    private static String resolveClientIp(HttpServletRequest request) {
+        if (request == null)
+            return null;
+        String xff = request.getHeader("X-Forwarded-For");
+        return StringUtils.hasText(xff) ? xff.split(",")[0].trim() : request.getRemoteAddr();
     }
 }

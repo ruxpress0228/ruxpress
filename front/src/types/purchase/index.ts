@@ -1,5 +1,15 @@
 import type { PurchaseRequestStatus } from "../domain";
 
+export interface PurchaseAttachment {
+  id: number;
+  originalFilename: string;
+  storedUrl: string;
+  thumbnailUrl?: string;
+  viewUrl?: string;
+  fileSize: number;
+  mimeType: string;
+}
+
 export interface PurchaseRequestCreatePayload {
   productName: string;
   quantity: number;
@@ -12,6 +22,7 @@ export interface PurchaseRequestCreatePayload {
   totalAmountKrw?: number;
   memo?: string;
   status?: PurchaseRequestStatus;
+  files?: File[];
 }
 
 export interface PurchaseRequestListItem {
@@ -20,6 +31,8 @@ export interface PurchaseRequestListItem {
   productName: string;
   quantity: number;
   totalAmountKrw?: number;
+  chargedAmountKrw?: number;
+  settledAmountKrw?: number;
   status: PurchaseRequestStatus;
   createdAt: string;
 }
@@ -35,6 +48,7 @@ export interface PurchaseRequestDetail extends PurchaseRequestListItem {
   memo?: string;
   adminMemo?: string;
   assignedAdminId?: number;
+  attachments?: PurchaseAttachment[];
   updatedAt: string;
 }
 

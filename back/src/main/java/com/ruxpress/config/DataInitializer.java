@@ -18,7 +18,7 @@ import java.util.Objects;
 
 @Slf4j
 @Component
-@Profile("local")
+@Profile({"local", "docker"})
 @RequiredArgsConstructor
 public class DataInitializer implements CommandLineRunner {
 
@@ -90,7 +90,7 @@ public class DataInitializer implements CommandLineRunner {
             settlementAccountRepository.save(SettlementAccount.create(
                     "신한은행",
                     "12345678901234",
-                    "럭스프레스(에스크로)",
+                    "럭스프레스",
                     "입금 시 요청 번호를 입금자명에 포함해 주세요.",
                     first.getId()));
             log.info("Seed settlement account created for local profile");
