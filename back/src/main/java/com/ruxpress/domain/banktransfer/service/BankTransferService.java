@@ -45,7 +45,7 @@ public class BankTransferService {
 
     public List<SettlementAccountResponse> listActiveSettlementAccountsForUser() {
         return settlementAccountRepository.findByActiveTrueAndDeletedAtIsNullOrderByIdAsc().stream()
-                .map(a -> SettlementAccountResponse.from(a, true))
+                .map(a -> SettlementAccountResponse.from(a, false))
                 .toList();
     }
 
@@ -62,7 +62,7 @@ public class BankTransferService {
                 if (!e.getUserId().equals(userId)) {
                     throw new BusinessException(ErrorCode.DUPLICATE_IDEMPOTENCY_KEY);
                 }
-                return toResponse(e, true, resolveUserEmail(userId));
+                return toResponse(e, false, resolveUserEmail(userId));
             }
         }
 
@@ -82,14 +82,14 @@ public class BankTransferService {
                 request.getRefId(),
                 request.getIdempotencyKey());
         TransferLedgerEntry saved = entryRepository.save(entry);
-        return toResponse(saved, true, resolveUserEmail(userId));
+        return toResponse(saved, false, resolveUserEmail(userId));
     }
 
     public PageResponse<TransferLedgerEntryResponse> listMyEntries(Long userId, PageRequest pageRequest) {
         Page<TransferLedgerEntry> page = entryRepository.findByUserIdOrderByCreatedAtDesc(userId, pageRequest);
         String email = resolveUserEmail(userId);
         return new PageResponse<>(
-                page.getContent().stream().map(e -> toResponse(e, true, email)).toList(),
+                page.getContent().stream().map(e -> toResponse(e, false, email)).toList(),
                 page.getTotalElements(),
                 page.getTotalPages(),
                 page.getNumber(),
@@ -99,7 +99,7 @@ public class BankTransferService {
     public TransferLedgerEntryResponse getMyEntry(Long userId, Long entryId) {
         TransferLedgerEntry entry = entryRepository.findByIdAndUserId(entryId, userId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.BANK_LEDGER_NOT_FOUND));
-        return toResponse(entry, true, resolveUserEmail(userId));
+        return toResponse(entry, false, resolveUserEmail(userId));
     }
 
     public LedgerReceiptResponse getMyReceipt(Long userId, Long entryId) {
@@ -116,7 +116,7 @@ public class BankTransferService {
                 entry.getCurrency(),
                 entry.getConfirmedAt(),
                 entry.getCreatedAt(),
-                SettlementAccountResponse.from(account, true),
+                SettlementAccountResponse.from(account, false),
                 entry.getDepositorName());
     }
 
