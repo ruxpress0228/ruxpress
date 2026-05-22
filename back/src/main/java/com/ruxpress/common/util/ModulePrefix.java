@@ -11,5 +11,6 @@ public final class ModulePrefix {
 
     public static final String PURCHASE = "purchase";
     public static final String INQUIRY = "inquiry";
+    public static final String BANK_TRANSFER = "bank-transfer";
 }
 

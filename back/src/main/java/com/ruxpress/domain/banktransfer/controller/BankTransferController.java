@@ -10,7 +10,9 @@ import com.ruxpress.domain.banktransfer.service.BankTransferService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -26,12 +28,21 @@ public class BankTransferController {
         return ApiResponse.success(bankTransferService.listActiveSettlementAccountsForUser());
     }
 
-    @PostMapping("/deposit-reports")
+    @PostMapping(value = "/deposit-reports", consumes = MediaType.APPLICATION_JSON_VALUE)
     public ApiResponse<TransferLedgerEntryResponse> createDepositReport(
             @RequestHeader(value = "X-User-Id", required = false) Long userId,
             @Valid @RequestBody DepositReportRequest request) {
         Long effectiveUserId = userId != null ? userId : 1L;
         return ApiResponse.success(bankTransferService.createDepositReport(effectiveUserId, request));
+    }
+
+    @PostMapping(value = "/deposit-reports", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ApiResponse<TransferLedgerEntryResponse> createDepositReportWithFiles(
+            @RequestHeader(value = "X-User-Id", required = false) Long userId,
+            @RequestPart("report") @Valid DepositReportRequest request,
+            @RequestPart(value = "files", required = false) List<MultipartFile> files) {
+        Long effectiveUserId = userId != null ? userId : 1L;
+        return ApiResponse.success(bankTransferService.createDepositReport(effectiveUserId, request, files));
     }
 
     @GetMapping

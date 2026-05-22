@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router";
-import { Landmark, Send, FileText } from "lucide-react";
+import { Landmark, Send, FileText, Upload, X } from "lucide-react";
 import { Button } from "../../components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../components/ui/card";
 import { Input } from "../../components/ui/input";
@@ -23,6 +23,10 @@ import {
 import { useTranslation } from "../../hooks/useTranslation";
 import { formatDate } from "../../utils/format";
 import type { SettlementAccount, TransferLedgerEntry } from "../../types/bankTransfer";
+
+const MAX_IMAGES = 10;
+const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
+const ALLOWED_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 
 function statusBadgeVariant(s: string): "default" | "secondary" | "destructive" | "outline" {
   switch (s) {
@@ -49,6 +53,40 @@ export default function BankTransfer() {
   const [amount, setAmount] = useState("");
   const [depositorName, setDepositorName] = useState("");
   const [depositorMemo, setDepositorMemo] = useState("");
+  const [images, setImages] = useState<File[]>([]);
+  const imageInputRef = useRef<HTMLInputElement>(null);
+
+  const imagePreviews = useMemo(
+    () => images.map((file) => ({ file, url: URL.createObjectURL(file) })),
+    [images]
+  );
+  useEffect(() => {
+    return () => {
+      imagePreviews.forEach((p) => URL.revokeObjectURL(p.url));
+    };
+  }, [imagePreviews]);
+
+  const addImages = (selected: File[]) => {
+    if (selected.length === 0) return;
+    const next: File[] = [];
+    for (const f of selected) {
+      if (!ALLOWED_IMAGE_TYPES.has(f.type)) continue;
+      if (f.size > MAX_IMAGE_SIZE) continue;
+      next.push(f);
+    }
+    const combined = [...images, ...next].slice(0, MAX_IMAGES);
+    if (next.length < selected.length || images.length + next.length > MAX_IMAGES) {
+      toast.error("이미지 5MB 이하 jpg/png/webp, 최대 10장까지만 첨부할 수 있습니다");
+    }
+    setImages(combined);
+  };
+  const onImageInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+    addImages(Array.from(e.target.files || []));
+    e.target.value = "";
+  };
+  const removeImage = (idx: number) => {
+    setImages((prev) => prev.filter((_, i) => i !== idx));
+  };
 
   const load = async () => {
     try {
@@ -89,10 +127,12 @@ export default function BankTransfer() {
         currency: "KRW",
         depositorName: depositorName.trim() || undefined,
         depositorMemo: depositorMemo.trim() || undefined,
+        files: images.length > 0 ? images : undefined,
       });
       toast.success(t("bankTransfer.toast.reportSuccess"));
       setAmount("");
       setDepositorMemo("");
+      setImages([]);
       await load();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : t("bankTransfer.toast.reportError"));
@@ -181,6 +221,53 @@ export default function BankTransfer() {
                   onChange={(ev) => setDepositorMemo(ev.target.value)}
                   placeholder={t("bankTransfer.field.memoPh")}
                 />
+              </div>
+              <div className="space-y-2">
+                <Label>증빙 사진 (선택)</Label>
+                <div
+                  className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center cursor-pointer hover:border-blue-500"
+                  onClick={() => imageInputRef.current?.click()}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") imageInputRef.current?.click();
+                  }}
+                >
+                  <input
+                    ref={imageInputRef}
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    multiple
+                    className="hidden"
+                    onChange={onImageInput}
+                  />
+                  <Upload className="w-8 h-8 mx-auto text-gray-400 mb-1" />
+                  <p className="text-xs text-gray-600">
+                    판매자 대화내역 등 증빙 이미지 (jpg/png/webp, 5MB, 최대 10장)
+                  </p>
+                </div>
+                {imagePreviews.length > 0 && (
+                  <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                    {imagePreviews.map((p, idx) => (
+                      <div key={`${p.file.name}-${idx}`} className="relative group">
+                        <img
+                          src={p.url}
+                          alt={p.file.name}
+                          className="h-20 w-full object-cover rounded border"
+                        />
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="absolute top-0 right-0 h-6 w-6 bg-white/80 hover:bg-white"
+                          onClick={() => removeImage(idx)}
+                        >
+                          <X className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
               <Button type="submit" className="w-full" disabled={submitting || !accounts.length}>
                 <Send className="w-4 h-4 mr-2" />

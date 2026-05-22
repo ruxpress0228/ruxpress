@@ -22,8 +22,19 @@ export async function reportDeposit(body: {
   refType?: string;
   refId?: number;
   idempotencyKey?: string;
+  files?: File[];
 }): Promise<TransferLedgerEntry> {
-  const res = await api.post<TransferLedgerEntry>(`${BANK_BASE}/deposit-reports`, body);
+  const { files, ...rest } = body;
+  const hasFiles = Array.isArray(files) && files.length > 0;
+  if (hasFiles) {
+    const fd = new FormData();
+    fd.append("report", new Blob([JSON.stringify(rest)], { type: "application/json" }));
+    files!.forEach((f) => fd.append("files", f));
+    const res = await api.upload<TransferLedgerEntry>(`${BANK_BASE}/deposit-reports`, fd);
+    if (res.code !== 200 || res.data == null) throw new Error(res.message || "Failed to report deposit");
+    return res.data;
+  }
+  const res = await api.post<TransferLedgerEntry>(`${BANK_BASE}/deposit-reports`, rest);
   if (res.code !== 200 || res.data == null) throw new Error(res.message || "Failed to report deposit");
   return res.data;
 }

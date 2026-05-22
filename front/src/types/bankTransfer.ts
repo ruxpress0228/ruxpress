@@ -1,6 +1,16 @@
 export type TransferLedgerEntryType = 'DEPOSIT' | 'SETTLEMENT' | 'REFUND';
 export type TransferLedgerStatus = 'PENDING' | 'CONFIRMED' | 'FAILED' | 'CANCELLED';
 
+export interface BankTransferAttachment {
+  id: number;
+  originalFilename: string;
+  storedUrl: string;
+  thumbnailUrl?: string | null;
+  viewUrl?: string | null;
+  fileSize: number;
+  mimeType: string;
+}
+
 export interface SettlementAccount {
   id: number;
   bankName: string;
@@ -29,6 +39,7 @@ export interface TransferLedgerEntry {
   confirmedByAdminId: number | null;
   createdAt: string;
   settlementAccount: SettlementAccount;
+  attachments?: BankTransferAttachment[];
 }
 
 export interface LedgerReceipt {

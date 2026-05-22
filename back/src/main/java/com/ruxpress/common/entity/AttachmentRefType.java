@@ -7,5 +7,6 @@ public enum AttachmentRefType {
     PURCHASE,
     INQUIRY,
     REVIEW,
-    CHAT
+    CHAT,
+    BANK_TRANSFER
 }
