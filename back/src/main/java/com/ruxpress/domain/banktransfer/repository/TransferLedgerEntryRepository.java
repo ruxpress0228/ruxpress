@@ -26,4 +26,6 @@ public interface TransferLedgerEntryRepository
             TransferLedgerStatus status);
 
     List<TransferLedgerEntry> findByParentEntryId(Long parentEntryId);
+
+    long countByUserId(Long userId);
 }
