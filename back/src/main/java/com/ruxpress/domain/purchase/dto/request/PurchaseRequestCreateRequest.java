@@ -47,8 +47,8 @@ public class PurchaseRequestCreateRequest {
 
     public boolean isValid() {
         if (status == PurchaseRequestStatus.SUBMITTED) {
-            if (totalAmountKrw == null || totalAmountKrw.compareTo(BigDecimal.ZERO) <= 0) {
-                throw new BusinessException(ErrorCode.INVALID_INPUT, "차감 금액은 양수여야 합니다.");
+            if (priceKrw == null || priceKrw.compareTo(BigDecimal.ZERO) <= 0) {
+                throw new BusinessException(ErrorCode.INVALID_INPUT, "상품 가격은 양수여야 합니다.");
             }
         }
         return true;

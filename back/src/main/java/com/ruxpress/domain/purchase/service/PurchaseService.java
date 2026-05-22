@@ -12,6 +12,8 @@ import com.ruxpress.common.storage.FileStorageUtil;
 import com.ruxpress.common.util.IDGenerateUtil;
 import com.ruxpress.common.util.JsonUtils;
 import com.ruxpress.common.util.ModulePrefix;
+import com.ruxpress.domain.admin.entity.SystemSetting;
+import com.ruxpress.domain.admin.repository.SystemSettingRepository;
 import com.ruxpress.domain.balance.service.BalanceService;
 import com.ruxpress.domain.notification.service.NotificationService;
 import com.ruxpress.domain.purchase.dto.request.AdminPurchaseStatusRequest;
@@ -31,6 +33,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -39,12 +43,31 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class PurchaseService {
 
+    private static final String FEE_RATE_KEY = "fee_rate";
+    private static final BigDecimal DEFAULT_FEE_RATE_PERCENT = new BigDecimal("12");
+    private static final BigDecimal HUNDRED = new BigDecimal("100");
+
     private final PurchaseRequestRepository purchaseRequestRepository;
     private final AttachmentRepository attachmentRepository;
     private final FileStoragePort fileStoragePort;
     private final JsonUtils jsonUtils;
     private final BalanceService balanceService;
     private final NotificationService notificationService;
+    private final SystemSettingRepository systemSettingRepository;
+
+    private BigDecimal currentFeeRatePercent() {
+        return systemSettingRepository.findBySettingKey(FEE_RATE_KEY)
+                .map(SystemSetting::getSettingValue)
+                .map(v -> {
+                    try {
+                        return new BigDecimal(v);
+                    } catch (NumberFormatException e) {
+                        log.warn("fee_rate setting value '{}' is not a valid number, using default", v);
+                        return DEFAULT_FEE_RATE_PERCENT;
+                    }
+                })
+                .orElse(DEFAULT_FEE_RATE_PERCENT);
+    }
 
     @Transactional
     public PurchaseRequestResponse createPurchaseRequest(Long userId, PurchaseRequestCreateRequest request) {
@@ -76,6 +99,14 @@ public class PurchaseService {
         PurchaseRequestStatus effectiveStatus = request.getStatus() != null
                 ? request.getStatus()
                 : PurchaseRequestStatus.DRAFT;
+
+        // 수수료·총액은 클라이언트 값이 아니라 서버측 SystemSetting(fee_rate)으로 재계산한 신뢰값을 저장한다.
+        BigDecimal priceKrw = request.getPriceKrw() != null ? request.getPriceKrw() : BigDecimal.ZERO;
+        BigDecimal feeRatePercent = currentFeeRatePercent();
+        BigDecimal feeAmount = priceKrw.multiply(feeRatePercent)
+                .divide(HUNDRED, 2, RoundingMode.HALF_UP);
+        BigDecimal totalAmountKrw = priceKrw.add(feeAmount);
+
         String requestNumber = IDGenerateUtil.generatePurchaseRequestNumber();
         PurchaseRequest purchaseRequest = PurchaseRequest.create(
                 userId,
@@ -85,16 +116,16 @@ public class PurchaseService {
                 jsonUtils.toJson(request.getUrls()),
                 jsonUtils.toJson(request.getOptions()),
                 request.getPriceRub(),
-                request.getPriceKrw(),
+                priceKrw,
                 request.getExchangeRateId(),
-                request.getFeeAmount(),
-                request.getTotalAmountKrw(),
+                feeAmount,
+                totalAmountKrw,
                 request.getMemo(),
                 effectiveStatus);
         PurchaseRequest saved = purchaseRequestRepository.save(purchaseRequest);
         if (effectiveStatus == PurchaseRequestStatus.SUBMITTED) {
-            balanceService.debitForPurchase(userId, request.getTotalAmountKrw(), saved.getId());
-            saved.recordChargedAmount(request.getTotalAmountKrw());
+            balanceService.debitForPurchase(userId, totalAmountKrw, saved.getId());
+            saved.recordChargedAmount(totalAmountKrw);
             saved = purchaseRequestRepository.save(saved);
         }
         return saved;

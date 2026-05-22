@@ -11,11 +11,12 @@ import { toast } from "sonner";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useExchangeRate } from "../../hooks/exchange/useExchangeRate";
 import { usePurchase } from "../../hooks/purchase/usePurchase";
+import { api } from "../../utils/api";
 import { formatDate, formatNumber } from "../../utils/format";
 import { USER_BALANCE_CHANGE_EVENT } from "../../utils/constants";
 import type { ExchangeRate, PurchaseRequestStatus } from "../../types";
 
-const FEE_PERCENT = 12;
+const DEFAULT_FEE_PERCENT = 12;
 const MAX_IMAGES = 10;
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024; // 5MB
 const ALLOWED_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
@@ -27,6 +28,7 @@ export default function PurchaseRequestForm() {
   const { createPurchaseRequest } = usePurchase();
   const imageInputRef = useRef<HTMLInputElement>(null);
   const [currentExchangeRate, setCurrentExchangeRate] = useState<ExchangeRate | null>(null);
+  const [feeRatePercent, setFeeRatePercent] = useState<number>(DEFAULT_FEE_PERCENT);
   const [urls, setUrls] = useState<Array<{ url: string; shop: string }>>([{ url: "", shop: "" }]);
   const [options, setOptions] = useState<Array<{ name: string; value: string }>>([]);
   const [priceKrw, setPriceKrw] = useState<number>(0);
@@ -41,6 +43,18 @@ export default function PurchaseRequestForm() {
     getCurrentExchangeRate()
       .then(setCurrentExchangeRate)
       .catch(() => setCurrentExchangeRate(null));
+
+    api
+      .get<{ feeRatePercent: number }>("/v1/settings/fee-rate")
+      .then((res) => {
+        const v = res?.data?.feeRatePercent;
+        if (v != null && Number.isFinite(Number(v))) {
+          setFeeRatePercent(Number(v));
+        }
+      })
+      .catch(() => {
+        // 기본값 유지
+      });
   }, []);
 
   const imagePreviews = useMemo(() => {
@@ -84,7 +98,7 @@ export default function PurchaseRequestForm() {
   const calculateTotal = () => {
     const rate = currentExchangeRate ? Number(currentExchangeRate.rate) : 0;
     const round2 = (n: number) => Math.round(n * 100) / 100;
-    const feeRate = FEE_PERCENT / 100;
+    const feeRate = feeRatePercent / 100;
     const feeKrw = priceKrw * feeRate;
     const totalKrw = priceKrw + feeKrw;
     const priceRub = rate > 0 ? priceKrw / rate : 0;
@@ -454,7 +468,7 @@ export default function PurchaseRequestForm() {
               </div>
             </div>
             <div className="flex justify-between text-sm">
-              <span className="text-gray-600">{t('purchase.summary.feeLabel').replace('{{percent}}', String(FEE_PERCENT))}</span>
+              <span className="text-gray-600">{t('purchase.summary.feeLabel').replace('{{percent}}', String(feeRatePercent))}</span>
               <div className="flex flex-col items-end gap-0.5">
                 <span className="font-medium">
                   {formatNumber(totals.feeKrw, locale, numOpt)}원
