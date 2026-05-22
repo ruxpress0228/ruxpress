@@ -222,7 +222,7 @@ public class PurchaseService {
     }
 
     @Transactional(readOnly = true)
-    public Resource getAttachmentResource(Long userId, Long attachmentId) {
+    public Resource getAttachmentResource(Long attachmentId, Long userId) {
         Attachment attachment = attachmentRepository.findById(attachmentId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
         if (attachment.getRefType() != AttachmentRefType.PURCHASE) {

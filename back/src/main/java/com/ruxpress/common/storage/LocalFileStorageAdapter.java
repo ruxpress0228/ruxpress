@@ -25,6 +25,8 @@ import java.util.UUID;
 @SuppressWarnings("null")
 public class LocalFileStorageAdapter implements FileStoragePort {
 
+    private static final String LOCAL_FILES_URL_PREFIX = "/api/v1/local-files/";
+
     private final Path rootLocation;
 
     public LocalFileStorageAdapter(
@@ -69,6 +71,9 @@ public class LocalFileStorageAdapter implements FileStoragePort {
     public Resource loadAsResource(String storedUrl) {
         try {
             Path file = rootLocation.resolve(storedUrl).normalize();
+            if (!file.startsWith(rootLocation)) {
+                throw new RuntimeException("Invalid stored path: " + storedUrl);
+            }
             Resource resource = new UrlResource(file.toUri());
             if (resource.exists() && resource.isReadable()) {
                 return resource;
@@ -81,13 +86,26 @@ public class LocalFileStorageAdapter implements FileStoragePort {
 
     @Override
     public String getViewUrl(String storedUrl) {
-        return null;
+        if (storedUrl == null || storedUrl.isBlank()) {
+            return null;
+        }
+        String normalized = storedUrl.replace('\\', '/').replaceFirst("^/+", "");
+        Path resolved = rootLocation.resolve(normalized).normalize();
+        if (!resolved.startsWith(rootLocation)) {
+            log.warn("getViewUrl rejected (path outside upload root): {}", storedUrl);
+            return null;
+        }
+        return LOCAL_FILES_URL_PREFIX + normalized;
     }
 
     @Override
     public void delete(String storedUrl) {
         try {
             Path file = rootLocation.resolve(storedUrl).normalize();
+            if (!file.startsWith(rootLocation)) {
+                log.warn("delete rejected (path outside upload root): {}", storedUrl);
+                return;
+            }
             Files.deleteIfExists(file);
         } catch (IOException e) {
             log.warn("Failed to delete file: {}", storedUrl, e);

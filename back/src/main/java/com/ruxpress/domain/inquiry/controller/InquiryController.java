@@ -62,7 +62,7 @@ public class InquiryController {
             @RequestHeader(value = "X-User-Id", required = false) Long userId,
             @PathVariable Long attachmentId) {
         Long effectiveUserId = userId != null ? userId : 1L; // TODO: JWT에서 추출
-        Resource resource = inquiryService.getAttachmentResource(effectiveUserId, attachmentId);
+        Resource resource = inquiryService.getAttachmentResource(attachmentId, effectiveUserId);
         String filename = inquiryService.getAttachmentOriginalFilename(attachmentId);
         String encodedFilename = URLEncoder.encode(filename, StandardCharsets.UTF_8).replace("+", "%20");
         return ResponseEntity.ok()
