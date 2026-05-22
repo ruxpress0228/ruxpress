@@ -6,7 +6,7 @@ export function notifyUserAuthChange(): void {
 }
 
 /** 자동로그인 체크 시에는 localStorage, 미체크 시에는 sessionStorage 에서 값을 읽는다. */
-function readAuthValue(key: string): string | null {
+export function readAuthValue(key: string): string | null {
   return localStorage.getItem(key) ?? sessionStorage.getItem(key);
 }
 

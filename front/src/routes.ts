@@ -37,6 +37,7 @@ import AdminChat from "./pages/admin/AdminChat";
 import NotFound from "./pages/NotFound";
 import ExamplePage from "./pages/ExamplePage";
 import { STORAGE_KEYS } from "./utils/constants";
+import { readAuthValue } from "./utils/api";
 
 function getTokenRole(token: string): string | null {
   try {
@@ -58,7 +59,7 @@ function isAdminRole(role: string | null): boolean {
 
 /** localStorage(영속) 와 sessionStorage(세션) 어느 쪽에 있든 토큰을 찾아낸다. REQ2-01. */
 function readToken(): string | null {
-  return localStorage.getItem(STORAGE_KEYS.TOKEN) ?? sessionStorage.getItem(STORAGE_KEYS.TOKEN);
+  return readAuthValue(STORAGE_KEYS.TOKEN);
 }
 
 function requireUserAuth() {

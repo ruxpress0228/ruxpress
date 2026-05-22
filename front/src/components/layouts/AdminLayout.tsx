@@ -16,10 +16,13 @@ import { Button } from "../ui/button";
 import { Sidebar, SidebarContent, SidebarHeader, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarProvider, SidebarTrigger } from "../ui/sidebar";
 import { useTranslation } from "../../hooks/useTranslation";
 import { STORAGE_KEYS } from "../../utils/constants";
+import { readAuthValue } from "../../utils/api";
+
+const ADMIN_STORAGE_KEY = "ruxpress_admin";
 
 function getAdmin(): { id: number; email: string; name: string; role: string } | null {
   try {
-    const raw = localStorage.getItem("ruxpress_admin");
+    const raw = readAuthValue(ADMIN_STORAGE_KEY);
     return raw ? JSON.parse(raw) : null;
   } catch {
     return null;
@@ -36,7 +39,7 @@ export default function AdminLayout() {
     return <Outlet />;
   }
 
-  const token = localStorage.getItem(STORAGE_KEYS.TOKEN);
+  const token = readAuthValue(STORAGE_KEYS.TOKEN);
   const admin = getAdmin();
 
   if (!token || !admin) {
@@ -45,7 +48,9 @@ export default function AdminLayout() {
 
   const handleLogout = () => {
     localStorage.removeItem(STORAGE_KEYS.TOKEN);
-    localStorage.removeItem("ruxpress_admin");
+    sessionStorage.removeItem(STORAGE_KEYS.TOKEN);
+    localStorage.removeItem(ADMIN_STORAGE_KEY);
+    sessionStorage.removeItem(ADMIN_STORAGE_KEY);
     navigate("/admin/login");
   };
 
