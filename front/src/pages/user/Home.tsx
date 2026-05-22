@@ -221,7 +221,9 @@ export default function Home() {
             <>
               <div className="flex items-baseline space-x-2">
                 <span className="text-3xl font-bold text-gray-900">
-                  1 RUB = {Number(currentExchangeRate.rate).toFixed(2)} KRW
+                  {converterMode === "krw-left"
+                    ? `1 KRW = ${(1 / Number(currentExchangeRate.rate)).toFixed(4)} RUB`
+                    : `1 RUB = ${Number(currentExchangeRate.rate).toFixed(2)} KRW`}
                 </span>
               </div>
               <p className="text-sm text-gray-500 mt-2">
