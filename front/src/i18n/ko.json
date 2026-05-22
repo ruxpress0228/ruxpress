@@ -99,7 +99,7 @@
   "home.hero.cta": "구매 요청하기",
   "home.exchange.title": "현재 환율",
   "home.exchange.asOf": "기준",
-  "home.exchange.autoUpdate": "환율은 자동으로 업데이트됩니다",
+  "home.exchange.autoUpdate": "환율은 관리자가 수동으로 갱신합니다",
   "home.exchange.calcTitle": "환율 계산",
   "home.exchange.krwToRub": "한국 상품 가격 (원화 KRW)",
   "home.exchange.rubToKrw": "결제 금액 (루블 RUB)",

@@ -98,7 +98,7 @@
   "home.hero.cta": "Оформить заявку",
   "home.exchange.title": "Текущий курс",
   "home.exchange.asOf": "на",
-  "home.exchange.autoUpdate": "Курс обновляется автоматически",
+  "home.exchange.autoUpdate": "Курс обновляется администратором вручную",
   "home.exchange.calcTitle": "Калькулятор курса",
   "home.exchange.krwToRub": "Цена товара в вонах (KRW)",
   "home.exchange.rubToKrw": "Сумма к оплате в рублях (RUB)",

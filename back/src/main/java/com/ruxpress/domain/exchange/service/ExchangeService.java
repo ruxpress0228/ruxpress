@@ -10,7 +10,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,9 +29,9 @@ public class ExchangeService {
     private final CbrApiClient cbrApiClient;
 
     /**
-     * 1시간마다 CBR에서 환율 조회. 기동 10초 후 첫 실행, 이후 1시간 간격. 값이 바뀐 경우에만 저장.
+     * 외부 환율 자동 fetch는 비활성화 상태(REQ-10). 관리자 화면의 "API에서 새로고침" 버튼이
+     * /api/v1/exchange-rates/fetch 로 호출할 때만 1회성으로 실행된다.
      */
-    @Scheduled(initialDelay = 10_000, fixedDelay = 3_600_000)
     @Transactional
     public void fetchAndSave() {
         Optional<BigDecimal> optRate = cbrApiClient.fetchKrwPerRub();

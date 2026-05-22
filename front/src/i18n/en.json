@@ -98,7 +98,7 @@
   "home.hero.cta": "Request purchase",
   "home.exchange.title": "Current exchange rate",
   "home.exchange.asOf": "as of",
-  "home.exchange.autoUpdate": "Rates are updated automatically",
+  "home.exchange.autoUpdate": "Rates are updated manually by the administrator",
   "home.exchange.calcTitle": "Exchange calculator",
   "home.exchange.krwToRub": "Korean product price (KRW)",
   "home.exchange.rubToKrw": "Payment amount (RUB)",
