@@ -161,9 +161,6 @@ export default function AdminPurchaseRequests() {
     }
   };
 
-  const adminUploadAllowed = (s: PurchaseRequestStatus) =>
-    s === "PURCHASED" || s === "SHIPPING" || s === "DELIVERED";
-
   const uploadAdminFiles = async () => {
     if (!selected || adminFiles.length === 0) return;
     try {
@@ -457,36 +454,27 @@ export default function AdminPurchaseRequests() {
               </div>
 
               <div className="border-t pt-4 space-y-2">
-                <Label>관리자 사진 첨부 (배송 관련 상태에서만 활성)</Label>
-                {adminUploadAllowed(selected.status) ? (
-                  <>
-                    <Input
-                      type="file"
-                      accept="image/jpeg,image/png,image/webp"
-                      multiple
-                      onChange={(e) => setAdminFiles(Array.from(e.target.files || []))}
-                    />
-                    {adminFiles.length > 0 && (
-                      <p className="text-xs text-gray-500">
-                        {adminFiles.length}개 선택됨
-                      </p>
-                    )}
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      className="w-full"
-                      disabled={adminFiles.length === 0 || uploadingFiles}
-                      onClick={() => void uploadAdminFiles()}
-                    >
-                      {uploadingFiles ? "업로드 중..." : `사진 업로드 (${adminFiles.length})`}
-                    </Button>
-                  </>
-                ) : (
-                  <p className="text-xs text-amber-700">
-                    현재 상태({statusLabels[selected.status].label})에서는 관리자 첨부가 비활성화됩니다.
-                    PURCHASED/SHIPPING/DELIVERED 상태에서만 가능합니다.
+                <Label>관리자 사진 첨부</Label>
+                <Input
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  multiple
+                  onChange={(e) => setAdminFiles(Array.from(e.target.files || []))}
+                />
+                {adminFiles.length > 0 && (
+                  <p className="text-xs text-gray-500">
+                    {adminFiles.length}개 선택됨
                   </p>
                 )}
+                <Button
+                  type="button"
+                  variant="secondary"
+                  className="w-full"
+                  disabled={adminFiles.length === 0 || uploadingFiles}
+                  onClick={() => void uploadAdminFiles()}
+                >
+                  {uploadingFiles ? "업로드 중..." : `사진 업로드 (${adminFiles.length})`}
+                </Button>
               </div>
 
               {isSuper && (
