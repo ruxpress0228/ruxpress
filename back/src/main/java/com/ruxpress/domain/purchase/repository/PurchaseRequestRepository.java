@@ -6,6 +6,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 
+import java.util.Collection;
 import java.util.List;
 
 public interface PurchaseRequestRepository extends JpaRepository<PurchaseRequest, Long> {
@@ -23,4 +24,12 @@ public interface PurchaseRequestRepository extends JpaRepository<PurchaseRequest
     Page<PurchaseRequest> findByDeletedAtIsNull(Pageable pageable);
 
     Page<PurchaseRequest> findByStatusAndDeletedAtIsNull(PurchaseRequestStatus status, Pageable pageable);
+
+    Page<PurchaseRequest> findByUserIdInAndDeletedAtIsNull(Collection<Long> userIds, Pageable pageable);
+
+    Page<PurchaseRequest> findByUserIdInAndStatusAndDeletedAtIsNull(
+            Collection<Long> userIds,
+            PurchaseRequestStatus status,
+            Pageable pageable
+    );
 }

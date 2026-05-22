@@ -39,6 +39,8 @@ export interface PurchaseRequestListItem {
 
 export interface PurchaseRequestDetail extends PurchaseRequestListItem {
   userId: number;
+  userEmail?: string;
+  userNickname?: string;
   urls?: string[];
   options?: Record<string, unknown>;
   priceRub?: number;

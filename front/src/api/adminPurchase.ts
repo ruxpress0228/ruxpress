@@ -10,12 +10,16 @@ export async function adminListPurchaseRequests(params: {
   size?: number;
   status?: PurchaseRequestStatus;
   sort?: string;
+  userKeyword?: string;
 }): Promise<PageResponse<PurchaseRequestDetail>> {
   const q = new URLSearchParams();
   if (params.page != null) q.set("page", String(params.page));
   if (params.size != null) q.set("size", String(params.size));
   if (params.status) q.set("status", params.status);
   if (params.sort) q.set("sort", params.sort);
+  if (params.userKeyword && params.userKeyword.trim() !== "") {
+    q.set("userKeyword", params.userKeyword.trim());
+  }
   const res = await api.get<PageResponse<PurchaseRequestDetail>>(`${ADMIN_PURCHASES}?${q}`);
   if (res.code !== 200 || res.data == null) throw new Error(res.message || "Failed to load purchases");
   return res.data;

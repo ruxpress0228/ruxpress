@@ -32,12 +32,13 @@ public class AdminPurchaseController {
     @GetMapping
     public ApiResponse<PageResponse<PurchaseRequestResponse>> list(
             @RequestParam(required = false) PurchaseRequestStatus status,
+            @RequestParam(required = false) String userKeyword,
             @RequestParam(defaultValue = "createdAt,desc") String sort,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
         Sort parsedSort = SortUtils.parseSort(sort);
         return ApiResponse.success(
-                purchaseService.getAdminPurchaseRequests(status, PageRequest.of(page, size, parsedSort)));
+                purchaseService.getAdminPurchaseRequests(status, userKeyword, PageRequest.of(page, size, parsedSort)));
     }
 
     @GetMapping("/{id}")

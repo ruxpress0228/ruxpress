@@ -69,7 +69,7 @@ export default function AdminPurchaseRequests() {
   const [page, setPage] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
   const [sort, setSort] = useState<"createdAt,desc" | "createdAt,asc">("createdAt,desc");
-  const [emailSearch, setEmailSearch] = useState("");
+  const [userKeyword, setUserKeyword] = useState("");
   const [search, setSearch] = useState("");
   const [totalElements, setTotalElements] = useState(0);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -84,7 +84,7 @@ export default function AdminPurchaseRequests() {
   const [walletIdem, setWalletIdem] = useState("");
 
   const fetchPage = useCallback(
-    async (p: number, status: string) => {
+    async (p: number, status: string, keyword: string) => {
       setLoading(true);
       try {
         const statusParam =
@@ -94,6 +94,7 @@ export default function AdminPurchaseRequests() {
           size: 20,
           status: statusParam,
           sort,
+          userKeyword: keyword.trim() || undefined,
         });
         setRows(res.content ?? []);
         setTotalPages(res.totalPages ?? 0);
@@ -110,11 +111,11 @@ export default function AdminPurchaseRequests() {
   );
 
   useEffect(() => {
-    void fetchPage(0, statusFilter);
-  }, [statusFilter, sort, fetchPage]);
+    void fetchPage(0, statusFilter, userKeyword);
+  }, [statusFilter, sort, fetchPage, userKeyword]);
 
   const changePage = (next: number) => {
-    void fetchPage(next, statusFilter);
+    void fetchPage(next, statusFilter, userKeyword);
   };
 
   const handleStatusFilter = (value: string) => {
@@ -146,7 +147,7 @@ export default function AdminPurchaseRequests() {
       });
       toast.success("저장되었습니다");
       setSelected(updated);
-      void fetchPage(page, statusFilter);
+      void fetchPage(page, statusFilter, userKeyword);
       setDialogOpen(false);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "실패");
@@ -171,7 +172,7 @@ export default function AdminPurchaseRequests() {
       });
       toast.success(t("adminPurchase.walletSuccess"));
       setDialogOpen(false);
-      void fetchPage(page, statusFilter);
+      void fetchPage(page, statusFilter, userKeyword);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "실패");
     }
@@ -181,9 +182,6 @@ export default function AdminPurchaseRequests() {
 
   const filtered = useMemo(() => {
     let list = rows;
-    if (emailSearch.trim() !== "") {
-      list = list.filter((r) => String(r.userId).includes(emailSearch.trim()));
-    }
     if (search.trim() !== "") {
       const q = search.trim().toLowerCase();
       list = list.filter(
@@ -193,7 +191,7 @@ export default function AdminPurchaseRequests() {
       );
     }
     return list;
-  }, [rows, emailSearch, search]);
+  }, [rows, search]);
 
   return (
     <div className="space-y-6">
@@ -218,9 +216,9 @@ export default function AdminPurchaseRequests() {
               />
             </div>
             <Input
-              placeholder="회원 ID"
-              value={emailSearch}
-              onChange={(e) => setEmailSearch(e.target.value)}
+              placeholder="회원 이름/이메일"
+              value={userKeyword}
+              onChange={(e) => setUserKeyword(e.target.value)}
             />
             <Select value={statusFilter} onValueChange={handleStatusFilter}>
               <SelectTrigger>
@@ -250,7 +248,7 @@ export default function AdminPurchaseRequests() {
                 <SelectItem value="createdAt,asc">오래된순</SelectItem>
               </SelectContent>
             </Select>
-            <Button type="button" variant="secondary" onClick={() => void fetchPage(page, statusFilter)}>
+            <Button type="button" variant="secondary" onClick={() => void fetchPage(page, statusFilter, userKeyword)}>
               새로고침
             </Button>
           </div>
@@ -263,6 +261,7 @@ export default function AdminPurchaseRequests() {
             <TableHeader>
               <TableRow>
                 <TableHead>요청번호</TableHead>
+                <TableHead>회원</TableHead>
                 <TableHead>상품명</TableHead>
                 <TableHead>수량</TableHead>
                 <TableHead>금액(원)</TableHead>
@@ -273,13 +272,13 @@ export default function AdminPurchaseRequests() {
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center text-gray-400 py-12">
+                  <TableCell colSpan={7} className="text-center text-gray-400 py-12">
                     불러오는 중...
                   </TableCell>
                 </TableRow>
               ) : filtered.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center text-gray-500 py-12">
+                  <TableCell colSpan={7} className="text-center text-gray-500 py-12">
                     구매 요청이 없습니다
                   </TableCell>
                 </TableRow>
@@ -292,6 +291,16 @@ export default function AdminPurchaseRequests() {
                     onClick={() => openManage(request)}
                   >
                     <TableCell className="font-medium text-sm">{request.requestNumber}</TableCell>
+                    <TableCell className="text-sm">
+                      {request.userNickname || request.userEmail ? (
+                        <div className="flex flex-col">
+                          <span className="font-medium text-gray-900">{request.userNickname ?? "—"}</span>
+                          <span className="text-xs text-gray-500">{request.userEmail ?? `#${request.userId}`}</span>
+                        </div>
+                      ) : (
+                        <span className="text-gray-500">#{request.userId}</span>
+                      )}
+                    </TableCell>
                     <TableCell className="font-medium">{request.productName}</TableCell>
                     <TableCell>{request.quantity}</TableCell>
                     <TableCell>
@@ -377,7 +386,9 @@ export default function AdminPurchaseRequests() {
               </Button>
               <div className="text-sm space-y-1">
                 <p>
-                  <span className="text-gray-500">회원</span> #{selected.userId}
+                  <span className="text-gray-500">회원</span>{" "}
+                  {selected.userNickname ?? `#${selected.userId}`}
+                  {selected.userEmail ? ` (${selected.userEmail})` : ""}
                 </p>
                 <p>
                   <span className="text-gray-500">상품</span> {selected.productName}

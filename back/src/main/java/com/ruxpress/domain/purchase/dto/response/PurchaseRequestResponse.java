@@ -16,6 +16,8 @@ public class PurchaseRequestResponse {
 
     private final Long id;
     private final Long userId;
+    private final String userEmail;
+    private final String userNickname;
     private final String requestNumber;
     private final String productName;
     private final Integer quantity;

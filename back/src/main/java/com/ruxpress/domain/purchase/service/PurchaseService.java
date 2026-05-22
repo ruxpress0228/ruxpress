@@ -16,6 +16,8 @@ import com.ruxpress.domain.admin.entity.SystemSetting;
 import com.ruxpress.domain.admin.repository.SystemSettingRepository;
 import com.ruxpress.domain.balance.service.BalanceService;
 import com.ruxpress.domain.notification.service.NotificationService;
+import com.ruxpress.domain.user.entity.User;
+import com.ruxpress.domain.user.repository.UserRepository;
 import com.ruxpress.domain.purchase.dto.request.AdminPurchaseStatusRequest;
 import com.ruxpress.domain.purchase.dto.request.AdminPurchaseWalletCreditRequest;
 import com.ruxpress.domain.purchase.dto.request.PurchaseRequestCreateRequest;
@@ -35,7 +37,9 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -54,6 +58,7 @@ public class PurchaseService {
     private final BalanceService balanceService;
     private final NotificationService notificationService;
     private final SystemSettingRepository systemSettingRepository;
+    private final UserRepository userRepository;
 
     private BigDecimal currentFeeRatePercent() {
         return systemSettingRepository.findBySettingKey(FEE_RATE_KEY)
@@ -246,12 +251,39 @@ public class PurchaseService {
 
     @Transactional(readOnly = true)
     public PageResponse<PurchaseRequestResponse> getAdminPurchaseRequests(
-            PurchaseRequestStatus status, Pageable pageable) {
-        Page<PurchaseRequest> page = status == null
-                ? purchaseRequestRepository.findByDeletedAtIsNull(pageable)
-                : purchaseRequestRepository.findByStatusAndDeletedAtIsNull(status, pageable);
+            PurchaseRequestStatus status, String userKeyword, Pageable pageable) {
+        Page<PurchaseRequest> page;
+        if (userKeyword != null && !userKeyword.isBlank()) {
+            List<Long> matchedUserIds = userRepository
+                    .searchByKeyword(userKeyword.trim(), Pageable.unpaged())
+                    .getContent()
+                    .stream()
+                    .map(User::getId)
+                    .toList();
+            if (matchedUserIds.isEmpty()) {
+                return new PageResponse<>(List.of(), 0, 0, pageable.getPageNumber(), pageable.getPageSize());
+            }
+            page = status == null
+                    ? purchaseRequestRepository.findByUserIdInAndDeletedAtIsNull(matchedUserIds, pageable)
+                    : purchaseRequestRepository.findByUserIdInAndStatusAndDeletedAtIsNull(matchedUserIds, status, pageable);
+        } else {
+            page = status == null
+                    ? purchaseRequestRepository.findByDeletedAtIsNull(pageable)
+                    : purchaseRequestRepository.findByStatusAndDeletedAtIsNull(status, pageable);
+        }
+
+        // 페이지 내 user_id 들을 한 번에 모아 user 정보를 IN 조회 — N+1 회피.
+        List<Long> userIds = page.getContent().stream()
+                .map(PurchaseRequest::getUserId)
+                .distinct()
+                .toList();
+        Map<Long, User> userMap = new HashMap<>();
+        if (!userIds.isEmpty()) {
+            userRepository.findAllById(userIds).forEach(u -> userMap.put(u.getId(), u));
+        }
+
         List<PurchaseRequestResponse> content = page.getContent().stream()
-                .map(this::toResponse)
+                .map(pr -> toResponseWithUser(pr, userMap.get(pr.getUserId())))
                 .collect(Collectors.toList());
         return new PageResponse<>(content, page.getTotalElements(), page.getTotalPages(), page.getNumber(),
                 page.getSize());
@@ -262,7 +294,8 @@ public class PurchaseService {
         PurchaseRequest pr = purchaseRequestRepository.findById(id)
                 .filter(p -> p.getDeletedAt() == null)
                 .orElseThrow(() -> new BusinessException(ErrorCode.PURCHASE_NOT_FOUND));
-        return toResponse(pr);
+        User user = userRepository.findById(pr.getUserId()).orElse(null);
+        return toResponseWithUser(pr, user);
     }
 
     @Transactional
@@ -332,6 +365,10 @@ public class PurchaseService {
     }
 
     private PurchaseRequestResponse toResponse(PurchaseRequest entity) {
+        return toResponseWithUser(entity, null);
+    }
+
+    private PurchaseRequestResponse toResponseWithUser(PurchaseRequest entity, User user) {
         List<Attachment> attachments = attachmentRepository.findByRefTypeAndRefIdOrderBySortOrder(
                 AttachmentRefType.PURCHASE,
                 entity.getId());
@@ -348,6 +385,8 @@ public class PurchaseService {
         return new PurchaseRequestResponse(
                 entity.getId(),
                 entity.getUserId(),
+                user != null ? user.getEmail() : null,
+                user != null ? user.getNickname() : null,
                 entity.getRequestNumber(),
                 entity.getProductName(),
                 entity.getQuantity(),
