@@ -20,7 +20,8 @@ export default function Home() {
   const { getRecentPurchaseRequests } = usePurchase();
   const [currentExchangeRate, setCurrentExchangeRate] = useState<ExchangeRate | null>(null);
   const [myRequests, setMyRequests] = useState<PurchaseRequestListItem[]>([]);
-  const [converterMode, setConverterMode] = useState<"krw-left" | "rub-left">("krw-left");
+  /** 변환기 왼쪽 통화 · 상단 환율 문구(1 RUB=… / 1 KRW=…) 공통 */
+  const [leftCurrency, setLeftCurrency] = useState<"KRW" | "RUB">("RUB");
   const [converterAmount, setConverterAmount] = useState<string>("");
   const [recentNotices, setRecentNotices] = useState<Notice[]>([]);
 
@@ -43,32 +44,40 @@ export default function Home() {
 
   const round2 = (n: number) => Math.round(n * 100) / 100;
 
+  const ratePerRub = () => Number(currentExchangeRate?.rate ?? 0);
+
+  const formatRateHeadline = (): string => {
+    const r = ratePerRub();
+    if (r <= 0) return "";
+    if (leftCurrency === "RUB") {
+      return t("home.exchange.rateRubToKrw").replace("{{rate}}", r.toFixed(2));
+    }
+    return t("home.exchange.rateKrwToRub").replace("{{rate}}", (1 / r).toFixed(4));
+  };
+
   const handleConverterSwap = () => {
-    if (!currentExchangeRate) {
-      setConverterMode((m) => (m === "krw-left" ? "rub-left" : "krw-left"));
-      return;
+    const nextLeft: "KRW" | "RUB" = leftCurrency === "KRW" ? "RUB" : "KRW";
+    const r = ratePerRub();
+    if (
+      currentExchangeRate &&
+      r > 0 &&
+      converterAmount !== "" &&
+      !Number.isNaN(Number(converterAmount))
+    ) {
+      const n = Number(converterAmount);
+      setConverterAmount(
+        leftCurrency === "KRW" ? String(round2(n / r)) : String(round2(n * r)),
+      );
     }
-    const r = Number(currentExchangeRate.rate);
-    if (converterAmount === "" || Number.isNaN(Number(converterAmount))) {
-      setConverterMode((m) => (m === "krw-left" ? "rub-left" : "krw-left"));
-      return;
-    }
-    const n = Number(converterAmount);
-    if (converterMode === "krw-left") {
-      setConverterAmount(String(round2(n / r)));
-      setConverterMode("rub-left");
-    } else {
-      setConverterAmount(String(round2(n * r)));
-      setConverterMode("krw-left");
-    }
+    setLeftCurrency(nextLeft);
   };
 
   const converterRightDisplay = (): string => {
     if (!currentExchangeRate || converterAmount === "" || Number.isNaN(Number(converterAmount))) return "";
-    const r = Number(currentExchangeRate.rate);
+    const r = ratePerRub();
     if (r <= 0) return "";
     const n = Number(converterAmount);
-    if (converterMode === "krw-left") {
+    if (leftCurrency === "KRW") {
       return formatNumber(round2(n / r), locale, numOpt);
     }
     return formatNumber(round2(n * r), locale, numOpt);
@@ -220,11 +229,7 @@ export default function Home() {
           {currentExchangeRate ? (
             <>
               <div className="flex items-baseline space-x-2">
-                <span className="text-3xl font-bold text-gray-900">
-                  {converterMode === "krw-left"
-                    ? `1 KRW = ${(1 / Number(currentExchangeRate.rate)).toFixed(4)} RUB`
-                    : `1 RUB = ${Number(currentExchangeRate.rate).toFixed(2)} KRW`}
-                </span>
+                <span className="text-3xl font-bold text-gray-900">{formatRateHeadline()}</span>
               </div>
               <p className="text-sm text-gray-500 mt-2">
                 {t('home.exchange.autoUpdate')}
@@ -238,7 +243,7 @@ export default function Home() {
 
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
                   <div className="flex min-h-10 flex-1 min-w-0 items-center rounded-md border border-input bg-background px-0 shadow-sm focus-within:ring-1 focus-within:ring-ring">
-                    {converterMode === "krw-left" ? (
+                    {leftCurrency === "KRW" ? (
                       <span className="pl-3 text-sm text-muted-foreground tabular-nums">₩</span>
                     ) : null}
                     <Input
@@ -247,14 +252,14 @@ export default function Home() {
                       min="0"
                       step="any"
                       inputMode="decimal"
-                      placeholder={converterMode === "krw-left" ? "10000" : "1000"}
+                      placeholder={leftCurrency === "KRW" ? "10000" : "1000"}
                       value={converterAmount}
                       onChange={(e) => setConverterAmount(e.target.value)}
-                      aria-label={converterMode === "krw-left" ? t("home.exchange.krw") : t("home.exchange.rub")}
+                      aria-label={leftCurrency === "KRW" ? t("home.exchange.krw") : t("home.exchange.rub")}
                       className="border-0 shadow-none focus-visible:ring-0 text-lg flex-1 min-w-0"
                     />
                     <span className="pr-3 text-xs font-medium text-gray-500 tabular-nums shrink-0">
-                      {converterMode === "krw-left" ? "KRW" : "RUB"}
+                      {leftCurrency}
                     </span>
                   </div>
 
@@ -273,7 +278,7 @@ export default function Home() {
                   </div>
 
                   <div className="flex min-h-10 flex-1 min-w-0 items-center rounded-md border border-input bg-muted/40 px-0 shadow-inner">
-                    {converterMode === "rub-left" ? (
+                    {leftCurrency === "RUB" ? (
                       <span className="pl-3 text-sm text-muted-foreground tabular-nums">₩</span>
                     ) : null}
                     <Input
@@ -283,14 +288,14 @@ export default function Home() {
                       value={converterRightDisplay()}
                       placeholder={t('home.exchange.placeholder')}
                       aria-label={
-                        converterMode === "krw-left"
+                        leftCurrency === "KRW"
                           ? `${t("home.exchange.rub")} (${t("home.exchange.placeholder")})`
                           : `${t("home.exchange.krw")} (${t("home.exchange.placeholder")})`
                       }
                       className="border-0 shadow-none bg-transparent text-lg font-semibold flex-1 min-w-0 cursor-default"
                     />
                     <span className="pr-3 text-xs font-medium text-gray-500 tabular-nums shrink-0">
-                      {converterMode === "krw-left" ? "RUB" : "KRW"}
+                      {leftCurrency === "KRW" ? "RUB" : "KRW"}
                     </span>
                   </div>
                 </div>
