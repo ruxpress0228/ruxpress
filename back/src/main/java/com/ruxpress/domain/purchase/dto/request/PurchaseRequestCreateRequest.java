@@ -26,7 +26,11 @@ public class PurchaseRequestCreateRequest {
     @Min(value = 1, message = "수량은 1 이상이어야 합니다")
     private Integer quantity;
 
+    /** 레거시 단순 URL 배열. 새 클라이언트는 items 를 보낸다. */
     private List<String> urls;
+
+    /** URL별 단가·수량 분리. items 가 비어있지 않으면 quantity/priceKrw/urls 보다 우선. */
+    private List<@jakarta.validation.Valid PurchaseItemRequest> items;
 
     private JsonNode options;
 
@@ -47,7 +51,9 @@ public class PurchaseRequestCreateRequest {
 
     public boolean isValid() {
         if (status == PurchaseRequestStatus.SUBMITTED) {
-            if (priceKrw == null || priceKrw.compareTo(BigDecimal.ZERO) <= 0) {
+            boolean hasItems = items != null && !items.isEmpty();
+            boolean hasLegacyPrice = priceKrw != null && priceKrw.compareTo(BigDecimal.ZERO) > 0;
+            if (!hasItems && !hasLegacyPrice) {
                 throw new BusinessException(ErrorCode.INVALID_INPUT, "상품 가격은 양수여야 합니다.");
             }
         }

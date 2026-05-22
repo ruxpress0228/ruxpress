@@ -29,11 +29,11 @@ export default function PurchaseRequestForm() {
   const imageInputRef = useRef<HTMLInputElement>(null);
   const [currentExchangeRate, setCurrentExchangeRate] = useState<ExchangeRate | null>(null);
   const [feeRatePercent, setFeeRatePercent] = useState<number>(DEFAULT_FEE_PERCENT);
-  const [urls, setUrls] = useState<Array<{ url: string; shop: string }>>([{ url: "", shop: "" }]);
+  const [items, setItems] = useState<Array<{ url: string; shop: string; priceKrw: number; quantity: number }>>([
+    { url: "", shop: "", priceKrw: 0, quantity: 1 },
+  ]);
   const [options, setOptions] = useState<Array<{ name: string; value: string }>>([]);
-  const [priceKrw, setPriceKrw] = useState<number>(0);
   const [productName, setProductName] = useState("");
-  const [quantity, setQuantity] = useState(1);
   const [memo, setMemo] = useState("");
   const [images, setImages] = useState<File[]>([]);
   const [isDragOver, setIsDragOver] = useState(false);
@@ -67,19 +67,36 @@ export default function PurchaseRequestForm() {
     };
   }, [imagePreviews]);
 
-  const addUrl = () => {
-    setUrls([...urls, { url: "", shop: "" }]);
+  const addItem = () => {
+    setItems([...items, { url: "", shop: "", priceKrw: 0, quantity: 1 }]);
   };
 
-  const removeUrl = (index: number) => {
-    setUrls(urls.filter((_, i) => i !== index));
+  const removeItem = (index: number) => {
+    setItems(items.filter((_, i) => i !== index));
   };
 
-  const updateUrl = (index: number, field: 'url' | 'shop', value: string) => {
-    const newUrls = [...urls];
-    newUrls[index][field] = value;
-    setUrls(newUrls);
+  const updateItem = (
+    index: number,
+    field: "url" | "shop" | "priceKrw" | "quantity",
+    value: string | number
+  ) => {
+    const next = [...items];
+    if (field === "priceKrw") {
+      next[index].priceKrw = typeof value === "number" ? value : parseFloat(value) || 0;
+    } else if (field === "quantity") {
+      const n = typeof value === "number" ? value : parseInt(value, 10) || 1;
+      next[index].quantity = Math.max(1, n);
+    } else {
+      next[index][field] = typeof value === "string" ? value : String(value);
+    }
+    setItems(next);
   };
+
+  const totalQuantity = items.reduce((sum, it) => sum + (Number(it.quantity) || 0), 0);
+  const aggregatedPriceKrw = items.reduce(
+    (sum, it) => sum + (Number(it.priceKrw) || 0) * (Number(it.quantity) || 0),
+    0
+  );
 
   const addOption = () => {
     setOptions([...options, { name: "", value: "" }]);
@@ -99,18 +116,19 @@ export default function PurchaseRequestForm() {
     const rate = currentExchangeRate ? Number(currentExchangeRate.rate) : 0;
     const round2 = (n: number) => Math.round(n * 100) / 100;
     const feeRate = feeRatePercent / 100;
-    const feeKrw = priceKrw * feeRate;
-    const totalKrw = priceKrw + feeKrw;
-    const priceRub = rate > 0 ? priceKrw / rate : 0;
+    const productPrice = aggregatedPriceKrw;
+    const feeKrw = productPrice * feeRate;
+    const totalKrw = productPrice + feeKrw;
+    const priceRub = rate > 0 ? productPrice / rate : 0;
     const feeRub = rate > 0 ? feeKrw / rate : 0;
     const totalRub = rate > 0 ? totalKrw / rate : 0;
     return {
-      priceKrw: round2(priceKrw),
+      priceKrw: round2(productPrice),
       feeKrw: round2(feeKrw),
       totalKrw: round2(totalKrw),
       priceRub: round2(priceRub),
       feeRub: round2(feeRub),
-      totalRub: round2(totalRub)
+      totalRub: round2(totalRub),
     };
   };
 
@@ -166,7 +184,21 @@ export default function PurchaseRequestForm() {
 
     try {
       setSubmitting(true);
-      const filteredUrls = urls.map((u) => u.url.trim()).filter(Boolean);
+      const cleanedItems = items
+        .map((it) => ({
+          url: it.url.trim(),
+          shop: it.shop.trim(),
+          priceKrw: Number(it.priceKrw) || 0,
+          quantity: Math.max(1, Number(it.quantity) || 1),
+        }))
+        .filter((it) => it.url !== "" && it.priceKrw > 0);
+
+      if (cleanedItems.length === 0) {
+        toast.error("최소 1개 이상의 상품(URL/단가/수량)을 입력해주세요.");
+        setSubmitting(false);
+        return;
+      }
+
       const optionMap = options.reduce<Record<string, string>>((acc, cur) => {
         const key = cur.name.trim();
         const value = cur.value.trim();
@@ -174,18 +206,22 @@ export default function PurchaseRequestForm() {
         return acc;
       }, {});
 
+      const productPrice = aggregatedPriceKrw;
       const rate = currentExchangeRate ? Number(currentExchangeRate.rate) : 0;
-      const priceRub = rate > 0 ? priceKrw / rate : undefined;
+      const priceRub = rate > 0 ? productPrice / rate : undefined;
       const feeAmount = totals.feeKrw;
       const status: PurchaseRequestStatus = "SUBMITTED";
 
       const payload = {
         productName: productName.trim(),
-        quantity,
-        urls: filteredUrls.length ? filteredUrls : undefined,
+        items: cleanedItems.map((it) => ({
+          url: it.url,
+          shop: it.shop || undefined,
+          priceKrw: it.priceKrw,
+          quantity: it.quantity,
+        })),
         options: Object.keys(optionMap).length ? optionMap : undefined,
         priceRub,
-        priceKrw,
         exchangeRateId: currentExchangeRate?.id,
         feeAmount,
         totalAmountKrw: totals.totalKrw,
@@ -238,70 +274,75 @@ export default function PurchaseRequestForm() {
 
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <Label>{t('purchase.productUrl')}</Label>
-                <Button type="button" variant="outline" size="sm" onClick={addUrl}>
+                <Label>상품 항목 (URL · 단가 · 수량)</Label>
+                <Button type="button" variant="outline" size="sm" onClick={addItem}>
                   <Plus className="w-4 h-4 mr-1" />
-                  {t('purchase.addUrl')}
+                  항목 추가
                 </Button>
               </div>
-              {urls.map((url, index) => (
-                <div key={index} className="flex space-x-2">
-                  <Input
-                    placeholder={t('purchase.shopName')}
-                    value={url.shop}
-                    onChange={(e) => updateUrl(index, 'shop', e.target.value)}
-                    className="w-1/3"
-                  />
-                  <Input
-                    placeholder="https://..."
-                    value={url.url}
-                    onChange={(e) => updateUrl(index, 'url', e.target.value)}
-                    className="flex-1"
-                    required={index === 0}
-                  />
-                  {urls.length > 1 && (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => removeUrl(index)}
-                    >
-                      <X className="w-4 h-4" />
-                    </Button>
-                  )}
+              {items.map((item, index) => (
+                <div key={index} className="border rounded-md p-3 space-y-2">
+                  <div className="flex items-start gap-2">
+                    <Input
+                      placeholder={t('purchase.shopName')}
+                      value={item.shop}
+                      onChange={(e) => updateItem(index, "shop", e.target.value)}
+                      className="w-1/3"
+                    />
+                    <Input
+                      placeholder="https://..."
+                      value={item.url}
+                      onChange={(e) => updateItem(index, "url", e.target.value)}
+                      className="flex-1"
+                      required={index === 0}
+                    />
+                    {items.length > 1 && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => removeItem(index)}
+                      >
+                        <X className="w-4 h-4" />
+                      </Button>
+                    )}
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <Label className="text-xs text-gray-500">단가 (KRW)</Label>
+                      <Input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        placeholder="0.00"
+                        value={item.priceKrw || ""}
+                        onChange={(e) => updateItem(index, "priceKrw", e.target.value)}
+                        required
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-xs text-gray-500">수량</Label>
+                      <Input
+                        type="number"
+                        min="1"
+                        value={item.quantity}
+                        onChange={(e) => updateItem(index, "quantity", e.target.value)}
+                        required
+                      />
+                    </div>
+                  </div>
+                  <p className="text-xs text-gray-400">
+                    소계: ₩{formatNumber((item.priceKrw || 0) * (item.quantity || 0), locale, numOpt)}
+                  </p>
                 </div>
               ))}
               <p className="text-xs text-gray-500">
                 {t('purchase.urlHint')}
               </p>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="quantity">{t('purchase.quantity')}</Label>
-                <Input
-                  id="quantity"
-                  type="number"
-                  min="1"
-                  value={quantity}
-                  onChange={(e) => setQuantity(Math.max(1, Number(e.target.value) || 1))}
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="priceKrw">{t('purchase.priceKrw')}</Label>
-                <Input
-                  id="priceKrw"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  placeholder="0.00"
-                  value={priceKrw || ""}
-                  onChange={(e) => setPriceKrw(parseFloat(e.target.value) || 0)}
-                  required
-                />
-                <p className="text-xs text-gray-500">{t('purchase.priceKrwHint')}</p>
-              </div>
+              <p className="text-sm text-gray-700">
+                전체 수량 합계: <span className="font-semibold">{totalQuantity}</span> 개 ·
+                상품가 합계: <span className="font-semibold">₩{formatNumber(aggregatedPriceKrw, locale, numOpt)}</span>
+              </p>
             </div>
 
             <div className="space-y-2">

@@ -230,8 +230,26 @@ export default function PurchaseRequestDetail() {
           <Separator />
 
           <div className="space-y-2">
-            <p className="font-semibold">상품 URL</p>
-            {data.urls && data.urls.length > 0 ? (
+            <p className="font-semibold">상품 항목</p>
+            {data.items && data.items.length > 0 ? (
+              <ul className="space-y-2">
+                {data.items.map((it, idx) => (
+                  <li key={`${it.url}-${idx}`} className="border rounded p-3 space-y-1">
+                    <div className="flex items-center justify-between">
+                      <a className="text-blue-600 underline break-all flex-1 mr-2" href={it.url} target="_blank" rel="noreferrer">
+                        {it.shop ? `[${it.shop}] ` : ""}{it.url}
+                      </a>
+                    </div>
+                    <div className="text-sm text-gray-700">
+                      단가 ₩{(it.priceKrw ?? 0).toLocaleString()} × {it.quantity ?? 0}개 =
+                      <span className="font-semibold ml-1">
+                        ₩{((it.priceKrw ?? 0) * (it.quantity ?? 0)).toLocaleString()}
+                      </span>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            ) : data.urls && data.urls.length > 0 ? (
               <ul className="space-y-1">
                 {data.urls.map((u, idx) => (
                   <li key={`${u}-${idx}`}>
@@ -242,7 +260,7 @@ export default function PurchaseRequestDetail() {
                 ))}
               </ul>
             ) : (
-              <p className="text-sm text-gray-500">등록된 URL이 없습니다.</p>
+              <p className="text-sm text-gray-500">등록된 상품 항목이 없습니다.</p>
             )}
           </div>
 

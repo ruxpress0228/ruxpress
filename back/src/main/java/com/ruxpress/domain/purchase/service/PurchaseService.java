@@ -20,7 +20,9 @@ import com.ruxpress.domain.user.entity.User;
 import com.ruxpress.domain.user.repository.UserRepository;
 import com.ruxpress.domain.purchase.dto.request.AdminPurchaseStatusRequest;
 import com.ruxpress.domain.purchase.dto.request.AdminPurchaseWalletCreditRequest;
+import com.ruxpress.domain.purchase.dto.request.PurchaseItemRequest;
 import com.ruxpress.domain.purchase.dto.request.PurchaseRequestCreateRequest;
+import com.ruxpress.domain.purchase.dto.response.PurchaseItemResponse;
 import com.ruxpress.domain.purchase.dto.response.PurchaseRequestListResponse;
 import com.ruxpress.domain.purchase.dto.response.PurchaseRequestResponse;
 import com.ruxpress.domain.purchase.entity.PurchaseRequest;
@@ -105,8 +107,30 @@ public class PurchaseService {
                 ? request.getStatus()
                 : PurchaseRequestStatus.DRAFT;
 
+        // items 가 있으면 URL별 단가·수량 모델을 신뢰값으로 사용. 없으면 레거시 priceKrw 단일 사용.
+        boolean hasItems = request.getItems() != null && !request.getItems().isEmpty();
+        BigDecimal priceKrw;
+        Integer quantity;
+        String urlsJson;
+        if (hasItems) {
+            BigDecimal sumPrice = BigDecimal.ZERO;
+            int sumQty = 0;
+            for (PurchaseItemRequest item : request.getItems()) {
+                BigDecimal unit = item.getPriceKrw() != null ? item.getPriceKrw() : BigDecimal.ZERO;
+                int q = item.getQuantity() != null ? item.getQuantity() : 0;
+                sumPrice = sumPrice.add(unit.multiply(BigDecimal.valueOf(q)));
+                sumQty += q;
+            }
+            priceKrw = sumPrice;
+            quantity = sumQty > 0 ? sumQty : 1;
+            urlsJson = jsonUtils.toJson(request.getItems());
+        } else {
+            priceKrw = request.getPriceKrw() != null ? request.getPriceKrw() : BigDecimal.ZERO;
+            quantity = request.getQuantity();
+            urlsJson = jsonUtils.toJson(request.getUrls());
+        }
+
         // 수수료·총액은 클라이언트 값이 아니라 서버측 SystemSetting(fee_rate)으로 재계산한 신뢰값을 저장한다.
-        BigDecimal priceKrw = request.getPriceKrw() != null ? request.getPriceKrw() : BigDecimal.ZERO;
         BigDecimal feeRatePercent = currentFeeRatePercent();
         BigDecimal feeAmount = priceKrw.multiply(feeRatePercent)
                 .divide(HUNDRED, 2, RoundingMode.HALF_UP);
@@ -117,8 +141,8 @@ public class PurchaseService {
                 userId,
                 requestNumber,
                 request.getProductName(),
-                request.getQuantity(),
-                jsonUtils.toJson(request.getUrls()),
+                quantity,
+                urlsJson,
                 jsonUtils.toJson(request.getOptions()),
                 request.getPriceRub(),
                 priceKrw,
@@ -436,6 +460,32 @@ public class PurchaseService {
                         a.getMimeType(),
                         a.isUploadedByAdmin()))
                 .collect(Collectors.toList());
+
+        // urls JSON 컬럼은 (1) 신규 [{url, shop?, priceKrw, quantity}, ...] 또는 (2) 레거시 ["string", ...] 두 형식 모두 지원.
+        List<String> urlsList = new java.util.ArrayList<>();
+        List<PurchaseItemResponse> itemsList = new java.util.ArrayList<>();
+        var node = jsonUtils.parseJsonNode(entity.getUrls());
+        if (node != null && node.isArray()) {
+            for (var element : node) {
+                if (element.isObject()) {
+                    String url = element.path("url").asText(null);
+                    String shop = element.path("shop").asText(null);
+                    java.math.BigDecimal priceKrw = element.has("priceKrw") && !element.get("priceKrw").isNull()
+                            ? new java.math.BigDecimal(element.get("priceKrw").asText())
+                            : null;
+                    Integer qty = element.has("quantity") && !element.get("quantity").isNull()
+                            ? element.get("quantity").asInt()
+                            : null;
+                    itemsList.add(new PurchaseItemResponse(url, shop, priceKrw, qty));
+                    if (url != null && !url.isBlank()) {
+                        urlsList.add(url);
+                    }
+                } else if (element.isTextual()) {
+                    urlsList.add(element.asText());
+                }
+            }
+        }
+
         return new PurchaseRequestResponse(
                 entity.getId(),
                 entity.getUserId(),
@@ -444,7 +494,7 @@ public class PurchaseService {
                 entity.getRequestNumber(),
                 entity.getProductName(),
                 entity.getQuantity(),
-                jsonUtils.parseStrings(entity.getUrls()),
+                urlsList,
                 jsonUtils.parseJsonNode(entity.getOptions()),
                 entity.getPriceRub(),
                 entity.getPriceKrw(),
@@ -458,6 +508,7 @@ public class PurchaseService {
                 entity.getAdminMemo(),
                 entity.getAssignedAdminId(),
                 entity.getTrackingNumber(),
+                itemsList,
                 attachmentResponses,
                 entity.getCreatedAt(),
                 entity.getUpdatedAt());

@@ -11,10 +11,18 @@ export interface PurchaseAttachment {
   uploadedByAdmin?: boolean;
 }
 
+export interface PurchaseItem {
+  url: string;
+  shop?: string;
+  priceKrw: number;
+  quantity: number;
+}
+
 export interface PurchaseRequestCreatePayload {
   productName: string;
-  quantity: number;
+  quantity?: number;
   urls?: string[];
+  items?: PurchaseItem[];
   options?: Record<string, string>;
   priceRub?: number;
   priceKrw?: number;
@@ -52,6 +60,7 @@ export interface PurchaseRequestDetail extends PurchaseRequestListItem {
   adminMemo?: string;
   assignedAdminId?: number;
   trackingNumber?: string;
+  items?: PurchaseItem[];
   attachments?: PurchaseAttachment[];
   updatedAt: string;
 }
