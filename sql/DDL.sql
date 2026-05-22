@@ -78,6 +78,7 @@ CREATE TABLE `purchase_requests` (
 	`status`	ENUM('DRAFT', 'SUBMITTED', 'REVIEWING', 'CONFIRMED', 'PURCHASING', 'PURCHASED', 'SHIPPING', 'DELIVERED', 'CANCELLED', 'REFUNDED')	NOT NULL	DEFAULT 'DRAFT'	COMMENT '상태',
 	`admin_memo`	TEXT	NULL	COMMENT '관리자 내부 메모',
 	`assigned_admin_id`	BIGINT	NULL	COMMENT '담당 관리자 ID',
+	`tracking_number`	VARCHAR(64)	NULL	COMMENT '운송장번호 (관리자 입력)',
 	`created_at`	DATETIME	NOT NULL,
 	`updated_at`	DATETIME	NOT NULL	DEFAULT CURRENT_TIMESTAMP,
 	`deleted_at`	DATETIME	NULL	COMMENT '소프트 삭제',
@@ -182,7 +183,7 @@ CREATE TABLE `user_social_accounts` (
 
 CREATE TABLE `attachments` (
 	`id`	BIGINT	NOT NULL AUTO_INCREMENT,
-	`ref_type`	ENUM('PURCHASE', 'INQUIRY', 'REVIEW', 'CHAT')	NOT NULL	COMMENT '참조 대상 유형',
+	`ref_type`	ENUM('PURCHASE', 'INQUIRY', 'REVIEW', 'CHAT', 'BANK_TRANSFER')	NOT NULL	COMMENT '참조 대상 유형',
 	`ref_id`	BIGINT	NOT NULL	COMMENT '참조 대상 ID',
 	`original_filename`	VARCHAR(300)	NOT NULL	COMMENT '원본 파일명',
 	`stored_url`	VARCHAR(500)	NOT NULL	COMMENT 'S3 저장 URL',
@@ -190,6 +191,7 @@ CREATE TABLE `attachments` (
 	`file_size`	INT	NOT NULL	COMMENT '파일 크기 (bytes)',
 	`mime_type`	VARCHAR(100)	NOT NULL	COMMENT 'MIME 타입',
 	`sort_order`	INT	NOT NULL	DEFAULT 0	COMMENT '정렬 순서',
+	`uploaded_by_admin`	TINYINT(1)	NULL	COMMENT '관리자 업로드 여부 (NULL/0=사용자, 1=관리자)',
 	`created_at`	DATETIME	NOT NULL,
 	PRIMARY KEY (`id`)
 );

@@ -12,6 +12,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
+import org.springframework.http.MediaType;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -20,7 +21,11 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/admin/purchases")
@@ -62,5 +67,12 @@ public class AdminPurchaseController {
             @RequestBody @Valid AdminPurchaseWalletCreditRequest request) {
         Long adminId = auth != null ? (Long) auth.getPrincipal() : null;
         return ApiResponse.success(purchaseService.creditPurchaseWalletAdjustment(id, adminId, request));
+    }
+
+    @PostMapping(value = "/{id}/attachments", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ApiResponse<PurchaseRequestResponse> uploadAttachments(
+            @PathVariable Long id,
+            @RequestPart("files") List<MultipartFile> files) {
+        return ApiResponse.success(purchaseService.uploadAdminAttachments(id, files));
     }
 }

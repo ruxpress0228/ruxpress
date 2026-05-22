@@ -34,6 +34,7 @@ public class PurchaseRequestResponse {
     private final PurchaseRequestStatus status;
     private final String adminMemo;
     private final Long assignedAdminId;
+    private final String trackingNumber;
     private final List<AttachmentResponse> attachments;
     private final LocalDateTime createdAt;
     private final LocalDateTime updatedAt;

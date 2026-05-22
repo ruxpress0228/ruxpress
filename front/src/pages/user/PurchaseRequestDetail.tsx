@@ -174,6 +174,8 @@ export default function PurchaseRequestDetail() {
   const optionsEntries = data.options && typeof data.options === "object" ? Object.entries(data.options) : [];
 
   const imageAttachments = (data.attachments ?? []).filter((a) => a.mimeType.startsWith("image/"));
+  const userAttachments = imageAttachments.filter((a) => !a.uploadedByAdmin);
+  const adminAttachments = imageAttachments.filter((a) => a.uploadedByAdmin);
 
   return (
     <div className="max-w-4xl mx-auto">
@@ -261,24 +263,59 @@ export default function PurchaseRequestDetail() {
             </div>
           )}
 
-          {imageAttachments.length > 0 && (
+          {data.trackingNumber && (
+            <div className="space-y-1">
+              <p className="font-semibold">운송장번호</p>
+              <p className="text-sm font-mono text-gray-900">{data.trackingNumber}</p>
+            </div>
+          )}
+
+          {userAttachments.length > 0 && (
             <div className="pt-4 border-t border-gray-200">
-              <p className="text-sm font-medium text-gray-700 mb-3">첨부 이미지</p>
+              <p className="text-sm font-medium text-gray-700 mb-3">내가 등록한 사진</p>
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-                {imageAttachments.map((att, idx) => (
-                  <div
-                    key={att.id}
-                    className="relative group cursor-pointer rounded overflow-hidden border"
-                    onClick={() => setLightboxIndex(idx)}
-                  >
-                    <img
-                      src={att.thumbnailUrl ?? att.viewUrl ?? att.storedUrl}
-                      alt={att.originalFilename}
-                      className="h-28 w-full object-cover group-hover:opacity-90 transition-opacity"
-                    />
-                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors" />
-                  </div>
-                ))}
+                {userAttachments.map((att) => {
+                  const idx = imageAttachments.findIndex((a) => a.id === att.id);
+                  return (
+                    <div
+                      key={att.id}
+                      className="relative group cursor-pointer rounded overflow-hidden border"
+                      onClick={() => setLightboxIndex(idx)}
+                    >
+                      <img
+                        src={att.thumbnailUrl ?? att.viewUrl ?? att.storedUrl}
+                        alt={att.originalFilename}
+                        className="h-28 w-full object-cover group-hover:opacity-90 transition-opacity"
+                      />
+                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors" />
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {adminAttachments.length > 0 && (
+            <div className="pt-4 border-t border-gray-200">
+              <p className="text-sm font-medium text-gray-700 mb-3">관리자가 등록한 사진 (배송/수령 등)</p>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                {adminAttachments.map((att) => {
+                  const idx = imageAttachments.findIndex((a) => a.id === att.id);
+                  return (
+                    <div
+                      key={att.id}
+                      className="relative group cursor-pointer rounded overflow-hidden border"
+                      onClick={() => setLightboxIndex(idx)}
+                    >
+                      <img
+                        src={att.thumbnailUrl ?? att.viewUrl ?? att.storedUrl}
+                        alt={att.originalFilename}
+                        className="h-28 w-full object-cover group-hover:opacity-90 transition-opacity"
+                      />
+                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors" />
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}

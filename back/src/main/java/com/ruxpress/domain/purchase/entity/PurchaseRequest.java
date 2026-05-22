@@ -72,6 +72,9 @@ public class PurchaseRequest extends BaseEntity {
     @Column(name = "assigned_admin_id")
     private Long assignedAdminId;
 
+    @Column(name = "tracking_number", length = 64)
+    private String trackingNumber;
+
     public static PurchaseRequest create(
             Long userId,
             String requestNumber,
@@ -116,6 +119,13 @@ public class PurchaseRequest extends BaseEntity {
 
     public void assignAdmin(Long adminId) {
         this.assignedAdminId = adminId;
+    }
+
+    public void updateTrackingNumber(String trackingNumber) {
+        if (trackingNumber != null) {
+            String trimmed = trackingNumber.trim();
+            this.trackingNumber = trimmed.isEmpty() ? null : trimmed;
+        }
     }
 
     public void recordChargedAmount(BigDecimal amount) {

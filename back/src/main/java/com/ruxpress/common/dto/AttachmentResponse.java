@@ -14,4 +14,5 @@ public class AttachmentResponse {
     private final String viewUrl;
     private final int fileSize;
     private final String mimeType;
+    private final boolean uploadedByAdmin;
 }

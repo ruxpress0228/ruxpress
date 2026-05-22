@@ -249,7 +249,8 @@ public class InquiryService {
                         a.getThumbnailUrl(),
                         fileStoragePort.getViewUrl(a.getStoredUrl()),
                         a.getFileSize(),
-                        a.getMimeType()
+                        a.getMimeType(),
+                        a.isUploadedByAdmin()
                 ))
                 .collect(Collectors.toList());
         User user = userRepository.findById(inquiry.getUserId()).orElse(null);

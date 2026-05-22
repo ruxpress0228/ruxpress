@@ -314,7 +314,8 @@ public class BankTransferService {
                         a.getThumbnailUrl(),
                         fileStoragePort.getViewUrl(a.getStoredUrl()),
                         a.getFileSize(),
-                        a.getMimeType()))
+                        a.getMimeType(),
+                        a.isUploadedByAdmin()))
                 .toList();
         return TransferLedgerEntryResponse.of(entry, acc, userEmail, attachments);
     }

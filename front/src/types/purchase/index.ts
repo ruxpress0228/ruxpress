@@ -8,6 +8,7 @@ export interface PurchaseAttachment {
   viewUrl?: string;
   fileSize: number;
   mimeType: string;
+  uploadedByAdmin?: boolean;
 }
 
 export interface PurchaseRequestCreatePayload {
@@ -50,6 +51,7 @@ export interface PurchaseRequestDetail extends PurchaseRequestListItem {
   memo?: string;
   adminMemo?: string;
   assignedAdminId?: number;
+  trackingNumber?: string;
   attachments?: PurchaseAttachment[];
   updatedAt: string;
 }

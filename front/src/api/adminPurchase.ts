@@ -33,10 +33,21 @@ export async function adminGetPurchaseRequest(id: number): Promise<PurchaseReque
 
 export async function adminUpdatePurchaseStatus(
   id: number,
-  body: { status: PurchaseRequestStatus; adminMemo?: string }
+  body: { status: PurchaseRequestStatus; adminMemo?: string; trackingNumber?: string }
 ): Promise<PurchaseRequestDetail> {
   const res = await api.patch<PurchaseRequestDetail>(`${ADMIN_PURCHASES}/${id}/status`, body);
   if (res.code !== 200 || res.data == null) throw new Error(res.message || "Failed to update status");
+  return res.data;
+}
+
+export async function adminUploadPurchaseAttachments(
+  id: number,
+  files: File[]
+): Promise<PurchaseRequestDetail> {
+  const fd = new FormData();
+  files.forEach((f) => fd.append("files", f));
+  const res = await api.upload<PurchaseRequestDetail>(`${ADMIN_PURCHASES}/${id}/attachments`, fd);
+  if (res.code !== 200 || res.data == null) throw new Error(res.message || "Failed to upload attachments");
   return res.data;
 }
 

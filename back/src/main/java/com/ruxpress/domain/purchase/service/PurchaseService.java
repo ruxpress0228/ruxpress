@@ -306,6 +306,7 @@ public class PurchaseService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.PURCHASE_NOT_FOUND));
         pr.changeStatus(request.getStatus());
         pr.updateAdminMemo(request.getAdminMemo());
+        pr.updateTrackingNumber(request.getTrackingNumber());
         if (adminId != null) {
             pr.assignAdmin(adminId);
         }
@@ -316,6 +317,58 @@ public class PurchaseService {
         }
 
         return toResponse(saved);
+    }
+
+    /** 관리자 첨부 업로드는 일부 배송 관련 상태에서만 허용. */
+    private static final java.util.Set<PurchaseRequestStatus> ADMIN_UPLOAD_ALLOWED_STATUSES =
+            java.util.EnumSet.of(
+                    PurchaseRequestStatus.PURCHASED,
+                    PurchaseRequestStatus.SHIPPING,
+                    PurchaseRequestStatus.DELIVERED);
+
+    @Transactional
+    public PurchaseRequestResponse uploadAdminAttachments(Long id, List<MultipartFile> files) {
+        PurchaseRequest pr = purchaseRequestRepository.findById(id)
+                .filter(p -> p.getDeletedAt() == null)
+                .orElseThrow(() -> new BusinessException(ErrorCode.PURCHASE_NOT_FOUND));
+        if (!ADMIN_UPLOAD_ALLOWED_STATUSES.contains(pr.getStatus())) {
+            throw new BusinessException(ErrorCode.INVALID_PURCHASE_STATE,
+                    "관리자 첨부는 PURCHASED, SHIPPING, DELIVERED 상태에서만 가능합니다.");
+        }
+        List<MultipartFile> fileList = files != null ? files : List.of();
+        if (fileList.isEmpty()) {
+            throw new BusinessException(ErrorCode.INVALID_INPUT, "업로드할 파일이 없습니다.");
+        }
+        if (fileList.size() > FileStorageUtil.MAX_IMAGE_COUNT) {
+            throw new BusinessException(ErrorCode.FILE_COUNT_EXCEEDED);
+        }
+
+        int baseSortOrder = attachmentRepository
+                .findByRefTypeAndRefIdOrderBySortOrder(AttachmentRefType.PURCHASE, pr.getId())
+                .size();
+        String directory = ModulePrefix.PURCHASE;
+        for (int i = 0; i < fileList.size(); i++) {
+            MultipartFile file = fileList.get(i);
+            FileStorageUtil.validateImageOrThrow(file);
+            try {
+                String storedUrl = fileStoragePort.store(directory, file);
+                Attachment attachment = Attachment.createByAdmin(
+                        AttachmentRefType.PURCHASE,
+                        pr.getId(),
+                        file.getOriginalFilename() != null ? file.getOriginalFilename() : "file",
+                        storedUrl,
+                        (int) file.getSize(),
+                        file.getContentType() != null ? file.getContentType() : "application/octet-stream",
+                        baseSortOrder + i);
+                attachmentRepository.save(attachment);
+            } catch (Exception e) {
+                log.error("Admin purchase attachment upload failed. purchaseId={}, idx={}", pr.getId(), i, e);
+                throw new BusinessException(ErrorCode.FILE_UPLOAD_FAILED, e.getMessage());
+            }
+        }
+
+        User user = userRepository.findById(pr.getUserId()).orElse(null);
+        return toResponseWithUser(pr, user);
     }
 
     @Transactional
@@ -380,7 +433,8 @@ public class PurchaseService {
                         a.getThumbnailUrl(),
                         fileStoragePort.getViewUrl(a.getStoredUrl()),
                         a.getFileSize(),
-                        a.getMimeType()))
+                        a.getMimeType(),
+                        a.isUploadedByAdmin()))
                 .collect(Collectors.toList());
         return new PurchaseRequestResponse(
                 entity.getId(),
@@ -403,6 +457,7 @@ public class PurchaseService {
                 entity.getStatus(),
                 entity.getAdminMemo(),
                 entity.getAssignedAdminId(),
+                entity.getTrackingNumber(),
                 attachmentResponses,
                 entity.getCreatedAt(),
                 entity.getUpdatedAt());

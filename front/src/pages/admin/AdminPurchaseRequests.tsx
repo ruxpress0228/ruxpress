@@ -17,6 +17,7 @@ import {
   adminListPurchaseRequests,
   adminUpdatePurchaseStatus,
   adminCreditPurchaseWallet,
+  adminUploadPurchaseAttachments,
 } from "../../api/adminPurchase";
 import { useTranslation } from "../../hooks/useTranslation";
 import { formatNumber } from "../../utils/format";
@@ -76,6 +77,9 @@ export default function AdminPurchaseRequests() {
   const [selected, setSelected] = useState<PurchaseRequestDetail | null>(null);
   const [newStatus, setNewStatus] = useState<PurchaseRequestStatus>("REVIEWING");
   const [statusMemo, setStatusMemo] = useState("");
+  const [trackingNumber, setTrackingNumber] = useState("");
+  const [adminFiles, setAdminFiles] = useState<File[]>([]);
+  const [uploadingFiles, setUploadingFiles] = useState(false);
   const navigate = useNavigate();
   
 
@@ -132,6 +136,8 @@ export default function AdminPurchaseRequests() {
     setSelected(r);
     setNewStatus(r.status);
     setStatusMemo(r.adminMemo ?? "");
+    setTrackingNumber(r.trackingNumber ?? "");
+    setAdminFiles([]);
     setWalletAmount("");
     setWalletMemo("");
     setWalletIdem(`purchase-${r.id}-${Date.now()}`);
@@ -144,6 +150,7 @@ export default function AdminPurchaseRequests() {
       const updated = await adminUpdatePurchaseStatus(selected.id, {
         status: newStatus,
         adminMemo: statusMemo.trim() || undefined,
+        trackingNumber: trackingNumber.trim() || undefined,
       });
       toast.success("저장되었습니다");
       setSelected(updated);
@@ -151,6 +158,25 @@ export default function AdminPurchaseRequests() {
       setDialogOpen(false);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "실패");
+    }
+  };
+
+  const adminUploadAllowed = (s: PurchaseRequestStatus) =>
+    s === "PURCHASED" || s === "SHIPPING" || s === "DELIVERED";
+
+  const uploadAdminFiles = async () => {
+    if (!selected || adminFiles.length === 0) return;
+    try {
+      setUploadingFiles(true);
+      const updated = await adminUploadPurchaseAttachments(selected.id, adminFiles);
+      toast.success(`사진 ${adminFiles.length}장이 업로드되었습니다`);
+      setSelected(updated);
+      setAdminFiles([]);
+      void fetchPage(page, statusFilter, userKeyword);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "업로드 실패");
+    } finally {
+      setUploadingFiles(false);
     }
   };
 
@@ -410,6 +436,14 @@ export default function AdminPurchaseRequests() {
                 </Select>
               </div>
               <div className="space-y-2">
+                <Label>운송장번호</Label>
+                <Input
+                  value={trackingNumber}
+                  onChange={(e) => setTrackingNumber(e.target.value)}
+                  placeholder="예: 1234-5678-9012"
+                />
+              </div>
+              <div className="space-y-2">
                 <Label>관리자 메모</Label>
                 <Textarea rows={3} value={statusMemo} onChange={(e) => setStatusMemo(e.target.value)} />
               </div>
@@ -418,8 +452,41 @@ export default function AdminPurchaseRequests() {
                   닫기
                 </Button>
                 <Button type="button" onClick={() => void saveStatus()}>
-                  상태 저장
+                  상태/운송장 저장
                 </Button>
+              </div>
+
+              <div className="border-t pt-4 space-y-2">
+                <Label>관리자 사진 첨부 (배송 관련 상태에서만 활성)</Label>
+                {adminUploadAllowed(selected.status) ? (
+                  <>
+                    <Input
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp"
+                      multiple
+                      onChange={(e) => setAdminFiles(Array.from(e.target.files || []))}
+                    />
+                    {adminFiles.length > 0 && (
+                      <p className="text-xs text-gray-500">
+                        {adminFiles.length}개 선택됨
+                      </p>
+                    )}
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      className="w-full"
+                      disabled={adminFiles.length === 0 || uploadingFiles}
+                      onClick={() => void uploadAdminFiles()}
+                    >
+                      {uploadingFiles ? "업로드 중..." : `사진 업로드 (${adminFiles.length})`}
+                    </Button>
+                  </>
+                ) : (
+                  <p className="text-xs text-amber-700">
+                    현재 상태({statusLabels[selected.status].label})에서는 관리자 첨부가 비활성화됩니다.
+                    PURCHASED/SHIPPING/DELIVERED 상태에서만 가능합니다.
+                  </p>
+                )}
               </div>
 
               {isSuper && (
