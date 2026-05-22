@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router";
-import { ArrowLeft, X, Download, ChevronLeft, ChevronRight } from "lucide-react";
+import { ArrowLeft, X, Download, ChevronLeft, ChevronRight, MessageSquare } from "lucide-react";
 import { Button } from "../../components/ui/button";
 import { Badge } from "../../components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card";
@@ -179,10 +179,16 @@ export default function PurchaseRequestDetail() {
 
   return (
     <div className="max-w-4xl mx-auto">
-      <Button variant="ghost" className="mb-6" onClick={() => navigate("/purchase")}>
-        <ArrowLeft className="w-4 h-4 mr-2" />
-        목록으로
-      </Button>
+      <div className="flex items-center justify-between mb-6">
+        <Button variant="ghost" onClick={() => navigate("/purchase")}>
+          <ArrowLeft className="w-4 h-4 mr-2" />
+          목록으로
+        </Button>
+        <Button variant="outline" onClick={() => navigate("/chat")}>
+          <MessageSquare className="w-4 h-4 mr-2" />
+          채팅으로 문의
+        </Button>
+      </div>
 
       <Card className="mb-6">
         <CardHeader className="pb-3">
