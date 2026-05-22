@@ -29,7 +29,7 @@ public class ExchangeService {
     private final CbrApiClient cbrApiClient;
 
     /**
-     * 외부 환율 자동 fetch는 비활성화 상태(REQ-10). 관리자 화면의 "API에서 새로고침" 버튼이
+     * 외부 환율 자동 fetch는 비활성화 상태(REQ2-10). 관리자 화면의 "API에서 새로고침" 버튼이
      * /api/v1/exchange-rates/fetch 로 호출할 때만 1회성으로 실행된다.
      */
     @Transactional

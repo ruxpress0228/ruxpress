@@ -56,7 +56,7 @@ function isAdminRole(role: string | null): boolean {
   return role === "SUPER_ADMIN" || role === "COUNSELOR";
 }
 
-/** localStorage(영속) 와 sessionStorage(세션) 어느 쪽에 있든 토큰을 찾아낸다. REQ-01. */
+/** localStorage(영속) 와 sessionStorage(세션) 어느 쪽에 있든 토큰을 찾아낸다. REQ2-01. */
 function readToken(): string | null {
   return localStorage.getItem(STORAGE_KEYS.TOKEN) ?? sessionStorage.getItem(STORAGE_KEYS.TOKEN);
 }
@@ -85,7 +85,7 @@ function requireAdminAuth() {
   return null;
 }
 
-/** 이미 로그인된 사용자가 인증 페이지(/login 등)에 들어오면 역할에 맞는 메인으로 보낸다. REQ-01. */
+/** 이미 로그인된 사용자가 인증 페이지(/login 등)에 들어오면 역할에 맞는 메인으로 보낸다. REQ2-01. */
 function redirectIfAuthenticated() {
   const token = readToken();
   if (!token) return null;
@@ -96,7 +96,7 @@ function redirectIfAuthenticated() {
   throw redirect("/");
 }
 
-/** /admin/login 가드: 이미 관리자 토큰을 가진 상태면 /admin 으로 보내되, 일반 회원 토큰이면 그대로 표시(역할 전환 허용). REQ-01 Q1'''. */
+/** /admin/login 가드: 이미 관리자 토큰을 가진 상태면 /admin 으로 보내되, 일반 회원 토큰이면 그대로 표시(역할 전환 허용). REQ2-01 Q1'''. */
 function redirectIfAdminAuthenticated() {
   const token = readToken();
   if (!token) return null;
