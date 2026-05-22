@@ -71,7 +71,7 @@ app:
       subject: ${MAIL_PASSWORD_RESET_SUBJECT:Ruxpress 비밀번호 재설정}
   jwt:
     secret: ${JWT_SECRET:local-dev-only-change-me-use-strong-secret-in-production-min-32chars}
-    expiration: ${JWT_EXPIRATION:86400000}
+    expiration: ${JWT_EXPIRATION:604800000}
 
 storage:
   type: local

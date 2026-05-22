@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import { Label } from "../../components/ui/label";
+import { Checkbox } from "../../components/ui/checkbox";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../components/ui/card";
 import { toast } from "sonner";
 import { api, notifyUserAuthChange } from "../../utils/api";
@@ -19,6 +20,7 @@ export default function Login() {
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [rememberMe, setRememberMe] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const handleLogin = async (e?: React.FormEvent | React.MouseEvent) => {
@@ -39,10 +41,27 @@ export default function Login() {
         password,
       });
       if (res.code === 200 && res.data?.token) {
-        localStorage.setItem(STORAGE_KEYS.TOKEN, res.data.token);
-        localStorage.setItem(STORAGE_KEYS.USER_ID, String(res.data.userId));
-        localStorage.setItem(STORAGE_KEYS.USER_EMAIL, res.data.email);
-        localStorage.setItem(STORAGE_KEYS.USER_NICKNAME, res.data.nickname);
+        // 자동로그인 체크 시 localStorage(영속), 미체크 시 sessionStorage(브라우저 세션 동안만).
+        const storage: Storage = rememberMe ? localStorage : sessionStorage;
+        // 양쪽 잔존 토큰 정리 후 한 곳에만 저장.
+        localStorage.removeItem(STORAGE_KEYS.TOKEN);
+        sessionStorage.removeItem(STORAGE_KEYS.TOKEN);
+        localStorage.removeItem(STORAGE_KEYS.USER_ID);
+        sessionStorage.removeItem(STORAGE_KEYS.USER_ID);
+        localStorage.removeItem(STORAGE_KEYS.USER_EMAIL);
+        sessionStorage.removeItem(STORAGE_KEYS.USER_EMAIL);
+        localStorage.removeItem(STORAGE_KEYS.USER_NICKNAME);
+        sessionStorage.removeItem(STORAGE_KEYS.USER_NICKNAME);
+
+        storage.setItem(STORAGE_KEYS.TOKEN, res.data.token);
+        storage.setItem(STORAGE_KEYS.USER_ID, String(res.data.userId));
+        storage.setItem(STORAGE_KEYS.USER_EMAIL, res.data.email);
+        storage.setItem(STORAGE_KEYS.USER_NICKNAME, res.data.nickname);
+        if (rememberMe) {
+          localStorage.setItem(STORAGE_KEYS.REMEMBER_ME, "1");
+        } else {
+          localStorage.removeItem(STORAGE_KEYS.REMEMBER_ME);
+        }
         window.Android?.setAuthToken?.(
           JSON.stringify({
             token: res.data.token,
@@ -104,6 +123,16 @@ export default function Login() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
             />
+          </div>
+          <div className="flex items-center space-x-2">
+            <Checkbox
+              id="remember-me"
+              checked={rememberMe}
+              onCheckedChange={(v) => setRememberMe(v === true)}
+            />
+            <Label htmlFor="remember-me" className="text-sm font-normal cursor-pointer">
+              자동 로그인 (다음 접속 시 로그인 유지)
+            </Label>
           </div>
           <Button type="submit" className="w-full" size="lg" disabled={loading}>
             {loading ? "로그인 중..." : "로그인"}

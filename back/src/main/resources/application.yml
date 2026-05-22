@@ -87,7 +87,7 @@ app:
   jwt:
     # 로컬에서 환경 변수 미설정 시에도 기동되도록 기본값(운영은 반드시 JWT_* 로 덮어쓰기)
     secret: ${JWT_SECRET:local-dev-only-change-me-use-strong-secret-in-production-min-32chars}
-    expiration: ${JWT_EXPIRATION:86400000}
+    expiration: ${JWT_EXPIRATION:604800000}
 
 # 파일 업로드 저장소 설정.
 # - local/dev/docker: local 권장

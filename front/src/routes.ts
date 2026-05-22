@@ -56,8 +56,13 @@ function isAdminRole(role: string | null): boolean {
   return role === "SUPER_ADMIN" || role === "COUNSELOR";
 }
 
+/** localStorage(영속) 와 sessionStorage(세션) 어느 쪽에 있든 토큰을 찾아낸다. REQ-01. */
+function readToken(): string | null {
+  return localStorage.getItem(STORAGE_KEYS.TOKEN) ?? sessionStorage.getItem(STORAGE_KEYS.TOKEN);
+}
+
 function requireUserAuth() {
-  const token = localStorage.getItem(STORAGE_KEYS.TOKEN);
+  const token = readToken();
   if (!token) {
     throw redirect("/login");
   }
@@ -69,13 +74,35 @@ function requireUserAuth() {
 }
 
 function requireAdminAuth() {
-  const token = localStorage.getItem(STORAGE_KEYS.TOKEN);
+  const token = readToken();
   if (!token) {
     throw redirect("/admin/login");
   }
   const role = getTokenRole(token);
   if (!isAdminRole(role)) {
     throw redirect("/admin/login");
+  }
+  return null;
+}
+
+/** 이미 로그인된 사용자가 인증 페이지(/login 등)에 들어오면 역할에 맞는 메인으로 보낸다. REQ-01. */
+function redirectIfAuthenticated() {
+  const token = readToken();
+  if (!token) return null;
+  const role = getTokenRole(token);
+  if (isAdminRole(role)) {
+    throw redirect("/admin");
+  }
+  throw redirect("/");
+}
+
+/** /admin/login 가드: 이미 관리자 토큰을 가진 상태면 /admin 으로 보내되, 일반 회원 토큰이면 그대로 표시(역할 전환 허용). REQ-01 Q1'''. */
+function redirectIfAdminAuthenticated() {
+  const token = readToken();
+  if (!token) return null;
+  const role = getTokenRole(token);
+  if (isAdminRole(role)) {
+    throw redirect("/admin");
   }
   return null;
 }
@@ -90,8 +117,8 @@ export const router = createBrowserRouter([
         Component: UserLayout,
         children: [
           { index: true, Component: Home, loader: requireUserAuth},
-          { path: "login", Component: Login },
-          { path: "signup", Component: Signup },
+          { path: "login", Component: Login, loader: redirectIfAuthenticated },
+          { path: "signup", Component: Signup, loader: redirectIfAuthenticated },
           { path: "purchase/new", Component: PurchaseRequestForm, loader: requireUserAuth },
           { path: "purchase", Component: PurchaseRequestList, loader: requireUserAuth },
           { path: "purchase/:id", Component: PurchaseRequestDetail, loader: requireUserAuth },
@@ -101,8 +128,8 @@ export const router = createBrowserRouter([
           { path: "notice", Component: NoticeList, loader: requireUserAuth },
           { path: "notice/:id", Component: NoticeDetail, loader: requireUserAuth },
           { path: "mypage", Component: MyPage, loader: requireUserAuth },
-          { path: "forgot-password", Component: ForgotPassword },
-          { path: "reset-password", Component: ResetPassword },
+          { path: "forgot-password", Component: ForgotPassword, loader: redirectIfAuthenticated },
+          { path: "reset-password", Component: ResetPassword, loader: redirectIfAuthenticated },
           { path: "bank-transfer", Component: BankTransfer, loader: requireUserAuth },
           { path: "wallet", Component: WalletLedger, loader: requireUserAuth },
           { path: "bank-transfer/receipt/:id", Component: BankTransferReceipt, loader: requireUserAuth },
@@ -114,7 +141,7 @@ export const router = createBrowserRouter([
         path: "/admin",
         Component: AdminLayout,
         children: [
-          { path: "login", Component: AdminLogin },
+          { path: "login", Component: AdminLogin, loader: redirectIfAdminAuthenticated },
           { path: "", Component: AdminDashboard, loader: requireAdminAuth },
           { path: "purchase-requests", Component: AdminPurchaseRequests, loader: requireAdminAuth },
           { path: "purchase-requests/:id", Component: AdminPurchaseRequestDetail, loader: requireAdminAuth },
