@@ -1,18 +1,19 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Search, Filter, ChevronLeft, ChevronRight } from "lucide-react";
+import { Search, Filter, ChevronLeft, ChevronRight, MapPin, ExternalLink } from "lucide-react";
 import { useNavigate } from 'react-router';
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import { Badge } from "../../components/ui/badge";
-import { Card, CardContent } from "../../components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../components/ui/card";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "../../components/ui/accordion";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../components/ui/table";
 import type { PurchaseRequestStatus } from "../../types";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "../../components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from "../../components/ui/dialog";
 import { Label } from "../../components/ui/label";
 import { Textarea } from "../../components/ui/textarea";
 import { toast } from "sonner";
-import type { PurchaseRequestDetail } from "../../types/purchase";
+import type { PurchaseRequestDetail, PurchaseShipping } from "../../types/purchase";
 import {
   adminListPurchaseRequests,
   adminUpdatePurchaseStatus,
@@ -51,6 +52,23 @@ const statusLabels: Record<
   REFUNDED: { label: "환불됨", variant: "destructive" },
 };
 
+function hasShippingSnapshot(s?: PurchaseShipping | null): boolean {
+  if (!s) return false;
+  return Boolean(s.addressLine1 || s.recipientName);
+}
+
+function shippingSummaryLines(s: PurchaseShipping): { title: string; subtitle: string } {
+  const name = s.recipientName?.trim() || "수령인 미입력";
+  const phone = s.recipientPhone?.trim();
+  const line1 = [s.postalCode ? `(${s.postalCode})` : null, s.addressLine1].filter(Boolean).join(" ").trim();
+  const line2 = s.addressLine2?.trim();
+  const addrMain = [line1, line2].filter(Boolean).join(", ");
+  const subtitle = [phone, addrMain].filter(Boolean).join(" · ") || "주소 없음";
+  const label = s.label?.trim();
+  const title = label ? `${label} · ${name}` : name;
+  return { title, subtitle };
+}
+
 const ALL_STATUSES: PurchaseRequestStatus[] = [
   "DRAFT",
   "SUBMITTED",
@@ -84,7 +102,6 @@ export default function AdminPurchaseRequests() {
   const [adminFiles, setAdminFiles] = useState<File[]>([]);
   const [uploadingFiles, setUploadingFiles] = useState(false);
   const navigate = useNavigate();
-  
 
   const [walletAmount, setWalletAmount] = useState("");
   const [walletMemo, setWalletMemo] = useState("");
@@ -120,6 +137,16 @@ export default function AdminPurchaseRequests() {
   useEffect(() => {
     void fetchPage(0, statusFilter, userKeyword);
   }, [statusFilter, sort, fetchPage, userKeyword]);
+
+  useEffect(() => {
+    if (!dialogOpen) return;
+    if (newStatus === "SHIPPING" || newStatus === "DELIVERED") {
+      const id = window.setTimeout(() => {
+        document.getElementById("purchase-admin-tracking")?.focus();
+      }, 120);
+      return () => window.clearTimeout(id);
+    }
+  }, [newStatus, dialogOpen]);
 
   const changePage = (next: number) => {
     void fetchPage(next, statusFilter, userKeyword);
@@ -210,11 +237,24 @@ export default function AdminPurchaseRequests() {
     let list = rows;
     if (search.trim() !== "") {
       const q = search.trim().toLowerCase();
-      list = list.filter(
-        (r) =>
-          r.requestNumber.includes(search.trim()) ||
-          r.requestName.toLowerCase().includes(q)
-      );
+      const needle = search.trim();
+      list = list.filter((r) => {
+        if (r.requestNumber.includes(needle) || r.requestName.toLowerCase().includes(q)) return true;
+        const sh = r.shipping;
+        if (!sh) return false;
+        const blob = [
+          sh.label,
+          sh.recipientName,
+          sh.recipientPhone,
+          sh.postalCode,
+          sh.addressLine1,
+          sh.addressLine2,
+        ]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase();
+        return blob.includes(q);
+      });
     }
     return list;
   }, [rows, search]);
@@ -235,7 +275,7 @@ export default function AdminPurchaseRequests() {
             <div className="relative lg:col-span-2">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
               <Input
-                placeholder="요청번호, 요청명 검색"
+                placeholder="요청번호, 요청명, 배송지(수령인·주소) 검색"
                 className="pl-10"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
@@ -289,6 +329,7 @@ export default function AdminPurchaseRequests() {
                 <TableHead>요청번호</TableHead>
                 <TableHead>회원</TableHead>
                 <TableHead>상품명</TableHead>
+                <TableHead className="min-w-[200px] max-w-[280px]">배송지</TableHead>
                 <TableHead>수량</TableHead>
                 <TableHead>금액(원)</TableHead>
                 <TableHead>상태</TableHead>
@@ -298,18 +339,26 @@ export default function AdminPurchaseRequests() {
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center text-gray-400 py-12">
+                  <TableCell colSpan={8} className="text-center text-gray-400 py-12">
                     불러오는 중...
                   </TableCell>
                 </TableRow>
               ) : filtered.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center text-gray-500 py-12">
+                  <TableCell colSpan={8} className="text-center text-gray-500 py-12">
                     구매 요청이 없습니다
                   </TableCell>
                 </TableRow>
               ) : filtered.map((request) => {
                 const statusInfo = statusLabels[request.status];
+                const sh = request.shipping;
+                const shipLines = hasShippingSnapshot(sh) && sh ? shippingSummaryLines(sh) : null;
+                const shipTitle =
+                  hasShippingSnapshot(sh) && sh
+                    ? [sh.label, sh.recipientName, sh.recipientPhone, sh.postalCode, sh.addressLine1, sh.addressLine2]
+                        .filter(Boolean)
+                        .join("\n")
+                    : undefined;
                 return (
                   <TableRow
                     key={request.id}
@@ -328,6 +377,22 @@ export default function AdminPurchaseRequests() {
                       )}
                     </TableCell>
                     <TableCell className="font-medium">{request.requestName}</TableCell>
+                    <TableCell
+                      className="text-sm align-top"
+                      title={shipTitle}
+                    >
+                      {shipLines ? (
+                        <div className="flex gap-2 min-w-0">
+                          <MapPin className="h-4 w-4 text-blue-600 shrink-0 mt-0.5" aria-hidden />
+                          <div className="min-w-0 space-y-0.5">
+                            <p className="font-medium text-gray-900 truncate">{shipLines.title}</p>
+                            <p className="text-xs text-gray-600 line-clamp-2 leading-snug">{shipLines.subtitle}</p>
+                          </div>
+                        </div>
+                      ) : (
+                        <span className="text-gray-400 text-xs">—</span>
+                      )}
+                    </TableCell>
                     <TableCell>{request.quantity}</TableCell>
                     <TableCell>
                       {request.totalAmountKrw != null
@@ -395,138 +460,310 @@ export default function AdminPurchaseRequests() {
         </div>
       )}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>구매 요청</DialogTitle>
-            <DialogDescription>{selected?.requestNumber}</DialogDescription>
-          </DialogHeader>
+        <DialogContent
+          className="flex h-[min(90vh,880px)] w-[calc(100%-2rem)] max-w-[calc(100%-2rem)] flex-col gap-0 overflow-hidden p-0 sm:max-w-2xl"
+          onKeyDown={(e) => {
+            if (!selected) return;
+            if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+              e.preventDefault();
+              void saveStatus();
+            }
+          }}
+        >
           {selected && (
-            <div className="space-y-4">
-              <Button
-                type="button"
-                variant="link"
-                className="h-auto p-0 text-sm"
-                onClick={() => navigate(`/admin/purchase-requests/${selected.id}`)}
-              >
-                상세 페이지로 이동 →
-              </Button>
-              <div className="text-sm space-y-1">
-                <p>
-                  <span className="text-gray-500">회원</span>{" "}
-                  {selected.userNickname ?? `#${selected.userId}`}
-                  {selected.userEmail ? ` (${selected.userEmail})` : ""}
-                </p>
-                <p>
-                  <span className="text-gray-500">요청</span> {selected.requestName}
-                </p>
-              </div>
-              <div className="space-y-2">
-                <Label>상태</Label>
-                <Select value={newStatus} onValueChange={(v) => setNewStatus(v as PurchaseRequestStatus)}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {ALL_STATUSES.filter((s) => s !== "DRAFT").map((s) => (
-                      <SelectItem key={s} value={s}>
-                        {statusLabels[s].label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>운송장번호</Label>
-                <Input
-                  value={trackingNumber}
-                  onChange={(e) => setTrackingNumber(e.target.value)}
-                  placeholder="예: 1234-5678-9012"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>관리자 메모</Label>
-                <Textarea rows={3} value={statusMemo} onChange={(e) => setStatusMemo(e.target.value)} />
-              </div>
-              <div className="flex justify-end gap-2">
-                <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
-                  닫기
-                </Button>
-                <Button type="button" onClick={() => void saveStatus()}>
-                  상태/운송장 저장
-                </Button>
-              </div>
-
-              <div className="border-t pt-4 space-y-2">
-                <Label>관리자 사진 첨부</Label>
-                <Input
-                  type="file"
-                  accept="image/jpeg,image/png,image/webp"
-                  multiple
-                  onChange={(e) => setAdminFiles(Array.from(e.target.files || []))}
-                />
-                {adminFiles.length > 0 && (
-                  <p className="text-xs text-gray-500">
-                    {adminFiles.length}개 선택됨
-                  </p>
-                )}
-                <Button
-                  type="button"
-                  variant="secondary"
-                  className="w-full"
-                  disabled={adminFiles.length === 0 || uploadingFiles}
-                  onClick={() => void uploadAdminFiles()}
-                >
-                  {uploadingFiles ? "업로드 중..." : `사진 업로드 (${adminFiles.length})`}
-                </Button>
-              </div>
-
-              {isSuper && (
-                <div className="border-t pt-4 space-y-3">
-                  <div className="text-sm rounded-md bg-gray-50 border px-3 py-2">
-                    <span className="text-gray-600">현재 선차감 금액:</span>{" "}
-                    <span className="font-semibold">
-                      {selected.chargedAmountKrw != null
-                        ? `₩${formatNumber(selected.chargedAmountKrw, locale, num0)}`
-                        : "—"}
-                    </span>
+            <>
+              <div className="shrink-0 space-y-3 border-b bg-muted/20 px-5 pb-4 pt-5 pr-12 sm:px-6 sm:pr-14">
+                <div className="flex flex-wrap items-start justify-between gap-2">
+                  <div className="min-w-0 flex-1 space-y-1">
+                    <DialogTitle className="line-clamp-2 text-left text-base font-semibold leading-snug text-gray-900 sm:text-lg">
+                      {selected.requestName}
+                    </DialogTitle>
+                    <DialogDescription className="text-left text-xs text-gray-500 sm:text-sm">
+                      {selected.requestNumber}
+                    </DialogDescription>
                   </div>
-                  <div className="space-y-3">
-                    <p className="font-semibold">{t("adminPurchase.walletCreditTitle")}</p>
-                    <p className="text-xs text-gray-500">{t("adminPurchase.walletIdempotencyHint")}</p>
-                    <div className="space-y-2">
-                      <Label>{t("adminPurchase.walletAmount")}</Label>
-                      <Input
-                        type="number"
-                        min="0"
-                        step="1"
-                        value={walletAmount}
-                        onChange={(e) => setWalletAmount(e.target.value)}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>{t("adminPurchase.walletSettled")}</Label>
-                      <p className="text-sm font-semibold border rounded-md px-3 py-2 bg-gray-50">
-                        {selected.chargedAmountKrw != null && walletAmount !== ""
-                          ? `₩${formatNumber(selected.chargedAmountKrw - parseFloat(walletAmount.replace(/,/g, "") || "0"), locale, num0)}`
-                          : "—"}
-                      </p>
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Idempotency key</Label>
-                      <Input value={walletIdem} onChange={(e) => setWalletIdem(e.target.value)} />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>{t("adminPurchase.walletMemo")}</Label>
-                      <Textarea rows={2} value={walletMemo} onChange={(e) => setWalletMemo(e.target.value)} />
-                    </div>
-                    <Button type="button" className="w-full" onClick={() => void submitWallet()}>
-                      {t("adminPurchase.walletSubmit")}
-                    </Button>
-                  </div>
+                  <Badge variant={statusLabels[selected.status].variant} className="shrink-0">
+                    {statusLabels[selected.status].label}
+                  </Badge>
                 </div>
-              )}
-              {!isSuper && <p className="text-xs text-amber-700">{t("admin.bank.superOnly")}</p>}
-            </div>
+                <div className="flex flex-wrap items-center justify-between gap-2 text-sm text-gray-600">
+                  <p className="min-w-0 truncate">
+                    <span className="text-gray-500">회원</span>{" "}
+                    <span className="font-medium text-gray-900">{selected.userNickname ?? `#${selected.userId}`}</span>
+                    {selected.userEmail ? (
+                      <span className="hidden sm:inline"> · {selected.userEmail}</span>
+                    ) : null}
+                  </p>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 shrink-0 gap-1 text-xs text-gray-600 hover:text-gray-900"
+                    onClick={() => navigate(`/admin/purchase-requests/${selected.id}`)}
+                  >
+                    전체 상세
+                    <ExternalLink className="h-3.5 w-3.5" aria-hidden />
+                  </Button>
+                </div>
+              </div>
+
+              <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-4 sm:px-6">
+                <div className="mx-auto max-w-3xl space-y-4">
+                  <Card className="border-gray-200 shadow-none">
+                    <CardHeader className="space-y-1 pb-2">
+                      <CardTitle className="text-sm font-semibold text-gray-900">주문 요약</CardTitle>
+                      <CardDescription className="text-xs">선차감·금액을 한눈에 확인합니다</CardDescription>
+                    </CardHeader>
+                    <CardContent className="grid gap-3 text-sm sm:grid-cols-2">
+                      <div>
+                        <p className="text-xs font-medium uppercase tracking-wide text-gray-500">수량</p>
+                        <p className="mt-0.5 font-semibold text-gray-900">{selected.quantity}개</p>
+                      </div>
+                      <div>
+                        <p className="text-xs font-medium uppercase tracking-wide text-gray-500">총 금액(원)</p>
+                        <p className="mt-0.5 font-semibold text-gray-900">
+                          {selected.totalAmountKrw != null
+                            ? `₩${formatNumber(selected.totalAmountKrw, locale, num0)}`
+                            : "—"}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs font-medium uppercase tracking-wide text-gray-500">선차감</p>
+                        <p className="mt-0.5 font-semibold text-gray-900">
+                          {selected.chargedAmountKrw != null
+                            ? `₩${formatNumber(selected.chargedAmountKrw, locale, num0)}`
+                            : "—"}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs font-medium uppercase tracking-wide text-gray-500">등록일</p>
+                        <p className="mt-0.5 text-gray-800">
+                          {new Date(selected.createdAt).toLocaleString("ko-KR", {
+                            month: "short",
+                            day: "numeric",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </p>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {hasShippingSnapshot(selected.shipping) && selected.shipping ? (
+                    <Accordion type="single" collapsible className="rounded-lg border border-gray-200 bg-white px-3">
+                      <AccordionItem value="shipping" className="border-0">
+                        <AccordionTrigger className="py-3 text-sm hover:no-underline">
+                          <span className="flex min-w-0 flex-1 items-start gap-2 text-left">
+                            <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-blue-600" aria-hidden />
+                            <span className="min-w-0">
+                              <span className="block font-semibold text-gray-900">배송지</span>
+                              <span className="mt-0.5 block truncate text-xs font-normal text-gray-600">
+                                {shippingSummaryLines(selected.shipping).title} ·{" "}
+                                {shippingSummaryLines(selected.shipping).subtitle}
+                              </span>
+                            </span>
+                          </span>
+                        </AccordionTrigger>
+                        <AccordionContent className="pb-3 pt-0">
+                          <div className="space-y-2 rounded-md border border-blue-100 bg-blue-50/50 p-3 text-sm text-gray-800">
+                            {selected.shipping.label ? (
+                              <p>
+                                <span className="text-gray-500">라벨</span> {selected.shipping.label}
+                              </p>
+                            ) : null}
+                            {(selected.shipping.recipientName || selected.shipping.recipientPhone) && (
+                              <p>
+                                <span className="text-gray-500">수령</span>{" "}
+                                {[selected.shipping.recipientName, selected.shipping.recipientPhone]
+                                  .filter(Boolean)
+                                  .join(" · ")}
+                              </p>
+                            )}
+                            <p className="break-words leading-relaxed">
+                              <span className="text-gray-500">주소</span>{" "}
+                              {selected.shipping.postalCode ? `(${selected.shipping.postalCode}) ` : null}
+                              {selected.shipping.addressLine1}
+                              {selected.shipping.addressLine2 ? ` ${selected.shipping.addressLine2}` : ""}
+                            </p>
+                            {selected.shipping.userAddressId != null && (
+                              <p className="text-xs text-gray-500">회원 배송지 ID: {selected.shipping.userAddressId}</p>
+                            )}
+                          </div>
+                        </AccordionContent>
+                      </AccordionItem>
+                    </Accordion>
+                  ) : (
+                    <p className="rounded-lg border border-amber-200 bg-amber-50/90 px-3 py-2.5 text-xs text-amber-900">
+                      배송지 스냅샷이 없습니다. 구버전 요청이거나 데이터 누락일 수 있습니다.
+                    </p>
+                  )}
+
+                  <Card className="border-gray-900/10 shadow-sm ring-1 ring-gray-900/5">
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm font-semibold text-gray-900">처리</CardTitle>
+                      <CardDescription className="text-xs">상태·운송장·메모 변경 후 하단에서 저장합니다</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="purchase-admin-status">상태</Label>
+                        <Select value={newStatus} onValueChange={(v) => setNewStatus(v as PurchaseRequestStatus)}>
+                          <SelectTrigger id="purchase-admin-status" className="w-full">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {ALL_STATUSES.filter((s) => s !== "DRAFT").map((s) => (
+                              <SelectItem key={s} value={s}>
+                                {statusLabels[s].label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="purchase-admin-tracking">운송장번호</Label>
+                        <Input
+                          id="purchase-admin-tracking"
+                          value={trackingNumber}
+                          onChange={(e) => setTrackingNumber(e.target.value)}
+                          placeholder="예: 1234-5678-9012"
+                          autoComplete="off"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="purchase-admin-memo">관리자 메모</Label>
+                        <Textarea
+                          id="purchase-admin-memo"
+                          rows={2}
+                          value={statusMemo}
+                          onChange={(e) => setStatusMemo(e.target.value)}
+                          className="min-h-[72px] resize-y"
+                          placeholder="내부 메모 (고객에게 노출되지 않음)"
+                        />
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Accordion type="multiple" className="space-y-2">
+                    <AccordionItem
+                      value="attachments"
+                      className="rounded-lg border border-gray-200 bg-white px-3 data-[state=open]:shadow-sm"
+                    >
+                      <AccordionTrigger className="py-3 text-sm hover:no-underline">
+                        <span className="font-semibold text-gray-900">관리자 사진 첨부</span>
+                        <span className="ml-2 text-xs font-normal text-gray-500">배송/수령 등</span>
+                      </AccordionTrigger>
+                      <AccordionContent>
+                        <div className="space-y-3 pb-1">
+                          <Input
+                            type="file"
+                            accept="image/jpeg,image/png,image/webp"
+                            multiple
+                            onChange={(e) => setAdminFiles(Array.from(e.target.files || []))}
+                          />
+                          {adminFiles.length > 0 ? (
+                            <p className="text-xs text-gray-500">{adminFiles.length}개 선택됨</p>
+                          ) : null}
+                          <Button
+                            type="button"
+                            variant="secondary"
+                            className="w-full"
+                            disabled={adminFiles.length === 0 || uploadingFiles}
+                            onClick={() => void uploadAdminFiles()}
+                          >
+                            {uploadingFiles ? "업로드 중..." : `사진 업로드 (${adminFiles.length})`}
+                          </Button>
+                        </div>
+                      </AccordionContent>
+                    </AccordionItem>
+
+                    {isSuper ? (
+                      <AccordionItem
+                        value="wallet"
+                        className="rounded-lg border border-amber-200/80 bg-amber-50/40 px-3 data-[state=open]:shadow-sm"
+                      >
+                        <AccordionTrigger className="py-3 text-sm hover:no-underline">
+                          <span className="font-semibold text-amber-950">지갑 환급 · 차액 정산</span>
+                          <span className="ml-2 text-xs font-normal text-amber-900/80">SUPER · 신중히 입력</span>
+                        </AccordionTrigger>
+                        <AccordionContent>
+                          <div className="space-y-3 pb-1">
+                            <p className="text-sm font-semibold text-amber-950">{t("adminPurchase.walletCreditTitle")}</p>
+                            <div className="rounded-md border border-amber-200/90 bg-white px-3 py-2 text-sm">
+                              <span className="text-gray-600">현재 선차감</span>{" "}
+                              <span className="font-semibold text-gray-900">
+                                {selected.chargedAmountKrw != null
+                                  ? `₩${formatNumber(selected.chargedAmountKrw, locale, num0)}`
+                                  : "—"}
+                              </span>
+                            </div>
+                            <p className="text-xs text-amber-900/90">{t("adminPurchase.walletIdempotencyHint")}</p>
+                            <div className="space-y-2">
+                              <Label>{t("adminPurchase.walletAmount")}</Label>
+                              <Input
+                                type="number"
+                                min="0"
+                                step="1"
+                                value={walletAmount}
+                                onChange={(e) => setWalletAmount(e.target.value)}
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label>{t("adminPurchase.walletSettled")}</Label>
+                              <p className="rounded-md border bg-white px-3 py-2 text-sm font-semibold text-gray-900">
+                                {selected.chargedAmountKrw != null && walletAmount !== ""
+                                  ? `₩${formatNumber(
+                                      selected.chargedAmountKrw -
+                                        parseFloat(walletAmount.replace(/,/g, "") || "0"),
+                                      locale,
+                                      num0
+                                    )}`
+                                  : "—"}
+                              </p>
+                            </div>
+                            <div className="space-y-2">
+                              <Label>Idempotency key</Label>
+                              <Input value={walletIdem} onChange={(e) => setWalletIdem(e.target.value)} />
+                            </div>
+                            <div className="space-y-2">
+                              <Label>{t("adminPurchase.walletMemo")}</Label>
+                              <Textarea rows={2} value={walletMemo} onChange={(e) => setWalletMemo(e.target.value)} />
+                            </div>
+                            <Button
+                              type="button"
+                              variant="destructive"
+                              className="w-full"
+                              onClick={() => void submitWallet()}
+                            >
+                              {t("adminPurchase.walletSubmit")}
+                            </Button>
+                          </div>
+                        </AccordionContent>
+                      </AccordionItem>
+                    ) : null}
+                  </Accordion>
+
+                  {!isSuper ? (
+                    <p className="text-center text-xs text-amber-800">{t("admin.bank.superOnly")}</p>
+                  ) : null}
+                </div>
+              </div>
+
+              <div className="flex shrink-0 flex-col gap-2 border-t bg-background/95 px-4 py-3 backdrop-blur-sm supports-[backdrop-filter]:bg-background/80 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+                <p className="hidden text-[11px] text-gray-500 sm:block">
+                  <kbd className="rounded border bg-muted px-1 py-0.5 font-mono text-[10px]">⌘</kbd> 또는{" "}
+                  <kbd className="rounded border bg-muted px-1 py-0.5 font-mono text-[10px]">Ctrl</kbd> +{" "}
+                  <kbd className="rounded border bg-muted px-1 py-0.5 font-mono text-[10px]">Enter</kbd> 로 상태 저장
+                </p>
+                <div className="flex w-full justify-end gap-2 sm:w-auto">
+                  <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
+                    닫기
+                  </Button>
+                  <Button type="button" className="min-w-[8.5rem] font-semibold" onClick={() => void saveStatus()}>
+                    상태·운송장 저장
+                  </Button>
+                </div>
+              </div>
+            </>
           )}
         </DialogContent>
       </Dialog>

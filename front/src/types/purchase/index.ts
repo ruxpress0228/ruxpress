@@ -60,6 +60,8 @@ export interface PurchaseRequestListItem {
   settledAmountKrw?: number;
   status: PurchaseRequestStatus;
   createdAt: string;
+  /** 관리자 목록 등 전체 응답을 쓸 때 포함될 수 있음 */
+  shipping?: PurchaseShipping | null;
 }
 
 export interface PurchaseRequestDetail extends PurchaseRequestListItem {

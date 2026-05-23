@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router";
-import { ArrowLeft, X, Download, ChevronLeft, ChevronRight, MessageSquare } from "lucide-react";
+import { ArrowLeft, X, Download, ChevronLeft, ChevronRight, MessageSquare, MapPin, Truck } from "lucide-react";
 import { Button } from "../../components/ui/button";
 import { Badge } from "../../components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card";
@@ -188,6 +188,15 @@ export default function AdminPurchaseRequestDetail() {
             <div className="min-w-0">
               <CardTitle className="text-2xl">{data.requestName}</CardTitle>
               <p className="text-sm text-gray-500 mt-1">요청번호: {data.requestNumber}</p>
+              {(data.userNickname || data.userEmail) && (
+                <p className="text-sm text-gray-600 mt-2">
+                  <span className="text-gray-500">회원</span>{" "}
+                  <span className="font-medium text-gray-900">{data.userNickname ?? "—"}</span>
+                  {data.userEmail ? (
+                    <span className="text-gray-600"> · {data.userEmail}</span>
+                  ) : null}
+                </p>
+              )}
             </div>
             <Badge variant={statusInfo.variant}>{statusInfo.label}</Badge>
           </div>
@@ -262,27 +271,66 @@ export default function AdminPurchaseRequestDetail() {
             </div>
           )}
 
-          {hasShippingSnapshot(data.shipping) && data.shipping && (
-            <div className="space-y-2">
-              <p className="font-semibold">배송지</p>
-              <div className="rounded-lg border border-gray-200 bg-gray-50/80 p-3 text-sm text-gray-800 space-y-1">
-                {data.shipping.label ? <p className="font-medium text-gray-900">{data.shipping.label}</p> : null}
-                {(data.shipping.recipientName || data.shipping.recipientPhone) && (
-                  <p>
-                    {data.shipping.recipientName ?? ""}
-                    {data.shipping.recipientPhone ? (
-                      <span className="text-gray-600"> · {data.shipping.recipientPhone}</span>
-                    ) : null}
-                  </p>
-                )}
-                <p className="break-words leading-relaxed">
-                  {data.shipping.postalCode ? <span className="mr-1">({data.shipping.postalCode})</span> : null}
-                  {data.shipping.addressLine1}
-                  {data.shipping.addressLine2 ? ` ${data.shipping.addressLine2}` : ""}
-                </p>
-              </div>
+          <div className="rounded-lg border border-slate-200 bg-gradient-to-b from-slate-50/90 to-white p-4 space-y-4 shadow-sm">
+            <div className="flex items-center gap-2 text-base font-semibold text-gray-900">
+              <MapPin className="h-5 w-5 text-blue-600 shrink-0" aria-hidden />
+              배송 정보
             </div>
-          )}
+
+            {hasShippingSnapshot(data.shipping) && data.shipping ? (
+              <dl className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
+                {data.shipping.label ? (
+                  <div className="sm:col-span-2">
+                    <dt className="text-xs font-medium uppercase tracking-wide text-gray-500">배송지 라벨</dt>
+                    <dd className="mt-0.5 font-medium text-gray-900">{data.shipping.label}</dd>
+                  </div>
+                ) : null}
+                <div>
+                  <dt className="text-xs font-medium uppercase tracking-wide text-gray-500">수령인</dt>
+                  <dd className="mt-0.5 text-gray-900">{data.shipping.recipientName ?? "—"}</dd>
+                </div>
+                <div>
+                  <dt className="text-xs font-medium uppercase tracking-wide text-gray-500">연락처</dt>
+                  <dd className="mt-0.5 text-gray-900">{data.shipping.recipientPhone ?? "—"}</dd>
+                </div>
+                <div className="sm:col-span-2">
+                  <dt className="text-xs font-medium uppercase tracking-wide text-gray-500">주소</dt>
+                  <dd className="mt-0.5 break-words leading-relaxed text-gray-900">
+                    {data.shipping.postalCode ? <span className="text-gray-600">({data.shipping.postalCode}) </span> : null}
+                    {data.shipping.addressLine1}
+                    {data.shipping.addressLine2 ? (
+                      <>
+                        <br />
+                        <span className="text-gray-800">{data.shipping.addressLine2}</span>
+                      </>
+                    ) : null}
+                  </dd>
+                </div>
+                {data.shipping.userAddressId != null && (
+                  <div className="sm:col-span-2">
+                    <dt className="text-xs font-medium uppercase tracking-wide text-gray-500">회원 배송지 ID</dt>
+                    <dd className="mt-0.5 font-mono text-xs text-gray-600">{data.shipping.userAddressId}</dd>
+                  </div>
+                )}
+              </dl>
+            ) : (
+              <p className="rounded-md border border-amber-200 bg-amber-50/90 px-3 py-2 text-sm text-amber-900">
+                배송지 스냅샷이 없습니다. 구버전 요청이거나 DB 마이그레이션 전 데이터일 수 있습니다.
+              </p>
+            )}
+
+            <div className="border-t border-slate-200 pt-3">
+              <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-gray-500">
+                <Truck className="h-3.5 w-3.5" aria-hidden />
+                운송장번호
+              </div>
+              {data.trackingNumber ? (
+                <p className="mt-1 font-mono text-sm font-semibold text-gray-900">{data.trackingNumber}</p>
+              ) : (
+                <p className="mt-1 text-sm text-gray-500">등록된 운송장번호가 없습니다. 목록의 빠른 관리에서 입력할 수 있습니다.</p>
+              )}
+            </div>
+          </div>
 
           {data.memo && (
             <div className="space-y-2">
@@ -295,13 +343,6 @@ export default function AdminPurchaseRequestDetail() {
             <div className="space-y-2">
               <p className="font-semibold">관리자 메모</p>
               <p className="text-sm text-gray-700 whitespace-pre-wrap">{data.adminMemo}</p>
-            </div>
-          )}
-
-          {data.trackingNumber && (
-            <div className="space-y-1">
-              <p className="font-semibold">운송장번호</p>
-              <p className="text-sm font-mono text-gray-900">{data.trackingNumber}</p>
             </div>
           )}
 
