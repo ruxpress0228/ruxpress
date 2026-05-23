@@ -19,10 +19,11 @@ import {
   getPublicSettlementAccounts,
   getMyLedgerEntries,
   reportDeposit,
+  listNoticeImages,
 } from "../../api/bankTransfer";
 import { useTranslation } from "../../hooks/useTranslation";
 import { formatDate } from "../../utils/format";
-import type { SettlementAccount, TransferLedgerEntry } from "../../types/bankTransfer";
+import type { BankTransferAttachment, SettlementAccount, TransferLedgerEntry } from "../../types/bankTransfer";
 import type { PageResponse } from "../../types";
 
 const PAGE_SIZE_OPTIONS = [20, 30, 50, 100] as const;
@@ -47,6 +48,7 @@ function statusBadgeVariant(s: string): "default" | "secondary" | "destructive" 
 export default function BankTransfer() {
   const { t, locale } = useTranslation();
   const [accounts, setAccounts] = useState<SettlementAccount[]>([]);
+  const [noticeImages, setNoticeImages] = useState<BankTransferAttachment[]>([]);
   const [entries, setEntries] = useState<TransferLedgerEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [entriesPage, setEntriesPage] = useState(0);
@@ -107,11 +109,13 @@ export default function BankTransfer() {
   const load = async () => {
     try {
       setLoading(true);
-      const [acc, res] = await Promise.all([
+      const [acc, res, notices] = await Promise.all([
         getPublicSettlementAccounts(),
         getMyLedgerEntries(0, entriesSize),
+        listNoticeImages().catch(() => [] as BankTransferAttachment[]),
       ]);
       setAccounts(acc);
+      setNoticeImages(notices);
       setEntries(res.content ?? []);
       setEntriesTotalPages(res.totalPages ?? 0);
       setEntriesPage(0);
@@ -196,6 +200,34 @@ export default function BankTransfer() {
                   {a.displayMemo ? <p className="text-sm text-blue-800 mt-2">{a.displayMemo}</p> : null}
                 </div>
               ))
+            )}
+
+            {noticeImages.length > 0 && (
+              <div className="pt-2 border-t space-y-2">
+                <p className="text-sm font-semibold text-gray-800">안내 이미지</p>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  {noticeImages.map((img) => {
+                    const src = img.viewUrl || img.storedUrl;
+                    return (
+                      <a
+                        key={img.id}
+                        href={src}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="block border rounded overflow-hidden hover:opacity-90"
+                        title={img.originalFilename}
+                      >
+                        <img
+                          src={img.thumbnailUrl || src}
+                          alt={img.originalFilename}
+                          className="h-32 w-full object-cover"
+                          loading="lazy"
+                        />
+                      </a>
+                    );
+                  })}
+                </div>
+              </div>
             )}
           </CardContent>
         </Card>

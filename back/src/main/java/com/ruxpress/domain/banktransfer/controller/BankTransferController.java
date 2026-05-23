@@ -1,11 +1,13 @@
 package com.ruxpress.domain.banktransfer.controller;
 
 import com.ruxpress.common.dto.ApiResponse;
+import com.ruxpress.common.dto.AttachmentResponse;
 import com.ruxpress.common.dto.PageResponse;
 import com.ruxpress.domain.banktransfer.dto.request.DepositReportRequest;
 import com.ruxpress.domain.banktransfer.dto.response.LedgerReceiptResponse;
 import com.ruxpress.domain.banktransfer.dto.response.SettlementAccountResponse;
 import com.ruxpress.domain.banktransfer.dto.response.TransferLedgerEntryResponse;
+import com.ruxpress.domain.banktransfer.service.BankTransferNoticeService;
 import com.ruxpress.domain.banktransfer.service.BankTransferService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -22,10 +24,16 @@ import java.util.List;
 public class BankTransferController {
 
     private final BankTransferService bankTransferService;
+    private final BankTransferNoticeService bankTransferNoticeService;
 
     @GetMapping("/settlement-accounts")
     public ApiResponse<List<SettlementAccountResponse>> listSettlementAccounts() {
         return ApiResponse.success(bankTransferService.listActiveSettlementAccountsForUser());
+    }
+
+    @GetMapping("/notice-images")
+    public ApiResponse<List<AttachmentResponse>> listNoticeImages() {
+        return ApiResponse.success(bankTransferNoticeService.list());
     }
 
     @PostMapping(value = "/deposit-reports", consumes = MediaType.APPLICATION_JSON_VALUE)
