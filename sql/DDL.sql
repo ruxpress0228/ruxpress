@@ -208,7 +208,7 @@ CREATE TABLE `user_social_accounts` (
 
 CREATE TABLE `attachments` (
 	`id`	BIGINT	NOT NULL AUTO_INCREMENT,
-	`ref_type`	ENUM('PURCHASE', 'INQUIRY', 'REVIEW', 'CHAT', 'BANK_TRANSFER')	NOT NULL	COMMENT '참조 대상 유형',
+	`ref_type`	ENUM('PURCHASE', 'INQUIRY', 'REVIEW', 'CHAT', 'BANK_TRANSFER', 'BANK_TRANSFER_NOTICE')	NOT NULL	COMMENT '참조 대상 유형',
 	`ref_id`	BIGINT	NOT NULL	COMMENT '참조 대상 ID',
 	`original_filename`	VARCHAR(300)	NOT NULL	COMMENT '원본 파일명',
 	`stored_url`	VARCHAR(500)	NOT NULL	COMMENT 'S3 저장 URL',
