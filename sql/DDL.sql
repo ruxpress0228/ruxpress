@@ -119,10 +119,27 @@ CREATE TABLE `users` (
 	`created_at`	DATETIME	NOT NULL	DEFAULT CURRENT_TIMESTAMP	COMMENT '가입 일시',
 	`updated_at`	DATETIME	NOT NULL	DEFAULT CURRENT_TIMESTAMP,
 	`deleted_at`	DATETIME	NULL	COMMENT '소프트 삭제',
-	`address_postal_code` VARCHAR(10) NULL COMMENT '우편번호',
-	`address_line1` VARCHAR(255) NULL COMMENT '기본 주소',
-	`address_line2` VARCHAR(255) NULL COMMENT '상세 주소',
+	`address_postal_code` VARCHAR(10) NULL COMMENT '우편번호 (기본 배송지 캐시)',
+	`address_line1` VARCHAR(255) NULL COMMENT '기본 주소 (기본 배송지 캐시)',
+	`address_line2` VARCHAR(255) NULL COMMENT '상세 주소 (기본 배송지 캐시)',
 	PRIMARY KEY (`id`)
+);
+
+CREATE TABLE `user_addresses` (
+	`id`	BIGINT	NOT NULL AUTO_INCREMENT	COMMENT '배송지 고유 ID',
+	`user_id`	BIGINT	NOT NULL	COMMENT '회원 ID',
+	`label`	VARCHAR(50)	NULL	COMMENT '배송지 별칭 (예: 집, 회사)',
+	`recipient_name`	VARCHAR(50)	NULL	COMMENT '수령인 이름',
+	`recipient_phone`	VARCHAR(20)	NULL	COMMENT '수령인 연락처',
+	`postal_code`	VARCHAR(10)	NULL	COMMENT '우편번호',
+	`address_line1`	VARCHAR(255)	NOT NULL	COMMENT '기본 주소',
+	`address_line2`	VARCHAR(255)	NULL	COMMENT '상세 주소',
+	`is_default`	TINYINT(1)	NOT NULL DEFAULT 0	COMMENT '기본 배송지 여부 (회원당 1건)',
+	`created_at`	DATETIME	NOT NULL	DEFAULT CURRENT_TIMESTAMP,
+	`updated_at`	DATETIME	NOT NULL	DEFAULT CURRENT_TIMESTAMP,
+	PRIMARY KEY (`id`),
+	KEY `idx_user_addresses_user` (`user_id`),
+	CONSTRAINT `fk_user_addresses_user` FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE CASCADE
 );
 
 CREATE TABLE `notices` (

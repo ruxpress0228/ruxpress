@@ -24,6 +24,19 @@ export interface User {
   updatedAt: string;
 }
 
+export interface UserAddress {
+  id: number;
+  label?: string;
+  recipientName?: string;
+  recipientPhone?: string;
+  postalCode?: string;
+  addressLine1: string;
+  addressLine2?: string;
+  isDefault: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface NotificationSettings {
   push: {
     inquiryReply: boolean;
