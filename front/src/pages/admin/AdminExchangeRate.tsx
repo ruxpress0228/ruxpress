@@ -16,10 +16,12 @@ import type { ExchangeRate } from "../../types";
 import {
   FOREIGN_QUOTE_CURRENCIES,
   type CurrentExchangeRates,
+  type QuoteRate,
   findQuoteRate,
-  foreignPerKrwToRateToKrw,
   formatKrwBasisRate,
-  krwPerOneToForeign,
+  formatRateToKrwForInput,
+  formatRateToKrwLine,
+  parseRateToKrwInput,
 } from "../../utils/exchange";
 
 const fetchedAtOptions: Intl.DateTimeFormatOptions = {
@@ -29,6 +31,27 @@ const fetchedAtOptions: Intl.DateTimeFormatOptions = {
   hour: "2-digit",
   minute: "2-digit",
 };
+
+const EMPTY_INPUTS: Record<string, string> = { RUB: "", USD: "", CNY: "" };
+
+function mergeInputsFromQuotes(
+  prev: Record<string, string>,
+  quotes: QuoteRate[],
+  options: { resetMissing: boolean; onlyCurrency?: string }
+): Record<string, string> {
+  const next = options.resetMissing ? { ...EMPTY_INPUTS } : { ...prev };
+  const currencies = options.onlyCurrency ? [options.onlyCurrency] : FOREIGN_QUOTE_CURRENCIES;
+
+  for (const c of currencies) {
+    const q = findQuoteRate(quotes, c);
+    if (q) {
+      next[c] = formatRateToKrwForInput(q.rateToKrw);
+    } else if (options.resetMissing) {
+      next[c] = "";
+    }
+  }
+  return next;
+}
 
 export default function AdminExchangeRate() {
   const { t, locale } = useTranslation();
@@ -43,12 +66,13 @@ export default function AdminExchangeRate() {
   const [loading, setLoading] = useState(true);
   const [fetching, setFetching] = useState(false);
   const [savingCurrency, setSavingCurrency] = useState<string | null>(null);
-  const [manualInputs, setManualInputs] = useState<Record<string, string>>({
-    RUB: "",
-    USD: "",
-    CNY: "",
-  });
+  const [manualInputs, setManualInputs] = useState<Record<string, string>>({ ...EMPTY_INPUTS });
   const [feeRate, setFeeRate] = useState("12");
+
+  const refreshHistory = async () => {
+    const historyRes = await getExchangeRateHistory(0, 30);
+    setHistory(historyRes.content ?? []);
+  };
 
   const loadData = async () => {
     try {
@@ -59,15 +83,7 @@ export default function AdminExchangeRate() {
       ]);
       setCurrentRates(current);
       setHistory(historyRes.content ?? []);
-      const nextInputs: Record<string, string> = { RUB: "", USD: "", CNY: "" };
-      for (const c of FOREIGN_QUOTE_CURRENCIES) {
-        const q = findQuoteRate(current.quotes, c);
-        if (q) {
-          const perKrw = krwPerOneToForeign(q.rateToKrw);
-          nextInputs[c] = perKrw != null ? String(perKrw) : "";
-        }
-      }
-      setManualInputs(nextInputs);
+      setManualInputs((prev) => mergeInputsFromQuotes(prev, current.quotes, { resetMissing: true }));
     } catch (e) {
       const msg = e instanceof Error ? e.message : t("admin.exchange.toast.loadError");
       toast.error(msg);
@@ -95,8 +111,12 @@ export default function AdminExchangeRate() {
   const fetchRubFromApi = async () => {
     try {
       setFetching(true);
-      await triggerExchangeRateFetch();
-      await loadData();
+      const updated = await triggerExchangeRateFetch();
+      setCurrentRates(updated);
+      setManualInputs((prev) =>
+        mergeInputsFromQuotes(prev, updated.quotes, { resetMissing: false, onlyCurrency: "RUB" })
+      );
+      await refreshHistory();
       toast.success(t("admin.exchange.toast.refreshSuccess"));
     } catch (e) {
       const msg = e instanceof Error ? e.message : t("admin.exchange.toast.refreshError");
@@ -107,21 +127,19 @@ export default function AdminExchangeRate() {
   };
 
   const saveManualRate = async (currency: string) => {
-    const raw = manualInputs[currency] ?? "";
-    const num = parseFloat(raw);
-    if (!raw || isNaN(num) || num <= 0) {
-      toast.error(t("admin.exchange.toast.invalidRate"));
-      return;
-    }
-    const rateToKrw = foreignPerKrwToRateToKrw(num);
+    const rateToKrw = parseRateToKrwInput(manualInputs[currency] ?? "");
     if (rateToKrw == null) {
       toast.error(t("admin.exchange.toast.invalidRate"));
       return;
     }
     try {
       setSavingCurrency(currency);
-      await setManualExchangeRate(currency, rateToKrw);
-      await loadData();
+      const updated = await setManualExchangeRate(currency, rateToKrw);
+      setCurrentRates(updated);
+      setManualInputs((prev) =>
+        mergeInputsFromQuotes(prev, updated.quotes, { resetMissing: false, onlyCurrency: currency })
+      );
+      await refreshHistory();
       toast.success(t("admin.exchange.toast.manualSuccess"));
     } catch (e) {
       const msg = e instanceof Error ? e.message : t("admin.exchange.toast.manualError");
@@ -196,21 +214,26 @@ export default function AdminExchangeRate() {
                   )}
                 </div>
                 {quote ? (
-                  <p className="text-2xl font-bold tabular-nums">
-                    {formatKrwBasisRate(currency, quote.rateToKrw, locale)}
-                  </p>
+                  <div className="space-y-1">
+                    <p className="text-2xl font-bold tabular-nums">
+                      {formatRateToKrwLine(currency, quote.rateToKrw)}
+                    </p>
+                    <p className="text-sm text-gray-500 tabular-nums">
+                      {formatKrwBasisRate(currency, quote.rateToKrw, locale)}
+                    </p>
+                  </div>
                 ) : (
                   <p className="text-gray-500 text-sm">{t("admin.exchange.noRate")}</p>
                 )}
                 <div className="space-y-2">
                   <Label htmlFor={`manual-${currency}`}>
-                    {t("admin.exchange.quote.rateLabel")}
+                    {t("admin.exchange.quote.rateLabel").replace("{{currency}}", currency)}
                   </Label>
                   <div className="flex gap-2">
                     <Input
                       id={`manual-${currency}`}
                       type="number"
-                      step="any"
+                      step="0.000001"
                       min="0"
                       placeholder={t("admin.exchange.quote.placeholder")}
                       value={manualInputs[currency] ?? ""}
@@ -219,7 +242,7 @@ export default function AdminExchangeRate() {
                       }
                     />
                     <span className="self-center text-sm text-gray-500 shrink-0">
-                      {t("admin.exchange.quote.unitForeign").replace("{{currency}}", currency)}
+                      {t("admin.exchange.quote.unitKrw")}
                     </span>
                   </div>
                   <Button
@@ -303,7 +326,7 @@ export default function AdminExchangeRate() {
                   <TableRow key={rate.id}>
                     <TableCell className="font-medium">{rate.baseCurrency}</TableCell>
                     <TableCell>
-                      {formatKrwBasisRate(rate.baseCurrency, Number(rate.rate), locale) ?? "—"}
+                      {formatRateToKrwLine(rate.baseCurrency, Number(rate.rate))}
                     </TableCell>
                     <TableCell>
                       <Badge variant={rate.source === "API" ? "default" : "secondary"}>

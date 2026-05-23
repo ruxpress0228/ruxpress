@@ -114,3 +114,23 @@ export function formatKrwBasisRate(
   });
   return `1 KRW = ${formatted} ${currency}`;
 }
+
+/** 1 {currency} = ? KRW (관리자 입력·표시) */
+export function formatRateToKrwLine(currency: string, rateToKrw: number): string {
+  const formatted = formatRateToKrwForInput(rateToKrw);
+  return `1 ${currency} = ${formatted} KRW`;
+}
+
+/** DB/API rateToKrw → 입력 필드 문자열 (부동소수 오차 제거) */
+export function formatRateToKrwForInput(rateToKrw: number): string {
+  if (!Number.isFinite(rateToKrw) || rateToKrw <= 0) return "";
+  const rounded = Math.round(rateToKrw * 1_000_000) / 1_000_000;
+  return rounded.toFixed(6).replace(/\.?0+$/, "");
+}
+
+/** 관리자 입력값 파싱 → 저장용 rateToKrw */
+export function parseRateToKrwInput(raw: string): number | null {
+  const num = parseFloat(raw.trim());
+  if (!raw.trim() || !Number.isFinite(num) || num <= 0) return null;
+  return Math.round(num * 1_000_000) / 1_000_000;
+}

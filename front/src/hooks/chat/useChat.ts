@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Client, type IMessage } from '@stomp/stompjs';
 import { STORAGE_KEYS } from '@/utils/constants';
+import { readAuthValue } from '@/utils/api';
 import type { ChatMessage } from '@/types/chat';
 import { getChatMessages, getAdminRoomMessages } from '@/api/chat';
 
@@ -37,7 +38,7 @@ export function useChat(roomId: string | null, options: UseChatOptions = {}) {
       setConnected(false);
       return;
     }
-    const token = localStorage.getItem(STORAGE_KEYS.TOKEN);
+    const token = readAuthValue(STORAGE_KEYS.TOKEN);
     if (!token) return;
 
     const client = new Client({
