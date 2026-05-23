@@ -2,22 +2,33 @@ import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router";
 import { Eye, Pin } from "lucide-react";
 import { Badge } from "../../components/ui/badge";
+import { Button } from "../../components/ui/button";
 import { Card, CardContent } from "../../components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../components/ui/select";
 import { api } from "../../utils/api";
 import { unwrap } from "../../utils/exception";
 import type { Notice, PageResponse } from "../../types";
+
+const PAGE_SIZE_OPTIONS = [20, 30, 50, 100] as const;
 
 export default function NoticeList() {
   const [notices, setNotices] = useState<Notice[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const [page, setPage] = useState(0);
+  const [size, setSize] = useState(20);
+  const [totalPages, setTotalPages] = useState(0);
 
-  const load = useCallback(() => {
+  const load = useCallback((p: number, s: number) => {
     setLoading(true);
     setError(false);
     api
-      .get<PageResponse<Notice>>("/v1/notices?page=0&size=100")
-      .then((res) => setNotices(unwrap(res).content))
+      .get<PageResponse<Notice>>(`/v1/notices?page=${p}&size=${s}`)
+      .then((res) => {
+        const data = unwrap(res);
+        setNotices(data.content);
+        setTotalPages(data.totalPages);
+      })
       .catch(() => {
         setError(true);
         setNotices([]);
@@ -26,8 +37,13 @@ export default function NoticeList() {
   }, []);
 
   useEffect(() => {
-    load();
-  }, [load]);
+    load(page, size);
+  }, [page, size, load]);
+
+  const handleSizeChange = (newSize: number) => {
+    setSize(newSize);
+    setPage(0);
+  };
 
   const pinnedNotices = notices.filter((n) => n.isPinned);
   const regularNotices = notices.filter((n) => !n.isPinned);
@@ -128,6 +144,27 @@ export default function NoticeList() {
             </p>
           </div>
         </Card>
+      )}
+
+      {totalPages > 0 && (
+        <div className="flex items-center justify-between mt-4 flex-wrap gap-2">
+          <div className="flex items-center gap-2 text-sm text-gray-500">
+            <span>페이지당</span>
+            <Select value={String(size)} onValueChange={(v) => handleSizeChange(Number(v))}>
+              <SelectTrigger className="w-[80px] h-8 text-xs"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {PAGE_SIZE_OPTIONS.map((s) => (
+                  <SelectItem key={s} value={String(s)}>{s}건</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" disabled={page <= 0} onClick={() => setPage((p) => p - 1)}>이전</Button>
+            <span className="text-sm text-gray-500">{page + 1} / {Math.max(1, totalPages)}</span>
+            <Button variant="outline" size="sm" disabled={page >= totalPages - 1} onClick={() => setPage((p) => p + 1)}>다음</Button>
+          </div>
+        </div>
       )}
     </div>
   );

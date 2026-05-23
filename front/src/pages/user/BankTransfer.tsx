@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router";
 import { Landmark, Send, FileText, Upload, X } from "lucide-react";
 import { Button } from "../../components/ui/button";
@@ -23,7 +23,9 @@ import {
 import { useTranslation } from "../../hooks/useTranslation";
 import { formatDate } from "../../utils/format";
 import type { SettlementAccount, TransferLedgerEntry } from "../../types/bankTransfer";
+import type { PageResponse } from "../../types";
 
+const PAGE_SIZE_OPTIONS = [20, 30, 50, 100] as const;
 const MAX_IMAGES = 10;
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
 const ALLOWED_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
@@ -47,6 +49,9 @@ export default function BankTransfer() {
   const [accounts, setAccounts] = useState<SettlementAccount[]>([]);
   const [entries, setEntries] = useState<TransferLedgerEntry[]>([]);
   const [loading, setLoading] = useState(true);
+  const [entriesPage, setEntriesPage] = useState(0);
+  const [entriesSize, setEntriesSize] = useState(20);
+  const [entriesTotalPages, setEntriesTotalPages] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const [accountId, setAccountId] = useState<string>("");
   const entryType = "DEPOSIT" as const;
@@ -88,15 +93,28 @@ export default function BankTransfer() {
     setImages((prev) => prev.filter((_, i) => i !== idx));
   };
 
+  const loadEntries = useCallback(async (p: number, s: number) => {
+    try {
+      const res: PageResponse<TransferLedgerEntry> = await getMyLedgerEntries(p, s);
+      setEntries(res.content ?? []);
+      setEntriesTotalPages(res.totalPages ?? 0);
+      setEntriesPage(res.page ?? p);
+    } catch {
+      // errors surfaced by initial load
+    }
+  }, []);
+
   const load = async () => {
     try {
       setLoading(true);
-      const [acc, page] = await Promise.all([
+      const [acc, res] = await Promise.all([
         getPublicSettlementAccounts(),
-        getMyLedgerEntries(0, 50),
+        getMyLedgerEntries(0, entriesSize),
       ]);
       setAccounts(acc);
-      setEntries(page.content ?? []);
+      setEntries(res.content ?? []);
+      setEntriesTotalPages(res.totalPages ?? 0);
+      setEntriesPage(0);
       if (acc.length && !accountId) {
         setAccountId(String(acc[0].id));
       }
@@ -108,8 +126,14 @@ export default function BankTransfer() {
   };
 
   useEffect(() => {
-    load();
+    void load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    if (!loading) void loadEntries(entriesPage, entriesSize);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [entriesPage, entriesSize]);
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -133,7 +157,8 @@ export default function BankTransfer() {
       setAmount("");
       setDepositorMemo("");
       setImages([]);
-      await load();
+      setEntriesPage(0);
+      await loadEntries(0, entriesSize);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : t("bankTransfer.toast.reportError"));
     } finally {
@@ -283,7 +308,7 @@ export default function BankTransfer() {
           <CardTitle>{t("bankTransfer.historyTitle")}</CardTitle>
           <CardDescription>{t("bankTransfer.historyDesc")}</CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-0">
           <Table>
             <TableHeader>
               <TableRow>
@@ -298,7 +323,7 @@ export default function BankTransfer() {
             <TableBody>
               {entries.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center text-gray-500">
+                  <TableCell colSpan={6} className="text-center text-gray-500 py-8">
                     {t("bankTransfer.empty")}
                   </TableCell>
                 </TableRow>
@@ -331,6 +356,27 @@ export default function BankTransfer() {
               )}
             </TableBody>
           </Table>
+          <div className="flex items-center justify-between p-4 border-t flex-wrap gap-2">
+            <div className="flex items-center gap-2 text-sm text-gray-500">
+              <span>페이지당</span>
+              <Select
+                value={String(entriesSize)}
+                onValueChange={(v) => { setEntriesSize(Number(v)); setEntriesPage(0); }}
+              >
+                <SelectTrigger className="w-[80px] h-8 text-xs"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {PAGE_SIZE_OPTIONS.map((s) => (
+                    <SelectItem key={s} value={String(s)}>{s}건</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm" disabled={entriesPage <= 0} onClick={() => setEntriesPage((p) => p - 1)}>이전</Button>
+              <span className="text-sm text-gray-500">{entriesPage + 1} / {Math.max(1, entriesTotalPages)}</span>
+              <Button variant="outline" size="sm" disabled={entriesPage >= entriesTotalPages - 1} onClick={() => setEntriesPage((p) => p + 1)}>다음</Button>
+            </div>
+          </div>
         </CardContent>
       </Card>
     </div>
