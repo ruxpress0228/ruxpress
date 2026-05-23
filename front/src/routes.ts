@@ -34,6 +34,7 @@ import AdminAdmins from "./pages/admin/AdminAdmins";
 import AdminBankTransfers from "./pages/admin/AdminBankTransfers";
 import AdminSettlementAccounts from "./pages/admin/AdminSettlementAccounts";
 import AdminChat from "./pages/admin/AdminChat";
+import AdminNotifications from "./pages/admin/AdminNotifications";
 import NotFound from "./pages/NotFound";
 import ExamplePage from "./pages/ExamplePage";
 import { STORAGE_KEYS } from "./utils/constants";
@@ -154,6 +155,7 @@ export const router = createBrowserRouter([
           { path: "bank-transfers", Component: AdminBankTransfers, loader: requireAdminAuth },
           { path: "settlement-accounts", Component: AdminSettlementAccounts, loader: requireAdminAuth },
           { path: "chat", Component: AdminChat, loader: requireAdminAuth },
+          { path: "notifications", Component: AdminNotifications, loader: requireAdminAuth },
         ],
       },
       { path: "*", Component: NotFound },

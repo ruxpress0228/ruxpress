@@ -11,6 +11,7 @@ import com.ruxpress.domain.chat.entity.ChatRoomStatus;
 import com.ruxpress.domain.chat.entity.SenderType;
 import com.ruxpress.domain.chat.repository.ChatMessageRepository;
 import com.ruxpress.domain.chat.repository.ChatRoomRepository;
+import com.ruxpress.domain.adminnotification.service.AdminNotificationService;
 import com.ruxpress.domain.notification.service.NotificationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -30,12 +31,17 @@ public class ChatService {
     private final ChatMessageRepository chatMessageRepository;
     private final SimpMessagingTemplate messagingTemplate;
     private final NotificationService notificationService;
+    private final AdminNotificationService adminNotificationService;
 
     @Transactional
     public ChatRoomResponse getOrCreateRoom(Long userId) {
         return chatRoomRepository.findByUserIdAndStatus(userId, ChatRoomStatus.OPEN)
                 .map(ChatRoomResponse::from)
-                .orElseGet(() -> ChatRoomResponse.from(chatRoomRepository.save(ChatRoom.create(userId))));
+                .orElseGet(() -> {
+                    ChatRoom newRoom = chatRoomRepository.save(ChatRoom.create(userId));
+                    adminNotificationService.notifyNewChatRoom(userId, newRoom.getId());
+                    return ChatRoomResponse.from(newRoom);
+                });
     }
 
     public List<ChatRoomResponse> getUserRooms(Long userId) {
@@ -77,6 +83,8 @@ public class ChatService {
 
         if (senderType == SenderType.ADMIN) {
             notificationService.notifyChatMessageFromAdmin(room.getUserId(), roomId, content);
+        } else {
+            adminNotificationService.notifyNewChatMessage(senderId, roomId, content);
         }
 
         // TODO (Kafka phase 2): publish ChatMessageEvent to Kafka topic instead of direct broadcast

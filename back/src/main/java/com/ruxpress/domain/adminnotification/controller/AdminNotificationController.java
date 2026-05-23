@@ -24,9 +24,10 @@ public class AdminNotificationController {
     @GetMapping
     public ApiResponse<AdminNotificationSummaryResponse> getSummary(
             Authentication auth,
-            @RequestParam(required = false) Integer limit) {
+            @RequestParam(required = false) Integer limit,
+            @RequestParam(required = false) Integer page) {
         Long adminId = requireAdminId(auth);
-        return ApiResponse.success(adminNotificationService.getSummary(adminId, limit));
+        return ApiResponse.success(adminNotificationService.getSummary(adminId, limit, page));
     }
 
     @PatchMapping("/{id}/read")

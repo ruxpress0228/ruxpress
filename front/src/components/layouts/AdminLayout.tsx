@@ -11,6 +11,7 @@ import {
   Shield,
   Landmark,
   Wallet,
+  Bell,
 } from "lucide-react";
 import { Button } from "../ui/button";
 import { Sidebar, SidebarContent, SidebarHeader, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarProvider, SidebarTrigger } from "../ui/sidebar";
@@ -69,6 +70,7 @@ export default function AdminLayout() {
     { nameKey: "nav.admin.bankTransfers", path: "/admin/bank-transfers", icon: Landmark, roles: ["SUPER_ADMIN", "COUNSELOR"] },
     { nameKey: "nav.admin.settlementAccounts", path: "/admin/settlement-accounts", icon: Wallet, roles: ["SUPER_ADMIN"] },
     { nameKey: "nav.admin.chat", path: "/admin/chat", icon: MessageSquare, roles: ["SUPER_ADMIN", "COUNSELOR"] },
+    { nameKey: "nav.admin.notifications", path: "/admin/notifications", icon: Bell, roles: ["SUPER_ADMIN", "COUNSELOR"] },
   ].filter((item) => item.roles.includes(admin.role));
 
   return (

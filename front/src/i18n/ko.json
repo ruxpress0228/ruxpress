@@ -23,6 +23,9 @@
   "admin.notification.title": "알림",
   "admin.notification.empty": "새로운 알림이 없습니다.",
   "admin.notification.markAllRead": "모두 읽음",
+  "admin.notification.viewAll": "전체 보기",
+  "admin.notification.page.title": "알림 내역",
+  "admin.notification.page.subtitle": "모든 알림을 확인합니다",
   "admin.notification.time.justNow": "방금 전",
   "admin.notification.time.minutesAgo": "분 전",
   "admin.notification.time.hoursAgo": "시간 전",
@@ -477,6 +480,7 @@
 
   "nav.chat": "채팅",
   "nav.admin.chat": "채팅 상담",
+  "nav.admin.notifications": "알림 내역",
   "chat.title": "고객 채팅",
   "chat.connected": "연결됨",
   "chat.connecting": "연결 중...",

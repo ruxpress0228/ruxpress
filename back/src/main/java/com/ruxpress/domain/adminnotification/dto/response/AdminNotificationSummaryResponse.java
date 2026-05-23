@@ -10,5 +10,6 @@ import java.util.List;
 public class AdminNotificationSummaryResponse {
 
     private final long unreadCount;
+    private final long totalElements;
     private final List<AdminNotificationResponse> items;
 }

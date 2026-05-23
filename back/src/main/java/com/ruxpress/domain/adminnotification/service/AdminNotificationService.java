@@ -13,6 +13,7 @@ import com.ruxpress.domain.adminnotification.entity.AdminNotificationType;
 import com.ruxpress.domain.adminnotification.repository.AdminNotificationRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -64,6 +65,33 @@ public class AdminNotificationService {
         fanOutAndSave(adminIds, AdminNotificationType.NEW_DEPOSIT_REPORT, title, body, dataJson, linkUrl);
     }
 
+    public void notifyNewChatRoom(Long userId, String roomId) {
+        List<Long> adminIds = findActiveAdminIds(Set.of(AdminRole.SUPER_ADMIN, AdminRole.COUNSELOR));
+        if (adminIds.isEmpty()) {
+            return;
+        }
+        String title = "새 채팅 상담 요청";
+        String body = String.format("회원 #%d 이 채팅 상담을 시작했습니다.", userId);
+        String dataJson = String.format("{\"roomId\":\"%s\",\"userId\":%d}", roomId, userId);
+        String linkUrl = "/admin/chat";
+        fanOutAndSave(adminIds, AdminNotificationType.NEW_CHAT_MESSAGE, title, body, dataJson, linkUrl);
+    }
+
+    public void notifyNewChatMessage(Long userId, String roomId, String contentPreview) {
+        List<Long> adminIds = findActiveAdminIds(Set.of(AdminRole.SUPER_ADMIN, AdminRole.COUNSELOR));
+        if (adminIds.isEmpty()) {
+            return;
+        }
+        String preview = (contentPreview != null && contentPreview.length() > 50)
+                ? contentPreview.substring(0, 50) + "…"
+                : contentPreview;
+        String title = "새 채팅 메시지";
+        String body = String.format("회원 #%d: %s", userId, preview);
+        String dataJson = String.format("{\"roomId\":\"%s\",\"userId\":%d}", roomId, userId);
+        String linkUrl = "/admin/chat";
+        fanOutAndSave(adminIds, AdminNotificationType.NEW_CHAT_MESSAGE, title, body, dataJson, linkUrl);
+    }
+
     public void notifyNewInquiry(Long inquiryId, String inquiryTitle) {
         List<Long> adminIds = findActiveAdminIds(Set.of(AdminRole.SUPER_ADMIN, AdminRole.COUNSELOR));
         if (adminIds.isEmpty()) {
@@ -80,15 +108,17 @@ public class AdminNotificationService {
     // ─── Queries ─────────────────────────────────────────────────────────
 
     @Transactional(readOnly = true)
-    public AdminNotificationSummaryResponse getSummary(Long adminId, Integer limit) {
+    public AdminNotificationSummaryResponse getSummary(Long adminId, Integer limit, Integer page) {
         int size = normalizeLimit(limit);
+        int pageNum = (page == null || page < 0) ? 0 : page;
         long unreadCount = notificationRepository.countByAdminIdAndReadFlagFalse(adminId);
-        List<AdminNotificationResponse> items = notificationRepository
-                .findByAdminIdOrderByCreatedAtDesc(adminId, PageRequest.of(0, size))
+        Page<AdminNotification> result = notificationRepository
+                .findByAdminIdOrderByCreatedAtDesc(adminId, PageRequest.of(pageNum, size));
+        List<AdminNotificationResponse> items = result.getContent()
                 .stream()
                 .map(AdminNotificationResponse::from)
                 .toList();
-        return new AdminNotificationSummaryResponse(unreadCount, items);
+        return new AdminNotificationSummaryResponse(unreadCount, result.getTotalElements(), items);
     }
 
     public void markRead(Long adminId, Long notificationId) {

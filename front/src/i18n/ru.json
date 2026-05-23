@@ -23,6 +23,9 @@
   "admin.notification.title": "Уведомления",
   "admin.notification.empty": "Нет новых уведомлений.",
   "admin.notification.markAllRead": "Прочитать все",
+  "admin.notification.viewAll": "Все уведомления",
+  "admin.notification.page.title": "История уведомлений",
+  "admin.notification.page.subtitle": "Просмотр всех уведомлений",
   "admin.notification.time.justNow": "только что",
   "admin.notification.time.minutesAgo": " мин. назад",
   "admin.notification.time.hoursAgo": " ч. назад",
@@ -476,6 +479,7 @@
 
   "nav.chat": "Чат",
   "nav.admin.chat": "Чат-поддержка",
+  "nav.admin.notifications": "История уведомлений",
   "chat.title": "Чат с поддержкой",
   "chat.connected": "Подключено",
   "chat.connecting": "Подключение...",

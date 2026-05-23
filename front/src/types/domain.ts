@@ -201,7 +201,8 @@ export interface SystemSetting {
 export type AdminNotificationType =
   | 'NEW_PURCHASE_REQUEST'
   | 'NEW_DEPOSIT_REPORT'
-  | 'NEW_INQUIRY';
+  | 'NEW_INQUIRY'
+  | 'NEW_CHAT_MESSAGE';
 
 export interface AdminNotification {
   id: number;
@@ -217,5 +218,6 @@ export interface AdminNotification {
 
 export interface AdminNotificationSummary {
   unreadCount: number;
+  totalElements: number;
   items: AdminNotification[];
 }
