@@ -91,7 +91,7 @@ export default function Home() {
                 <Link
                   key={notice.id}
                   to={`/notice/${notice.id}`}
-                  className="block p-3 rounded-lg hover:bg-gray-50 transition-colors"
+                  className="block p-3 rounded-lg border border-gray-200 hover:bg-gray-50 hover:border-gray-300 transition-colors"
                 >
                   <div className="flex items-center justify-between">
                     <span className="font-medium text-gray-900">{notice.title}</span>
@@ -239,27 +239,27 @@ export default function Home() {
         <Link to="/purchase/new">
           <Card className="hover:shadow-lg transition-shadow cursor-pointer border-2 hover:border-blue-500">
             <CardHeader>
-              <ShoppingCart className="w-8 h-8 text-blue-600 mb-2" />
-              <CardTitle>{t("home.quick.purchase.title")}</CardTitle>
-              <CardDescription>{t("home.quick.purchase.desc")}</CardDescription>
+              <ShoppingCart className="w-7 h-7 text-blue-600 mb-2" />
+              <CardTitle className="text-lg">{t("home.quick.purchase.title")}</CardTitle>
+              <CardDescription className="text-sm">{t("home.quick.purchase.desc")}</CardDescription>
             </CardHeader>
           </Card>
         </Link>
         <Link to="/inquiry">
           <Card className="hover:shadow-lg transition-shadow cursor-pointer border-2 hover:border-blue-500">
             <CardHeader>
-              <MessageSquare className="w-8 h-8 text-blue-600 mb-2" />
-              <CardTitle>{t("home.quick.inquiry.title")}</CardTitle>
-              <CardDescription>{t("home.quick.inquiry.desc")}</CardDescription>
+              <MessageSquare className="w-7 h-7 text-blue-600 mb-2" />
+              <CardTitle className="text-lg">{t("home.quick.inquiry.title")}</CardTitle>
+              <CardDescription className="text-sm">{t("home.quick.inquiry.desc")}</CardDescription>
             </CardHeader>
           </Card>
         </Link>
         <Link to="/notice">
           <Card className="hover:shadow-lg transition-shadow cursor-pointer border-2 hover:border-blue-500">
             <CardHeader>
-              <FileText className="w-8 h-8 text-blue-600 mb-2" />
-              <CardTitle>{t("home.quick.notice.title")}</CardTitle>
-              <CardDescription>{t("home.quick.notice.desc")}</CardDescription>
+              <FileText className="w-7 h-7 text-blue-600 mb-2" />
+              <CardTitle className="text-lg">{t("home.quick.notice.title")}</CardTitle>
+              <CardDescription className="text-sm">{t("home.quick.notice.desc")}</CardDescription>
             </CardHeader>
           </Card>
         </Link>
