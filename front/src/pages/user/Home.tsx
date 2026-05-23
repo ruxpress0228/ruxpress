@@ -37,9 +37,10 @@ export default function Home() {
   const [recentNotices, setRecentNotices] = useState<Notice[]>([]);
 
   const rateMap = useMemo(
-    () => (ratesData ? buildRateMap(ratesData.quotes) : new Map<string, number>()),
-    [ratesData]
+    () => buildRateMap(Array.isArray(ratesData?.quotes) ? ratesData.quotes : undefined),
+    [ratesData],
   );
+  const quotes = Array.isArray(ratesData?.quotes) ? ratesData.quotes : [];
   const baseAmount = useMemo(() => normalizeBaseAmount(baseAmountInput), [baseAmountInput]);
 
   useEffect(() => {
@@ -164,7 +165,7 @@ export default function Home() {
           <CardDescription>{t("home.exchange.autoUpdate")}</CardDescription>
         </CardHeader>
         <CardContent>
-          {ratesData && ratesData.quotes.length > 0 ? (
+          {quotes.length > 0 ? (
             <div className="space-y-4">
               <div className="grid gap-4 sm:grid-cols-2">
                 <div>

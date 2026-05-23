@@ -18,8 +18,11 @@ export interface CurrentExchangeRates {
   quotes: QuoteRate[];
 }
 
-export function buildRateMap(quotes: QuoteRate[]): Map<string, number> {
+export function buildRateMap(quotes: QuoteRate[] | null | undefined): Map<string, number> {
   const map = new Map<string, number>();
+  if (!Array.isArray(quotes)) {
+    return map;
+  }
   for (const q of quotes) {
     if (q.rateToKrw > 0) {
       map.set(q.currency.toUpperCase(), q.rateToKrw);
