@@ -16,12 +16,15 @@ public class PurchaseRequestResponse {
 
     private final Long id;
     private final Long userId;
+    private final String userEmail;
+    private final String userNickname;
     private final String requestNumber;
-    private final String productName;
+    private final String requestName;
     private final Integer quantity;
     private final List<String> urls;
     private final JsonNode options;
     private final BigDecimal priceRub;
+    private final String quoteCurrency;
     private final BigDecimal priceKrw;
     private final Long exchangeRateId;
     private final BigDecimal feeAmount;
@@ -32,6 +35,9 @@ public class PurchaseRequestResponse {
     private final PurchaseRequestStatus status;
     private final String adminMemo;
     private final Long assignedAdminId;
+    private final String trackingNumber;
+    private final PurchaseShippingResponse shipping;
+    private final List<PurchaseItemResponse> items;
     private final List<AttachmentResponse> attachments;
     private final LocalDateTime createdAt;
     private final LocalDateTime updatedAt;

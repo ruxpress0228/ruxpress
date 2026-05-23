@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router";
-import { User, Bell, Shield, LogOut, Mail, Phone, MapPin, Wallet } from "lucide-react";
+import { User, Bell, Shield, LogOut, Mail, Phone, MapPin, Wallet, Plus, Pencil, Trash2, Star } from "lucide-react";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../components/ui/card";
@@ -17,10 +17,10 @@ import {
   DialogTitle,
 } from "../../components/ui/dialog";
 import { toast } from "sonner";
-import { api, clearUserSession, notifyUserAuthChange } from "../../utils/api";
+import { api, clearUserSession, notifyUserAuthChange, readAuthValue, writeAuthValue } from "../../utils/api";
 import { STORAGE_KEYS } from "../../utils/constants";
 import { useBalance } from "../../hooks/balance/useBalance";
-import type { User as UserProfile } from "../../types/domain";
+import type { User as UserProfile, UserAddress } from "../../types/domain";
 
 function formatDateKo(iso: string | undefined): string {
   if (!iso) return "—";
@@ -65,8 +65,21 @@ export default function MyPage() {
   const [editLine2, setEditLine2] = useState("");
   const [editSubmitting, setEditSubmitting] = useState(false);
 
+  const [addresses, setAddresses] = useState<UserAddress[]>([]);
+  const [addressesLoading, setAddressesLoading] = useState(false);
+  const [addrDialogOpen, setAddrDialogOpen] = useState(false);
+  const [addrEditingId, setAddrEditingId] = useState<number | null>(null);
+  const [addrLabel, setAddrLabel] = useState("");
+  const [addrRecipient, setAddrRecipient] = useState("");
+  const [addrPhone, setAddrPhone] = useState("");
+  const [addrPostal, setAddrPostal] = useState("");
+  const [addrLine1, setAddrLine1] = useState("");
+  const [addrLine2, setAddrLine2] = useState("");
+  const [addrIsDefault, setAddrIsDefault] = useState(false);
+  const [addrSubmitting, setAddrSubmitting] = useState(false);
+
   const loadProfile = useCallback(async () => {
-    const token = localStorage.getItem(STORAGE_KEYS.TOKEN);
+    const token = readAuthValue(STORAGE_KEYS.TOKEN);
     if (!token) {
       toast.error("로그인이 필요합니다");
       navigate("/login", { replace: true });
@@ -77,9 +90,9 @@ export default function MyPage() {
       const res = await api.get<UserProfile>("/v1/users/me");
       if (res.code === 200 && res.data) {
         setProfile(res.data);
-        localStorage.setItem(STORAGE_KEYS.USER_NICKNAME, res.data.nickname);
-        localStorage.setItem(STORAGE_KEYS.USER_EMAIL, res.data.email);
-        localStorage.setItem(STORAGE_KEYS.USER_ID, String(res.data.id));
+        writeAuthValue(STORAGE_KEYS.USER_NICKNAME, res.data.nickname);
+        writeAuthValue(STORAGE_KEYS.USER_EMAIL, res.data.email);
+        writeAuthValue(STORAGE_KEYS.USER_ID, String(res.data.id));
         notifyUserAuthChange();
       } else if (res.code === 401) {
         clearUserSession();
@@ -97,9 +110,126 @@ export default function MyPage() {
     }
   }, [navigate]);
 
+  const loadAddresses = useCallback(async () => {
+    setAddressesLoading(true);
+    try {
+      const res = await api.get<UserAddress[]>("/v1/users/me/addresses");
+      if (res.code === 200 && Array.isArray(res.data)) {
+        setAddresses(res.data);
+      } else if (res.code !== 401) {
+        toast.error(res.message ?? "배송지를 불러오지 못했습니다");
+      }
+    } catch {
+      toast.error("배송지를 불러오지 못했습니다");
+    } finally {
+      setAddressesLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     void loadProfile();
   }, [loadProfile]);
+
+  useEffect(() => {
+    if (profile) void loadAddresses();
+  }, [profile, loadAddresses]);
+
+  const resetAddressForm = () => {
+    setAddrEditingId(null);
+    setAddrLabel("");
+    setAddrRecipient("");
+    setAddrPhone("");
+    setAddrPostal("");
+    setAddrLine1("");
+    setAddrLine2("");
+    setAddrIsDefault(false);
+  };
+
+  const openAddressCreate = () => {
+    resetAddressForm();
+    setAddrIsDefault(addresses.length === 0);
+    setAddrDialogOpen(true);
+  };
+
+  const openAddressEdit = (a: UserAddress) => {
+    setAddrEditingId(a.id);
+    setAddrLabel(a.label ?? "");
+    setAddrRecipient(a.recipientName ?? "");
+    setAddrPhone(a.recipientPhone ?? "");
+    setAddrPostal(a.postalCode ?? "");
+    setAddrLine1(a.addressLine1 ?? "");
+    setAddrLine2(a.addressLine2 ?? "");
+    setAddrIsDefault(a.isDefault);
+    setAddrDialogOpen(true);
+  };
+
+  const submitAddress = async () => {
+    const line1 = addrLine1.trim();
+    if (!line1) {
+      toast.error("주소를 입력하세요");
+      return;
+    }
+    const payload = {
+      label: addrLabel.trim() || null,
+      recipientName: addrRecipient.trim() || null,
+      recipientPhone: addrPhone.trim() || null,
+      postalCode: addrPostal.trim() || null,
+      addressLine1: line1,
+      addressLine2: addrLine2.trim() || null,
+      isDefault: addrIsDefault,
+    };
+    setAddrSubmitting(true);
+    try {
+      const res = addrEditingId == null
+        ? await api.post<UserAddress>("/v1/users/me/addresses", payload)
+        : await api.patch<UserAddress>(`/v1/users/me/addresses/${addrEditingId}`, payload);
+      if (res.code === 200) {
+        toast.success(res.message ?? (addrEditingId == null ? "배송지가 추가되었습니다" : "배송지가 수정되었습니다"));
+        setAddrDialogOpen(false);
+        resetAddressForm();
+        await loadAddresses();
+        await loadProfile();
+      } else {
+        toast.error(res.message ?? "처리에 실패했습니다");
+      }
+    } catch {
+      toast.error("처리에 실패했습니다");
+    } finally {
+      setAddrSubmitting(false);
+    }
+  };
+
+  const deleteAddress = async (a: UserAddress) => {
+    if (!window.confirm("이 배송지를 삭제하시겠습니까?")) return;
+    try {
+      const res = await api.delete<unknown>(`/v1/users/me/addresses/${a.id}`);
+      if (res.code === 200) {
+        toast.success(res.message ?? "배송지가 삭제되었습니다");
+        await loadAddresses();
+        await loadProfile();
+      } else {
+        toast.error(res.message ?? "삭제에 실패했습니다");
+      }
+    } catch {
+      toast.error("삭제에 실패했습니다");
+    }
+  };
+
+  const markAsDefault = async (a: UserAddress) => {
+    if (a.isDefault) return;
+    try {
+      const res = await api.post<UserAddress>(`/v1/users/me/addresses/${a.id}/default`, {});
+      if (res.code === 200) {
+        toast.success(res.message ?? "기본 배송지로 설정되었습니다");
+        await loadAddresses();
+        await loadProfile();
+      } else {
+        toast.error(res.message ?? "기본 설정에 실패했습니다");
+      }
+    } catch {
+      toast.error("기본 설정에 실패했습니다");
+    }
+  };
 
   const handleLogout = () => {
     clearUserSession();
@@ -118,26 +248,26 @@ export default function MyPage() {
 
   const submitProfileEdit = async () => {
     const nickname = editNickname.trim();
-    const line1 = editLine1.trim();
     if (!nickname) {
       toast.error("닉네임을 입력하세요");
       return;
     }
+    const line1 = editLine1.trim() || profile?.addressLine1?.trim() || "";
     if (!line1) {
-      toast.error("주소를 입력하세요");
+      toast.error("기본 배송지를 먼저 등록해 주세요");
       return;
     }
     setEditSubmitting(true);
     try {
       const res = await api.patch<UserProfile>("/v1/users/me", {
         nickname,
-        addressPostalCode: editPostal.trim() || null,
+        addressPostalCode: editPostal.trim() || profile?.addressPostalCode || null,
         addressLine1: line1,
-        addressLine2: editLine2.trim() || null,
+        addressLine2: editLine2.trim() || profile?.addressLine2 || null,
       });
       if (res.code === 200 && res.data) {
         setProfile(res.data);
-        localStorage.setItem(STORAGE_KEYS.USER_NICKNAME, res.data.nickname);
+        writeAuthValue(STORAGE_KEYS.USER_NICKNAME, res.data.nickname);
         notifyUserAuthChange();
         toast.success(res.message ?? "프로필이 수정되었습니다");
         setEditOpen(false);
@@ -278,20 +408,6 @@ export default function MyPage() {
                 </div>
               )}
 
-              {(profile.addressLine1 || profile.addressPostalCode) && (
-                <div className="flex items-start">
-                  <MapPin className="w-5 h-5 text-gray-400 mr-3 mt-0.5 shrink-0" />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm text-gray-500">배송지</p>
-                    <p className="font-medium text-gray-900">
-                      {[profile.addressPostalCode, profile.addressLine1, profile.addressLine2]
-                        .filter(Boolean)
-                        .join(" ")}
-                    </p>
-                  </div>
-                </div>
-              )}
-
               <div className="flex items-center">
                 <User className="w-5 h-5 text-gray-400 mr-3 shrink-0" />
                 <div className="flex-1">
@@ -310,6 +426,68 @@ export default function MyPage() {
                 </div>
               )}
             </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <MapPin className="w-5 h-5 text-blue-600" />
+                <CardTitle>배송지 관리</CardTitle>
+              </div>
+              <Button type="button" size="sm" variant="outline" onClick={openAddressCreate}>
+                <Plus className="w-4 h-4 mr-1" />
+                추가
+              </Button>
+            </div>
+            <CardDescription>여러 배송지를 등록하고 기본 배송지를 지정할 수 있습니다.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {addressesLoading && addresses.length === 0 ? (
+              <p className="text-sm text-gray-500">불러오는 중…</p>
+            ) : addresses.length === 0 ? (
+              <p className="text-sm text-gray-500">등록된 배송지가 없습니다. 우측 상단의 "추가" 버튼으로 등록해 주세요.</p>
+            ) : (
+              addresses.map((a) => (
+                <div key={a.id} className="border rounded-lg p-3 flex items-start justify-between gap-3">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-medium text-gray-900">{a.label || "배송지"}</span>
+                      {a.isDefault && (
+                        <Badge className="bg-blue-500 hover:bg-blue-500">
+                          <Star className="w-3 h-3 mr-1" />
+                          기본
+                        </Badge>
+                      )}
+                    </div>
+                    {(a.recipientName || a.recipientPhone) && (
+                      <p className="text-sm text-gray-600 mt-1">
+                        {[a.recipientName, a.recipientPhone].filter(Boolean).join(" / ")}
+                      </p>
+                    )}
+                    <p className="text-sm text-gray-700 mt-1 break-words">
+                      {[a.postalCode, a.addressLine1, a.addressLine2].filter(Boolean).join(" ")}
+                    </p>
+                  </div>
+                  <div className="flex flex-col gap-1 shrink-0">
+                    {!a.isDefault && (
+                      <Button type="button" size="sm" variant="ghost" className="text-blue-600" onClick={() => void markAsDefault(a)}>
+                        기본 설정
+                      </Button>
+                    )}
+                    <Button type="button" size="sm" variant="ghost" onClick={() => openAddressEdit(a)}>
+                      <Pencil className="w-4 h-4 mr-1" />
+                      수정
+                    </Button>
+                    <Button type="button" size="sm" variant="ghost" className="text-red-600 hover:text-red-700" onClick={() => void deleteAddress(a)}>
+                      <Trash2 className="w-4 h-4 mr-1" />
+                      삭제
+                    </Button>
+                  </div>
+                </div>
+              ))
+            )}
           </CardContent>
         </Card>
 
@@ -438,24 +616,12 @@ export default function MyPage() {
           <DialogContent className="sm:max-w-md">
             <DialogHeader>
               <DialogTitle>프로필 수정</DialogTitle>
-              <DialogDescription>닉네임과 배송지 주소를 수정할 수 있습니다.</DialogDescription>
+              <DialogDescription>닉네임을 수정할 수 있습니다. 배송지는 아래 "배송지 관리"에서 관리하세요.</DialogDescription>
             </DialogHeader>
             <div className="space-y-3 py-2">
               <div className="space-y-2">
                 <Label htmlFor="edit-nickname">닉네임</Label>
                 <Input id="edit-nickname" maxLength={50} value={editNickname} onChange={(e) => setEditNickname(e.target.value)} />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="edit-postal">우편번호</Label>
-                <Input id="edit-postal" maxLength={10} value={editPostal} onChange={(e) => setEditPostal(e.target.value)} />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="edit-line1">주소</Label>
-                <Input id="edit-line1" maxLength={255} value={editLine1} onChange={(e) => setEditLine1(e.target.value)} />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="edit-line2">상세주소</Label>
-                <Input id="edit-line2" maxLength={255} value={editLine2} onChange={(e) => setEditLine2(e.target.value)} />
               </div>
             </div>
             <DialogFooter>
@@ -464,6 +630,69 @@ export default function MyPage() {
               </Button>
               <Button type="button" onClick={() => void submitProfileEdit()} disabled={editSubmitting}>
                 {editSubmitting ? "처리 중…" : "저장"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog
+          open={addrDialogOpen}
+          onOpenChange={(open) => {
+            setAddrDialogOpen(open);
+            if (!open) resetAddressForm();
+          }}
+        >
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>{addrEditingId == null ? "배송지 추가" : "배송지 수정"}</DialogTitle>
+              <DialogDescription>수령인 정보와 주소를 입력해 주세요.</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-3 py-2">
+              <div className="space-y-2">
+                <Label htmlFor="addr-label">별칭 (예: 집, 회사)</Label>
+                <Input id="addr-label" maxLength={50} value={addrLabel} onChange={(e) => setAddrLabel(e.target.value)} />
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div className="space-y-2">
+                  <Label htmlFor="addr-recipient">수령인</Label>
+                  <Input id="addr-recipient" maxLength={50} value={addrRecipient} onChange={(e) => setAddrRecipient(e.target.value)} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="addr-phone">연락처</Label>
+                  <Input id="addr-phone" maxLength={20} value={addrPhone} onChange={(e) => setAddrPhone(e.target.value)} />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="addr-postal">우편번호</Label>
+                <Input id="addr-postal" maxLength={10} value={addrPostal} onChange={(e) => setAddrPostal(e.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="addr-line1">주소 *</Label>
+                <Input id="addr-line1" maxLength={255} value={addrLine1} onChange={(e) => setAddrLine1(e.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="addr-line2">상세 주소</Label>
+                <Input id="addr-line2" maxLength={255} value={addrLine2} onChange={(e) => setAddrLine2(e.target.value)} />
+              </div>
+              <div className="flex items-center space-x-2 pt-1">
+                <input
+                  id="addr-default"
+                  type="checkbox"
+                  className="h-4 w-4 rounded border-gray-300"
+                  checked={addrIsDefault}
+                  onChange={(e) => setAddrIsDefault(e.target.checked)}
+                />
+                <Label htmlFor="addr-default" className="cursor-pointer text-sm">
+                  기본 배송지로 설정
+                </Label>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setAddrDialogOpen(false)} disabled={addrSubmitting}>
+                취소
+              </Button>
+              <Button type="button" onClick={() => void submitAddress()} disabled={addrSubmitting}>
+                {addrSubmitting ? "처리 중…" : "저장"}
               </Button>
             </DialogFooter>
           </DialogContent>

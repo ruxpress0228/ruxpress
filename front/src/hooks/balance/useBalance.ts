@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { getMyBalance } from "../../api/balance";
+import { readAuthValue } from "../../utils/api";
 import {
   STORAGE_KEYS,
   USER_BALANCE_CHANGE_EVENT,
@@ -12,7 +13,7 @@ export function useBalance() {
 
   const refresh = useCallback(async (options?: { silent?: boolean }) => {
     const silent = options?.silent === true;
-    const token = localStorage.getItem(STORAGE_KEYS.TOKEN);
+    const token = readAuthValue(STORAGE_KEYS.TOKEN);
     if (!token) {
       setBalance(null);
       return;
@@ -52,7 +53,7 @@ export function useBalance() {
   }, [refresh]);
 
   useEffect(() => {
-    const token = localStorage.getItem(STORAGE_KEYS.TOKEN);
+    const token = readAuthValue(STORAGE_KEYS.TOKEN);
     if (!token) return;
 
     const intervalId = window.setInterval(() => {

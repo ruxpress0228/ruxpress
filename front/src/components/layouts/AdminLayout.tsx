@@ -11,15 +11,20 @@ import {
   Shield,
   Landmark,
   Wallet,
+  Bell,
 } from "lucide-react";
 import { Button } from "../ui/button";
 import { Sidebar, SidebarContent, SidebarHeader, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarProvider, SidebarTrigger } from "../ui/sidebar";
 import { useTranslation } from "../../hooks/useTranslation";
 import { STORAGE_KEYS } from "../../utils/constants";
+import { notifyUserAuthChange, readAuthValue } from "../../utils/api";
+import AdminNotificationBell from "./AdminNotificationBell";
+
+const ADMIN_STORAGE_KEY = "ruxpress_admin";
 
 function getAdmin(): { id: number; email: string; name: string; role: string } | null {
   try {
-    const raw = localStorage.getItem("ruxpress_admin");
+    const raw = readAuthValue(ADMIN_STORAGE_KEY);
     return raw ? JSON.parse(raw) : null;
   } catch {
     return null;
@@ -36,7 +41,7 @@ export default function AdminLayout() {
     return <Outlet />;
   }
 
-  const token = localStorage.getItem(STORAGE_KEYS.TOKEN);
+  const token = readAuthValue(STORAGE_KEYS.TOKEN);
   const admin = getAdmin();
 
   if (!token || !admin) {
@@ -45,7 +50,10 @@ export default function AdminLayout() {
 
   const handleLogout = () => {
     localStorage.removeItem(STORAGE_KEYS.TOKEN);
-    localStorage.removeItem("ruxpress_admin");
+    sessionStorage.removeItem(STORAGE_KEYS.TOKEN);
+    localStorage.removeItem(ADMIN_STORAGE_KEY);
+    sessionStorage.removeItem(ADMIN_STORAGE_KEY);
+    notifyUserAuthChange();
     navigate("/admin/login");
   };
 
@@ -62,6 +70,7 @@ export default function AdminLayout() {
     { nameKey: "nav.admin.bankTransfers", path: "/admin/bank-transfers", icon: Landmark, roles: ["SUPER_ADMIN", "COUNSELOR"] },
     { nameKey: "nav.admin.settlementAccounts", path: "/admin/settlement-accounts", icon: Wallet, roles: ["SUPER_ADMIN"] },
     { nameKey: "nav.admin.chat", path: "/admin/chat", icon: MessageSquare, roles: ["SUPER_ADMIN", "COUNSELOR"] },
+    { nameKey: "nav.admin.notifications", path: "/admin/notifications", icon: Bell, roles: ["SUPER_ADMIN", "COUNSELOR"] },
   ].filter((item) => item.roles.includes(admin.role));
 
   return (
@@ -116,6 +125,7 @@ export default function AdminLayout() {
               </Button>
             </SidebarTrigger>
             <div className="ml-auto flex items-center space-x-4">
+              <AdminNotificationBell />
               <div className="text-right">
                 <p className="text-sm font-medium text-gray-900">{admin.name}</p>
                 <p className="text-xs text-gray-500">{admin.email}{isSuperAdmin ? " (슈퍼 관리자)" : " (상담사)"}</p>

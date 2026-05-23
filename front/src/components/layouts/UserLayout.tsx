@@ -5,7 +5,7 @@ import { Button } from "../ui/button";
 import { Badge } from "../ui/badge";
 import { useTranslation } from "../../hooks/useTranslation";
 import { LOCALES, STORAGE_KEYS, USER_AUTH_CHANGE_EVENT } from "../../utils/constants";
-import { clearUserSession } from "../../utils/api";
+import { clearUserSession, readAuthValue } from "../../utils/api";
 
 export default function UserLayout() {
   const location = useLocation();
@@ -25,8 +25,8 @@ export default function UserLayout() {
     setAuthRevision((n) => n + 1);
   }, [location.pathname]);
 
-  const userToken = localStorage.getItem(STORAGE_KEYS.TOKEN);
-  const userNickname = localStorage.getItem(STORAGE_KEYS.USER_NICKNAME);
+  const userToken = readAuthValue(STORAGE_KEYS.TOKEN);
+  const userNickname = readAuthValue(STORAGE_KEYS.USER_NICKNAME);
 
   useEffect(() => {
     if (!langOpen) return;

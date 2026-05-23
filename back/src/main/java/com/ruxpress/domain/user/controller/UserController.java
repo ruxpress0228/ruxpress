@@ -14,10 +14,14 @@ import com.ruxpress.domain.user.dto.LoginResponse;
 import com.ruxpress.domain.user.dto.PushContextRequest;
 import com.ruxpress.domain.user.dto.ResetPasswordRequest;
 import com.ruxpress.domain.user.dto.UpdateProfileRequest;
+import com.ruxpress.domain.user.dto.request.UserAddressCreateRequest;
+import com.ruxpress.domain.user.dto.request.UserAddressUpdateRequest;
+import com.ruxpress.domain.user.dto.response.UserAddressResponse;
 import com.ruxpress.domain.user.dto.response.UserResponse;
 import com.ruxpress.domain.user.entity.DeviceType;
 import com.ruxpress.domain.user.service.EmailVerificationService;
 import com.ruxpress.domain.user.service.PasswordResetService;
+import com.ruxpress.domain.user.service.UserAddressService;
 import com.ruxpress.domain.user.service.UserDeviceService;
 import com.ruxpress.domain.user.service.UserService;
 import jakarta.servlet.http.HttpServletRequest;
@@ -26,6 +30,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @Slf4j
 @RestController
@@ -37,6 +43,7 @@ public class UserController {
     private final UserService userService;
     private final PasswordResetService passwordResetService;
     private final UserDeviceService userDeviceService;
+    private final UserAddressService userAddressService;
 
     /**
      * 이메일 인증 코드 발송 (실제 메일 발송)
@@ -131,6 +138,57 @@ public class UserController {
             throw new BusinessException(ErrorCode.UNAUTHORIZED, "로그인이 필요합니다.");
         }
         return ApiResponse.success("프로필이 수정되었습니다.", userService.updateProfile(userId, body));
+    }
+
+    @GetMapping("/me/addresses")
+    public ApiResponse<List<UserAddressResponse>> listMyAddresses(HttpServletRequest request) {
+        Long userId = JwtUtil.getUserId(request);
+        if (userId == null) {
+            throw new BusinessException(ErrorCode.UNAUTHORIZED, "로그인이 필요합니다.");
+        }
+        return ApiResponse.success(userAddressService.listMyAddresses(userId));
+    }
+
+    @PostMapping("/me/addresses")
+    public ApiResponse<UserAddressResponse> createMyAddress(
+            HttpServletRequest request,
+            @Valid @RequestBody UserAddressCreateRequest body) {
+        Long userId = JwtUtil.getUserId(request);
+        if (userId == null) {
+            throw new BusinessException(ErrorCode.UNAUTHORIZED, "로그인이 필요합니다.");
+        }
+        return ApiResponse.success("배송지가 추가되었습니다.", userAddressService.create(userId, body));
+    }
+
+    @PatchMapping("/me/addresses/{addressId}")
+    public ApiResponse<UserAddressResponse> updateMyAddress(
+            HttpServletRequest request,
+            @PathVariable Long addressId,
+            @Valid @RequestBody UserAddressUpdateRequest body) {
+        Long userId = JwtUtil.getUserId(request);
+        if (userId == null) {
+            throw new BusinessException(ErrorCode.UNAUTHORIZED, "로그인이 필요합니다.");
+        }
+        return ApiResponse.success("배송지가 수정되었습니다.", userAddressService.update(userId, addressId, body));
+    }
+
+    @DeleteMapping("/me/addresses/{addressId}")
+    public ApiResponse<Void> deleteMyAddress(HttpServletRequest request, @PathVariable Long addressId) {
+        Long userId = JwtUtil.getUserId(request);
+        if (userId == null) {
+            throw new BusinessException(ErrorCode.UNAUTHORIZED, "로그인이 필요합니다.");
+        }
+        userAddressService.delete(userId, addressId);
+        return ApiResponse.success("배송지가 삭제되었습니다.", null);
+    }
+
+    @PostMapping("/me/addresses/{addressId}/default")
+    public ApiResponse<UserAddressResponse> setDefaultMyAddress(HttpServletRequest request, @PathVariable Long addressId) {
+        Long userId = JwtUtil.getUserId(request);
+        if (userId == null) {
+            throw new BusinessException(ErrorCode.UNAUTHORIZED, "로그인이 필요합니다.");
+        }
+        return ApiResponse.success("기본 배송지로 설정되었습니다.", userAddressService.setDefault(userId, addressId));
     }
 
     @PostMapping("/me/password")

@@ -1,18 +1,23 @@
 package com.ruxpress.domain.banktransfer.controller;
 
 import com.ruxpress.common.dto.ApiResponse;
+import com.ruxpress.common.dto.AttachmentResponse;
 import com.ruxpress.common.dto.PageResponse;
 import com.ruxpress.domain.banktransfer.dto.request.AdminMemoRequest;
 import com.ruxpress.domain.banktransfer.dto.request.SettlementOrRefundRequest;
 import com.ruxpress.domain.banktransfer.dto.response.TransferLedgerEntryResponse;
 import com.ruxpress.domain.banktransfer.entity.TransferLedgerEntryType;
 import com.ruxpress.domain.banktransfer.entity.TransferLedgerStatus;
+import com.ruxpress.domain.banktransfer.service.BankTransferNoticeService;
 import com.ruxpress.domain.banktransfer.service.BankTransferService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/admin/bank-transfers")
@@ -20,6 +25,24 @@ import org.springframework.web.bind.annotation.*;
 public class AdminBankTransferController {
 
     private final BankTransferService bankTransferService;
+    private final BankTransferNoticeService bankTransferNoticeService;
+
+    @GetMapping("/notice-images")
+    public ApiResponse<List<AttachmentResponse>> listNoticeImages() {
+        return ApiResponse.success(bankTransferNoticeService.list());
+    }
+
+    @PostMapping("/notice-images")
+    public ApiResponse<List<AttachmentResponse>> uploadNoticeImages(
+            @RequestPart("files") List<MultipartFile> files) {
+        return ApiResponse.success("안내 이미지가 업로드되었습니다.", bankTransferNoticeService.upload(files));
+    }
+
+    @DeleteMapping("/notice-images/{attachmentId}")
+    public ApiResponse<Void> deleteNoticeImage(@PathVariable Long attachmentId) {
+        bankTransferNoticeService.delete(attachmentId);
+        return ApiResponse.success("안내 이미지가 삭제되었습니다.", null);
+    }
 
     @GetMapping
     public ApiResponse<PageResponse<TransferLedgerEntryResponse>> list(

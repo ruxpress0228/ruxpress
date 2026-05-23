@@ -15,4 +15,6 @@ public class AdminPurchaseStatusRequest {
     private PurchaseRequestStatus status;
 
     private String adminMemo;
+
+    private String trackingNumber;
 }

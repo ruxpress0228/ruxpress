@@ -1,5 +1,5 @@
-import { useState, useRef } from "react";
-import { useNavigate } from "react-router";
+import { useState, useRef, useEffect } from "react";
+import { useLocation, useNavigate } from "react-router";
 import { Upload, X } from "lucide-react";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
@@ -25,9 +25,17 @@ function getCategoryOptions(t: (key: string) => string): { value: InquiryCategor
   ];
 }
 
+/** 구매 목록 등에서 `navigate('/inquiry/new', { state })`로 전달 */
+export type InquiryFormPrefillState = {
+  category?: InquiryCategory;
+  title?: string;
+  content?: string;
+};
+
 export default function InquiryForm() {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const location = useLocation();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [category, setCategory] = useState<InquiryCategory | "">("");
   const [title, setTitle] = useState("");
@@ -36,6 +44,14 @@ export default function InquiryForm() {
   const [submitting, setSubmitting] = useState(false);
 
   const categoryOptions = getCategoryOptions(t);
+
+  useEffect(() => {
+    const st = location.state as InquiryFormPrefillState | null | undefined;
+    if (!st || (!st.category && !st.title?.trim() && !st.content?.trim())) return;
+    if (st.category) setCategory(st.category);
+    if (typeof st.title === "string" && st.title.trim()) setTitle(st.title);
+    if (typeof st.content === "string" && st.content.trim()) setContent(st.content);
+  }, [location.key]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selected = Array.from(e.target.files || []);

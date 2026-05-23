@@ -1,12 +1,12 @@
 import { useState, useEffect } from "react";
-import { TrendingUp, RefreshCw, Edit } from "lucide-react";
+import { TrendingUp, RefreshCw } from "lucide-react";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../components/ui/table";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "../../components/ui/dialog";
 import { Label } from "../../components/ui/label";
 import { Badge } from "../../components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../components/ui/select";
 import { toast } from "sonner";
 import { api } from "../../utils/api";
 import { unwrap } from "../../utils/exception";
@@ -14,6 +14,16 @@ import { useTranslation } from "../../hooks/useTranslation";
 import { useExchangeRate } from "../../hooks/exchange/useExchangeRate";
 import { formatDate, formatNumber } from "../../utils/format";
 import type { ExchangeRate } from "../../types";
+import {
+  FOREIGN_QUOTE_CURRENCIES,
+  type CurrentExchangeRates,
+  type QuoteRate,
+  findQuoteRate,
+  formatKrwBasisRate,
+  formatRateToKrwForInput,
+  formatRateToKrwLine,
+  parseRateToKrwInput,
+} from "../../utils/exchange";
 
 const fetchedAtOptions: Intl.DateTimeFormatOptions = {
   year: "numeric",
@@ -23,35 +33,70 @@ const fetchedAtOptions: Intl.DateTimeFormatOptions = {
   minute: "2-digit",
 };
 
+const EMPTY_INPUTS: Record<string, string> = { RUB: "", USD: "", CNY: "" };
+const PAGE_SIZE_OPTIONS = [20, 30, 50, 100] as const;
+
+function mergeInputsFromQuotes(
+  prev: Record<string, string>,
+  quotes: QuoteRate[],
+  options: { resetMissing: boolean; onlyCurrency?: string }
+): Record<string, string> {
+  const next = options.resetMissing ? { ...EMPTY_INPUTS } : { ...prev };
+  const currencies = options.onlyCurrency ? [options.onlyCurrency] : FOREIGN_QUOTE_CURRENCIES;
+
+  for (const c of currencies) {
+    const q = findQuoteRate(quotes, c);
+    if (q) {
+      next[c] = formatRateToKrwForInput(q.rateToKrw);
+    } else if (options.resetMissing) {
+      next[c] = "";
+    }
+  }
+  return next;
+}
+
 export default function AdminExchangeRate() {
   const { t, locale } = useTranslation();
   const {
-    getCurrentExchangeRate,
+    getCurrentExchangeRates,
     getExchangeRateHistory,
     triggerExchangeRateFetch,
     setManualExchangeRate,
   } = useExchangeRate();
-  const [currentRate, setCurrentRate] = useState<ExchangeRate | null>(null);
+  const [currentRates, setCurrentRates] = useState<CurrentExchangeRates | null>(null);
   const [history, setHistory] = useState<ExchangeRate[]>([]);
+  const [historyPage, setHistoryPage] = useState(0);
+  const [historySize, setHistorySize] = useState(20);
+  const [historyTotalPages, setHistoryTotalPages] = useState(0);
   const [loading, setLoading] = useState(true);
   const [fetching, setFetching] = useState(false);
-  const [newRate, setNewRate] = useState("");
-  const [isManualDialogOpen, setIsManualDialogOpen] = useState(false);
+  const [savingCurrency, setSavingCurrency] = useState<string | null>(null);
+  const [manualInputs, setManualInputs] = useState<Record<string, string>>({ ...EMPTY_INPUTS });
   const [feeRate, setFeeRate] = useState("12");
+
+  const refreshHistory = async (p = historyPage, s = historySize) => {
+    const historyRes = await getExchangeRateHistory(p, s);
+    setHistory(historyRes.content ?? []);
+    setHistoryTotalPages(historyRes.totalPages ?? 0);
+    setHistoryPage(historyRes.number ?? p);
+  };
 
   const loadData = async () => {
     try {
       setLoading(true);
       const [current, historyRes] = await Promise.all([
-        getCurrentExchangeRate(),
-        getExchangeRateHistory(0, 20),
+        getCurrentExchangeRates(),
+        getExchangeRateHistory(historyPage, historySize),
       ]);
-      setCurrentRate(current);
+      setCurrentRates(current);
       setHistory(historyRes.content ?? []);
+      setHistoryTotalPages(historyRes.totalPages ?? 0);
+      setHistoryPage(historyRes.number ?? 0);
+      setManualInputs((prev) => mergeInputsFromQuotes(prev, current.quotes, { resetMissing: true }));
     } catch (e) {
-      const msg = e instanceof Error ? e.message : t('admin.exchange.toast.loadError');
+      const msg = e instanceof Error ? e.message : t("admin.exchange.toast.loadError");
       toast.error(msg);
-      setCurrentRate(null);
+      setCurrentRates(null);
       setHistory([]);
     } finally {
       setLoading(false);
@@ -62,7 +107,9 @@ export default function AdminExchangeRate() {
     try {
       const res = await api.get<{ key: string; value: string }>("/v1/admin/settings/fee-rate");
       setFeeRate(unwrap(res).value);
-    } catch { /* keep default */ }
+    } catch {
+      /* keep default */
+    }
   };
 
   useEffect(() => {
@@ -70,148 +117,166 @@ export default function AdminExchangeRate() {
     loadFeeRate();
   }, []);
 
-  const fetchExchangeRate = async () => {
+  const fetchRubFromApi = async () => {
     try {
       setFetching(true);
-      await triggerExchangeRateFetch();
-      await loadData();
-      toast.success(t('admin.exchange.toast.refreshSuccess'));
+      const updated = await triggerExchangeRateFetch();
+      setCurrentRates(updated);
+      setManualInputs((prev) =>
+        mergeInputsFromQuotes(prev, updated.quotes, { resetMissing: false, onlyCurrency: "RUB" })
+      );
+      await refreshHistory();
+      toast.success(t("admin.exchange.toast.refreshSuccess"));
     } catch (e) {
-      const msg = e instanceof Error ? e.message : t('admin.exchange.toast.refreshError');
+      const msg = e instanceof Error ? e.message : t("admin.exchange.toast.refreshError");
       toast.error(msg);
     } finally {
       setFetching(false);
     }
   };
 
-  const updateManualRate = async () => {
-    const num = parseFloat(newRate);
-    if (!newRate || isNaN(num) || num <= 0) {
-      toast.error(t('admin.exchange.toast.invalidRate'));
+  const saveManualRate = async (currency: string) => {
+    const rateToKrw = parseRateToKrwInput(manualInputs[currency] ?? "");
+    if (rateToKrw == null) {
+      toast.error(t("admin.exchange.toast.invalidRate"));
       return;
     }
     try {
-      await setManualExchangeRate(num);
-      await loadData();
-      toast.success(t('admin.exchange.toast.manualSuccess'));
-      setIsManualDialogOpen(false);
-      setNewRate("");
+      setSavingCurrency(currency);
+      const updated = await setManualExchangeRate(currency, rateToKrw);
+      setCurrentRates(updated);
+      setManualInputs((prev) =>
+        mergeInputsFromQuotes(prev, updated.quotes, { resetMissing: false, onlyCurrency: currency })
+      );
+      await refreshHistory();
+      toast.success(t("admin.exchange.toast.manualSuccess"));
     } catch (e) {
-      const msg = e instanceof Error ? e.message : t('admin.exchange.toast.manualError');
+      const msg = e instanceof Error ? e.message : t("admin.exchange.toast.manualError");
       toast.error(msg);
+    } finally {
+      setSavingCurrency(null);
     }
   };
 
   const updateFeeRate = async () => {
     try {
       await api.put<{ key: string; value: string }>("/v1/admin/settings/fee-rate", { value: feeRate });
-      toast.success(t('admin.exchange.toast.feeSuccess'));
+      toast.success(t("admin.exchange.toast.feeSuccess"));
     } catch {
       toast.error("수수료율 저장에 실패했습니다");
     }
   };
 
-  if (loading && !currentRate) {
+  if (loading && !currentRates) {
     return (
       <div className="flex items-center justify-center py-12">
-        <p className="text-gray-500">{t('admin.exchange.loading')}</p>
+        <p className="text-gray-500">{t("admin.exchange.loading")}</p>
       </div>
     );
   }
 
+  const latestFetchedAt = currentRates?.fetchedAt;
+
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold text-gray-900">{t('admin.exchange.title')}</h1>
-        <p className="text-gray-600 mt-1">{t('admin.exchange.subtitle')}</p>
+        <h1 className="text-3xl font-bold text-gray-900">{t("admin.exchange.title")}</h1>
+        <p className="text-gray-600 mt-1">{t("admin.exchange.subtitle")}</p>
       </div>
 
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <CardTitle className="flex items-center space-x-2">
                 <TrendingUp className="w-5 h-5 text-blue-600" />
-                <span>{t('admin.exchange.currentTitle')}</span>
+                <span>{t("admin.exchange.quote.title")}</span>
               </CardTitle>
               <CardDescription>
-                {currentRate?.fetchedAt
-                  ? formatDate(currentRate.fetchedAt, locale, fetchedAtOptions) + " " + t('admin.exchange.asOf')
-                  : "—"}
+                {t("admin.exchange.quote.desc")}
+                {latestFetchedAt && (
+                  <span className="block mt-1 text-sm">
+                    {formatDate(latestFetchedAt, locale, fetchedAtOptions)} {t("admin.exchange.asOf")}
+                  </span>
+                )}
               </CardDescription>
             </div>
-            <div className="flex space-x-2">
-              <Button onClick={fetchExchangeRate} disabled={fetching}>
-                <RefreshCw className={`w-4 h-4 mr-2 ${fetching ? "animate-spin" : ""}`} />
-                {t('admin.exchange.apiRefresh')}
-              </Button>
-              <Dialog open={isManualDialogOpen} onOpenChange={setIsManualDialogOpen}>
-                <DialogTrigger asChild>
-                  <Button variant="outline">
-                    <Edit className="w-4 h-4 mr-2" />
-                    {t('admin.exchange.manual')}
-                  </Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>{t('admin.exchange.manualDialog.title')}</DialogTitle>
-                    <DialogDescription>
-                      {t('admin.exchange.manualDialog.desc')}
-                    </DialogDescription>
-                  </DialogHeader>
-                  <div className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="manual-rate">{t('admin.exchange.manualDialog.rateLabel')}</Label>
-                      <Input
-                        id="manual-rate"
-                        type="number"
-                        step="0.01"
-                        placeholder={t('admin.exchange.manualDialog.placeholder')}
-                        value={newRate}
-                        onChange={(e) => setNewRate(e.target.value)}
-                      />
-                    </div>
-                    <div className="flex justify-end space-x-2">
-                      <Button variant="outline" onClick={() => setIsManualDialogOpen(false)}>
-                        {t('common.cancel')}
-                      </Button>
-                      <Button onClick={updateManualRate}>
-                        {t('common.apply')}
-                      </Button>
-                    </div>
-                  </div>
-                </DialogContent>
-              </Dialog>
-            </div>
+            <Button onClick={fetchRubFromApi} disabled={fetching} variant="outline">
+              <RefreshCw className={`w-4 h-4 mr-2 ${fetching ? "animate-spin" : ""}`} />
+              {t("admin.exchange.apiRefresh")} (RUB)
+            </Button>
           </div>
         </CardHeader>
-        <CardContent>
-          {currentRate ? (
-            <div className="flex items-baseline space-x-2">
-              <span className="text-4xl font-bold text-gray-900">
-                1 RUB = {Number(currentRate.rate).toFixed(2)} KRW
-              </span>
-              <Badge variant={currentRate.source === "API" ? "default" : "secondary"}>
-                {currentRate.source === "API" ? t('admin.exchange.sourceApi') : t('admin.exchange.sourceManual')}
-              </Badge>
-            </div>
-          ) : (
-            <p className="text-gray-500">{t('admin.exchange.noRate')}</p>
-          )}
+        <CardContent className="grid gap-4 md:grid-cols-3">
+          {FOREIGN_QUOTE_CURRENCIES.map((currency) => {
+            const quote = currentRates ? findQuoteRate(currentRates.quotes, currency) : undefined;
+            return (
+              <div key={currency} className="rounded-lg border p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="font-semibold text-lg">{currency}</span>
+                  {quote && (
+                    <Badge variant={quote.source === "API" ? "default" : "secondary"}>
+                      {quote.source === "API"
+                        ? t("admin.exchange.sourceApi")
+                        : t("admin.exchange.sourceManual")}
+                    </Badge>
+                  )}
+                </div>
+                {quote ? (
+                  <div className="space-y-1">
+                    <p className="text-2xl font-bold tabular-nums">
+                      {formatRateToKrwLine(currency, quote.rateToKrw)}
+                    </p>
+                    <p className="text-sm text-gray-500 tabular-nums">
+                      {formatKrwBasisRate(currency, quote.rateToKrw, locale)}
+                    </p>
+                  </div>
+                ) : (
+                  <p className="text-gray-500 text-sm">{t("admin.exchange.noRate")}</p>
+                )}
+                <div className="space-y-2">
+                  <Label htmlFor={`manual-${currency}`}>
+                    {t("admin.exchange.quote.rateLabel").replace("{{currency}}", currency)}
+                  </Label>
+                  <div className="flex gap-2">
+                    <Input
+                      id={`manual-${currency}`}
+                      type="number"
+                      step="0.000001"
+                      min="0"
+                      placeholder={t("admin.exchange.quote.placeholder")}
+                      value={manualInputs[currency] ?? ""}
+                      onChange={(e) =>
+                        setManualInputs((prev) => ({ ...prev, [currency]: e.target.value }))
+                      }
+                    />
+                    <span className="self-center text-sm text-gray-500 shrink-0">
+                      {t("admin.exchange.quote.unitKrw")}
+                    </span>
+                  </div>
+                  <Button
+                    className="w-full"
+                    onClick={() => saveManualRate(currency)}
+                    disabled={savingCurrency === currency}
+                  >
+                    {t("admin.exchange.quote.save")}
+                  </Button>
+                </div>
+              </div>
+            );
+          })}
         </CardContent>
       </Card>
 
       <Card>
         <CardHeader>
-          <CardTitle>{t('admin.exchange.feeCard.title')}</CardTitle>
-          <CardDescription>
-            {t('admin.exchange.feeCard.desc')}
-          </CardDescription>
+          <CardTitle>{t("admin.exchange.feeCard.title")}</CardTitle>
+          <CardDescription>{t("admin.exchange.feeCard.desc")}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex items-center space-x-4">
             <div className="flex-1">
-              <Label htmlFor="fee-rate">{t('admin.exchange.feeCard.label')}</Label>
+              <Label htmlFor="fee-rate">{t("admin.exchange.feeCard.label")}</Label>
               <Input
                 id="fee-rate"
                 type="number"
@@ -224,15 +289,18 @@ export default function AdminExchangeRate() {
               />
             </div>
             <Button onClick={updateFeeRate} className="mt-6">
-              {t('common.save')}
+              {t("common.save")}
             </Button>
           </div>
           <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
             <p className="text-sm text-blue-900">
-              <strong>{t('admin.exchange.feeCard.current')}</strong> {feeRate}%
+              <strong>{t("admin.exchange.feeCard.current")}</strong> {feeRate}%
             </p>
             <p className="text-sm text-blue-700 mt-1">
-              {t('admin.exchange.feeCard.example').replace('{{fee}}', formatNumber(100000 * parseFloat(feeRate || "0") / 100, locale))}
+              {t("admin.exchange.feeCard.example").replace(
+                "{{fee}}",
+                formatNumber(100000 * parseFloat(feeRate || "0") / 100, locale)
+              )}
             </p>
           </div>
         </CardContent>
@@ -240,58 +308,83 @@ export default function AdminExchangeRate() {
 
       <Card>
         <CardHeader>
-          <CardTitle>{t('admin.exchange.history.title')}</CardTitle>
-          <CardDescription>
-            {t('admin.exchange.history.desc')}
-          </CardDescription>
+          <CardTitle>{t("admin.exchange.history.title")}</CardTitle>
+          <CardDescription>{t("admin.exchange.history.desc")}</CardDescription>
         </CardHeader>
         <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>{t('admin.exchange.history.rate')}</TableHead>
-                <TableHead>{t('admin.exchange.history.source')}</TableHead>
-                <TableHead>{t('admin.exchange.history.status')}</TableHead>
-                <TableHead>{t('admin.exchange.history.fetchedAt')}</TableHead>
-                <TableHead>{t('admin.exchange.history.createdAt')}</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {history.length === 0 ? (
+          <>
+            <Table>
+              <TableHeader>
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center text-gray-500 py-8">
-                    {t('admin.exchange.historyEmpty')}
-                  </TableCell>
+                  <TableHead>{t("admin.exchange.history.currency")}</TableHead>
+                  <TableHead>{t("admin.exchange.history.rate")}</TableHead>
+                  <TableHead>{t("admin.exchange.history.source")}</TableHead>
+                  <TableHead>{t("admin.exchange.history.status")}</TableHead>
+                  <TableHead>{t("admin.exchange.history.fetchedAt")}</TableHead>
+                  <TableHead>{t("admin.exchange.history.createdAt")}</TableHead>
                 </TableRow>
-              ) : (
-                history.map((rate) => (
-                  <TableRow key={rate.id}>
-                    <TableCell className="font-medium">
-                      1 RUB = {Number(rate.rate).toFixed(2)} KRW
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={rate.source === "API" ? "default" : "secondary"}>
-                        {rate.source === "API" ? t('admin.exchange.badgeApi') : t('admin.exchange.badgeManual')}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      {rate.isCurrent ? (
-                        <Badge variant="default">{t('admin.exchange.statusCurrent')}</Badge>
-                      ) : (
-                        <Badge variant="outline">{t('admin.exchange.statusPrevious')}</Badge>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-sm text-gray-500">
-                      {rate.fetchedAt ? formatDate(rate.fetchedAt, locale, fetchedAtOptions) : "—"}
-                    </TableCell>
-                    <TableCell className="text-sm text-gray-500">
-                      {rate.createdAt ? formatDate(rate.createdAt, locale) : "—"}
+              </TableHeader>
+              <TableBody>
+                {history.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-center text-gray-500 py-8">
+                      {t("admin.exchange.historyEmpty")}
                     </TableCell>
                   </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
+                ) : (
+                  history.map((rate) => (
+                    <TableRow key={rate.id}>
+                      <TableCell className="font-medium">{rate.baseCurrency}</TableCell>
+                      <TableCell>
+                        {formatRateToKrwLine(rate.baseCurrency, Number(rate.rate))}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={rate.source === "API" ? "default" : "secondary"}>
+                          {rate.source === "API"
+                            ? t("admin.exchange.badgeApi")
+                            : t("admin.exchange.badgeManual")}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        {rate.isCurrent ? (
+                          <Badge variant="default">{t("admin.exchange.statusCurrent")}</Badge>
+                        ) : (
+                          <Badge variant="outline">{t("admin.exchange.statusPrevious")}</Badge>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-sm text-gray-500">
+                        {rate.fetchedAt ? formatDate(rate.fetchedAt, locale, fetchedAtOptions) : "—"}
+                      </TableCell>
+                      <TableCell className="text-sm text-gray-500">
+                        {rate.createdAt ? formatDate(rate.createdAt, locale) : "—"}
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+            <div className="flex items-center justify-between p-4 border-t flex-wrap gap-2">
+              <div className="flex items-center gap-2 text-sm text-gray-500">
+                <span>페이지당</span>
+                <Select
+                  value={String(historySize)}
+                  onValueChange={(v) => { const s = Number(v); setHistorySize(s); setHistoryPage(0); void refreshHistory(0, s); }}
+                >
+                  <SelectTrigger className="w-[80px] h-8 text-xs"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {PAGE_SIZE_OPTIONS.map((s) => (
+                      <SelectItem key={s} value={String(s)}>{s}건</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button variant="outline" size="sm" disabled={historyPage <= 0} onClick={() => { void refreshHistory(historyPage - 1, historySize); }}>이전</Button>
+                <span className="text-sm text-gray-500">{historyPage + 1} / {Math.max(1, historyTotalPages)}</span>
+                <Button variant="outline" size="sm" disabled={historyPage >= historyTotalPages - 1} onClick={() => { void refreshHistory(historyPage + 1, historySize); }}>다음</Button>
+              </div>
+            </div>
+          </>
         </CardContent>
       </Card>
     </div>

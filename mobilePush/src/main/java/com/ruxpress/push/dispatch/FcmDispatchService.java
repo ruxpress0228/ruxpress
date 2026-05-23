@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.firebase.FirebaseApp;
 import com.google.firebase.messaging.AndroidConfig;
+import com.google.firebase.messaging.AndroidNotification;
 import com.google.firebase.messaging.FirebaseMessaging;
 import com.google.firebase.messaging.FirebaseMessagingException;
 import com.google.firebase.messaging.Message;
@@ -22,6 +23,9 @@ import java.util.Map;
 @RequiredArgsConstructor
 @Slf4j
 public class FcmDispatchService {
+
+    /** Android 앱 [RuxpressFcmService] notification channel id 와 동일 */
+    private static final String ANDROID_CHANNEL_ID = "ruxpress_default";
 
     private final PushFcmProperties fcmProperties;
     private final ObjectMapper objectMapper;
@@ -44,11 +48,11 @@ public class FcmDispatchService {
             Message.Builder builder = Message.builder()
                     .setToken(deviceToken)
                     .setNotification(Notification.builder().setTitle(title).setBody(body).build())
-                    .setAndroidConfig(buildAndroidConfig());
-            Map<String, String> data = toDataMap(dataJson);
-            if (!data.isEmpty()) {
-                builder.putAllData(data);
-            }
+                    .setAndroidConfig(buildAndroidConfig(title, body));
+            Map<String, String> data = new HashMap<>(toDataMap(dataJson));
+            data.put("title", title != null ? title : "");
+            data.put("body", body != null ? body : "");
+            builder.putAllData(data);
             String id = FirebaseMessaging.getInstance(app).send(builder.build());
             log.info("FCM sent ok messageId={} title={} tokenPrefix={}", id, title, prefix(deviceToken));
             return id;
@@ -62,9 +66,14 @@ public class FcmDispatchService {
         }
     }
 
-    private AndroidConfig buildAndroidConfig() {
+    private AndroidConfig buildAndroidConfig(String title, String body) {
         AndroidConfig.Builder android = AndroidConfig.builder()
-                .setPriority(AndroidConfig.Priority.HIGH);
+                .setPriority(AndroidConfig.Priority.HIGH)
+                .setNotification(AndroidNotification.builder()
+                        .setChannelId(ANDROID_CHANNEL_ID)
+                        .setTitle(title)
+                        .setBody(body)
+                        .build());
         if (StringUtils.hasText(fcmProperties.getAndroidPackageName())) {
             android.setRestrictedPackageName(fcmProperties.getAndroidPackageName().trim());
         }

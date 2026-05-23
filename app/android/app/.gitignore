@@ -2,3 +2,4 @@
 
 # Firebase 설정 파일 (API 키 포함 - 커밋 금지)
 google-services.json
+firebase-admin.json

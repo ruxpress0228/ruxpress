@@ -9,6 +9,7 @@ export const STORAGE_KEYS = {
   USER_ID: 'ruxpress_user_id',
   USER_EMAIL: 'ruxpress_user_email',
   USER_NICKNAME: 'ruxpress_user_nickname',
+  REMEMBER_ME: 'ruxpress_remember_me',
 } as const;
 
 /** UserLayout 등에서 로그인/로그아웃 후 헤더를 다시 그리기 위해 사용 */

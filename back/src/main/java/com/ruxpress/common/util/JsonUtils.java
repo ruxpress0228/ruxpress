@@ -44,4 +44,13 @@ public class JsonUtils {
             return null;
         }
     }
+
+    public <T> List<T> parseList(String json, TypeReference<List<T>> typeReference) {
+        if (json == null || json.isBlank()) return Collections.emptyList();
+        try {
+            return objectMapper.readValue(json, typeReference);
+        } catch (JsonProcessingException e) {
+            return Collections.emptyList();
+        }
+    }
 }

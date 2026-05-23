@@ -20,6 +20,7 @@ import org.springframework.stereotype.Component;
 public class ChatAuthChannelInterceptor implements ChannelInterceptor {
 
     private final JwtUtil jwtUtil;
+    private final JwtTokenProvider jwtTokenProvider;
 
     @Override
     public Message<?> preSend(Message<?> message, MessageChannel channel) {
@@ -35,11 +36,17 @@ public class ChatAuthChannelInterceptor implements ChannelInterceptor {
 
         String token = auth.substring(7).trim();
         try {
+            if (jwtTokenProvider.validateToken(token)) {
+                String role = jwtTokenProvider.getRole(token);
+                if (role != null) {
+                    Long adminId = jwtTokenProvider.getAdminId(token);
+                    accessor.setUser(new ChatPrincipal(adminId, SenderType.ADMIN));
+                    return message;
+                }
+            }
             Claims claims = jwtUtil.parseToken(token);
-            String role = claims.get("role", String.class);
-            Long id = Long.parseLong(claims.getSubject());
-            SenderType senderType = (role != null) ? SenderType.ADMIN : SenderType.USER;
-            accessor.setUser(new ChatPrincipal(id, senderType));
+            Long userId = Long.parseLong(claims.getSubject());
+            accessor.setUser(new ChatPrincipal(userId, SenderType.USER));
         } catch (Exception e) {
             log.warn("WebSocket JWT auth failed: {}", e.getMessage());
             throw new MessagingException("Invalid JWT token");

@@ -45,6 +45,10 @@ public class Attachment {
     @Column(name = "sort_order", nullable = false)
     private int sortOrder = 0;
 
+    /** 관리자가 업로드한 첨부면 true. 사용자 업로드면 null/false. */
+    @Column(name = "uploaded_by_admin")
+    private Boolean uploadedByAdmin;
+
     @CreatedDate
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -60,5 +64,16 @@ public class Attachment {
         attachment.mimeType = mimeType;
         attachment.sortOrder = sortOrder;
         return attachment;
+    }
+
+    public static Attachment createByAdmin(AttachmentRefType refType, Long refId, String originalFilename,
+                                           String storedUrl, int fileSize, String mimeType, int sortOrder) {
+        Attachment attachment = create(refType, refId, originalFilename, storedUrl, fileSize, mimeType, sortOrder);
+        attachment.uploadedByAdmin = Boolean.TRUE;
+        return attachment;
+    }
+
+    public boolean isUploadedByAdmin() {
+        return Boolean.TRUE.equals(this.uploadedByAdmin);
     }
 }

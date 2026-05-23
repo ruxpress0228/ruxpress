@@ -5,15 +5,42 @@ export function notifyUserAuthChange(): void {
   window.dispatchEvent(new Event(USER_AUTH_CHANGE_EVENT));
 }
 
+/** writeAuthValue 와 동일: sessionStorage 에 TOKEN 이 있으면 세션 우선, 아니면 localStorage. */
+export function readAuthValue(key: string): string | null {
+  if (sessionStorage.getItem(STORAGE_KEYS.TOKEN)) {
+    return sessionStorage.getItem(key);
+  }
+  return localStorage.getItem(key);
+}
+
+/**
+ * 현재 토큰이 저장된 스토리지(sessionStorage 우선, 없으면 localStorage)에 값을 저장한다.
+ * 자동로그인 미체크 사용자는 sessionStorage에, 체크 사용자는 localStorage에 쓴다.
+ */
+export function writeAuthValue(key: string, value: string): void {
+  if (sessionStorage.getItem(STORAGE_KEYS.TOKEN)) {
+    sessionStorage.setItem(key, value);
+  } else {
+    localStorage.setItem(key, value);
+  }
+}
+
+/** 양쪽 스토리지에서 모두 제거 (어느 쪽에 있든 일관되게 정리). */
+function removeAuthValue(key: string): void {
+  localStorage.removeItem(key);
+  sessionStorage.removeItem(key);
+}
+
 /** 일반 회원 로그인 세션 제거 (관리자와 동일 STORAGE_KEYS.TOKEN 사용 시 주의) */
 export function clearUserSession(): void {
   if (typeof window !== 'undefined') {
     window.Android?.clearAuthToken?.();
   }
-  localStorage.removeItem(STORAGE_KEYS.TOKEN);
-  localStorage.removeItem(STORAGE_KEYS.USER_ID);
-  localStorage.removeItem(STORAGE_KEYS.USER_EMAIL);
-  localStorage.removeItem(STORAGE_KEYS.USER_NICKNAME);
+  removeAuthValue(STORAGE_KEYS.TOKEN);
+  removeAuthValue(STORAGE_KEYS.USER_ID);
+  removeAuthValue(STORAGE_KEYS.USER_EMAIL);
+  removeAuthValue(STORAGE_KEYS.USER_NICKNAME);
+  removeAuthValue(STORAGE_KEYS.REMEMBER_ME);
   notifyUserAuthChange();
 }
 
@@ -22,7 +49,7 @@ function getHeaders(): Record<string, string> {
     'Content-Type': 'application/json',
   };
 
-  const token = localStorage.getItem(STORAGE_KEYS.TOKEN);
+  const token = readAuthValue(STORAGE_KEYS.TOKEN);
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;
   }
@@ -32,23 +59,41 @@ function getHeaders(): Record<string, string> {
     headers['Accept-Language'] = locale;
   }
 
-  const userId = localStorage.getItem(STORAGE_KEYS.USER_ID);
-  if (userId) {
-    headers['X-User-Id'] = userId;
-  }
-
   return headers;
 }
 
 function getHeadersForUpload(): Record<string, string> {
   const headers: Record<string, string> = {};
-  const token = localStorage.getItem(STORAGE_KEYS.TOKEN);
+  const token = readAuthValue(STORAGE_KEYS.TOKEN);
   if (token) headers['Authorization'] = `Bearer ${token}`;
   const locale = localStorage.getItem(STORAGE_KEYS.LOCALE);
   if (locale) headers['Accept-Language'] = locale;
-  const userId = localStorage.getItem(STORAGE_KEYS.USER_ID);
-  if (userId) headers['X-User-Id'] = userId;
   return headers;
+}
+
+function isAuthPath(path: string): boolean {
+  // 로그인/회원가입/비번 재설정 등은 401 이 정상 응답일 수 있어 자동 로그아웃에서 제외.
+  return (
+    path.startsWith('/v1/users/login') ||
+    path.startsWith('/v1/users/signup') ||
+    path.startsWith('/v1/users/password/') ||
+    path.startsWith('/v1/users/email/') ||
+    path.startsWith('/v1/admin/auth/')
+  );
+}
+
+function handleUnauthorizedIfNeeded(path: string, payload: ApiResponse<unknown>): void {
+  if (payload?.code !== 401) return;
+  if (isAuthPath(path)) return;
+  if (typeof window === 'undefined') return;
+  if (!readAuthValue(STORAGE_KEYS.TOKEN)) return;
+
+  clearUserSession();
+  const isAdminPath = window.location.pathname.startsWith('/admin');
+  const target = isAdminPath ? '/admin/login' : '/login';
+  if (window.location.pathname !== target) {
+    window.location.href = target;
+  }
 }
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<ApiResponse<T>> {
@@ -60,7 +105,9 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<ApiR
     },
   });
 
-  return response.json();
+  const json = (await response.json()) as ApiResponse<T>;
+  handleUnauthorizedIfNeeded(path, json);
+  return json;
 }
 
 function toFormDataWithJsonAndFiles(
@@ -146,7 +193,12 @@ export const api = {
       method: 'POST',
       body: formData,
       headers: getHeadersForUpload(),
-    }).then((res) => res.json());
+    })
+      .then((res) => res.json() as Promise<ApiResponse<T>>)
+      .then((json) => {
+        handleUnauthorizedIfNeeded(path, json);
+        return json;
+      });
   },
 
   async downloadAttachment(attachmentId: number, filename: string): Promise<void> {

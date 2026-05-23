@@ -24,6 +24,19 @@ export interface User {
   updatedAt: string;
 }
 
+export interface UserAddress {
+  id: number;
+  label?: string;
+  recipientName?: string;
+  recipientPhone?: string;
+  postalCode?: string;
+  addressLine1: string;
+  addressLine2?: string;
+  isDefault: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface NotificationSettings {
   push: {
     inquiryReply: boolean;
@@ -45,23 +58,18 @@ export interface NotificationSettings {
   };
 }
 
-export type PurchaseRequestStatus = 
-  | 'DRAFT' 
-  | 'SUBMITTED' 
-  | 'REVIEWING' 
-  | 'CONFIRMED' 
-  | 'PURCHASING' 
-  | 'PURCHASED' 
-  | 'SHIPPING' 
-  | 'DELIVERED' 
-  | 'CANCELLED' 
-  | 'REFUNDED';
+export type PurchaseRequestStatus =
+  | 'REQUESTED'
+  | 'PURCHASING'
+  | 'SHIPPING'
+  | 'COMPLETED'
+  | 'CANCELLED';
 
 export interface PurchaseRequest {
   id: number;
   userId: number;
   requestNumber: string;
-  productName: string;
+  requestName: string;
   quantity: number;
   urls?: Array<{ url: string; shop: string }>;
   options?: Array<{ name: string; value: string }>;
@@ -188,4 +196,28 @@ export interface SystemSetting {
   updatedBy?: number;
   createdAt: string;
   updatedAt: string;
+}
+
+export type AdminNotificationType =
+  | 'NEW_PURCHASE_REQUEST'
+  | 'NEW_DEPOSIT_REPORT'
+  | 'NEW_INQUIRY'
+  | 'NEW_CHAT_MESSAGE';
+
+export interface AdminNotification {
+  id: number;
+  type: AdminNotificationType;
+  title: string;
+  body: string;
+  dataJson?: string;
+  linkUrl?: string;
+  isRead: boolean;
+  readAt?: string;
+  createdAt: string;
+}
+
+export interface AdminNotificationSummary {
+  unreadCount: number;
+  totalElements: number;
+  items: AdminNotification[];
 }

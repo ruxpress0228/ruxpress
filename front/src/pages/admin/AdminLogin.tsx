@@ -3,9 +3,10 @@ import { useNavigate } from "react-router";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import { Label } from "../../components/ui/label";
+import { Checkbox } from "../../components/ui/checkbox";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../components/ui/card";
 import { toast } from "sonner";
-import { api } from "../../utils/api";
+import { api, notifyUserAuthChange } from "../../utils/api";
 import { unwrap } from "../../utils/exception";
 import { STORAGE_KEYS } from "../../utils/constants";
 
@@ -21,6 +22,7 @@ export default function AdminLogin() {
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [rememberMe, setRememberMe] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -29,13 +31,26 @@ export default function AdminLogin() {
     try {
       const res = await api.post<LoginResponse>("/v1/admin/auth/login", { email, password });
       const data = unwrap(res);
-      localStorage.setItem(STORAGE_KEYS.TOKEN, data.token);
-      localStorage.setItem("ruxpress_admin", JSON.stringify({
+      // 자동로그인 체크 시 localStorage, 미체크 시 sessionStorage.
+      const storage: Storage = rememberMe ? localStorage : sessionStorage;
+      localStorage.removeItem(STORAGE_KEYS.TOKEN);
+      sessionStorage.removeItem(STORAGE_KEYS.TOKEN);
+      localStorage.removeItem("ruxpress_admin");
+      sessionStorage.removeItem("ruxpress_admin");
+
+      storage.setItem(STORAGE_KEYS.TOKEN, data.token);
+      storage.setItem("ruxpress_admin", JSON.stringify({
         id: data.adminId,
         email: data.email,
         name: data.name,
         role: data.role,
       }));
+      if (rememberMe) {
+        localStorage.setItem(STORAGE_KEYS.REMEMBER_ME, "1");
+      } else {
+        localStorage.removeItem(STORAGE_KEYS.REMEMBER_ME);
+      }
+      notifyUserAuthChange();
       toast.success(`${data.name}님, 환영합니다`);
       navigate("/admin");
     } catch {
@@ -84,6 +99,16 @@ export default function AdminLogin() {
                 required
                 disabled={loading}
               />
+            </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="admin-remember-me"
+                checked={rememberMe}
+                onCheckedChange={(v) => setRememberMe(v === true)}
+              />
+              <Label htmlFor="admin-remember-me" className="text-sm font-normal cursor-pointer">
+                자동 로그인 (다음 접속 시 로그인 유지)
+              </Label>
             </div>
             <Button type="submit" className="w-full" size="lg" disabled={loading}>
               {loading ? "로그인 중..." : "로그인"}

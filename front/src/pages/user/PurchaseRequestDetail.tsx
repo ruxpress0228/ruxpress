@@ -1,26 +1,78 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router";
-import { ArrowLeft, X, Download, ChevronLeft, ChevronRight } from "lucide-react";
+import { ArrowLeft, X, Download, ChevronLeft, ChevronRight, MessageSquare, ExternalLink } from "lucide-react";
 import { Button } from "../../components/ui/button";
 import { Badge } from "../../components/ui/badge";
+import { cn } from "../../components/ui/utils";
+import { purchaseStatusBadgeClass } from "../../utils/purchaseStatusStyle";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card";
 import { Separator } from "../../components/ui/separator";
 import { usePurchase } from "../../hooks/purchase/usePurchase";
 import type { PurchaseRequestStatus } from "../../types";
-import type { PurchaseAttachment, PurchaseRequestDetail as PurchaseRequestDetailType } from "../../types/purchase";
+import type { PurchaseAttachment, PurchaseRequestDetail as PurchaseRequestDetailType, PurchaseShipping } from "../../types/purchase";
 
-const statusLabels: Record<PurchaseRequestStatus, { label: string; variant: "default" | "secondary" | "outline" | "destructive" }> = {
-  DRAFT: { label: "작성중", variant: "outline" },
-  SUBMITTED: { label: "제출됨", variant: "secondary" },
-  REVIEWING: { label: "검토중", variant: "secondary" },
-  CONFIRMED: { label: "확정", variant: "default" },
-  PURCHASING: { label: "구매중", variant: "default" },
-  PURCHASED: { label: "구매완료", variant: "default" },
-  SHIPPING: { label: "배송중", variant: "default" },
-  DELIVERED: { label: "배송완료", variant: "default" },
-  CANCELLED: { label: "취소됨", variant: "destructive" },
-  REFUNDED: { label: "환불됨", variant: "destructive" },
+function hasShippingSnapshot(s?: PurchaseShipping | null): boolean {
+  if (!s) return false;
+  return Boolean(s.addressLine1 || s.recipientName);
+}
+
+const statusLabels: Record<PurchaseRequestStatus, { label: string }> = {
+  REQUESTED: { label: "요청접수" },
+  PURCHASING: { label: "구매진행중" },
+  SHIPPING: { label: "배송중" },
+  COMPLETED: { label: "완료" },
+  CANCELLED: { label: "취소" },
 };
+
+function optionRecordEntries(opt: unknown): [string, string][] {
+  if (opt == null || typeof opt !== "object" || Array.isArray(opt)) return [];
+  return Object.entries(opt as Record<string, unknown>)
+    .filter(([, v]) => v != null && String(v) !== "")
+    .map(([k, v]) => [k, String(v)]);
+}
+
+function ProductUrlBlock({ shop, url }: { shop?: string | null; url: string }) {
+  return (
+    <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+      <div className="min-w-0 flex-1 space-y-1">
+        {shop ? (
+          <p className="text-xs font-medium text-gray-500">
+            쇼핑몰 <span className="text-gray-800">{shop}</span>
+          </p>
+        ) : null}
+        <p className="text-sm text-gray-900 break-all font-mono leading-relaxed">{url}</p>
+      </div>
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        className="shrink-0 self-start gap-1.5"
+        onClick={() => window.open(url, "_blank", "noopener,noreferrer")}
+      >
+        <ExternalLink className="h-4 w-4" aria-hidden />
+        새 창에서 열기
+      </Button>
+    </div>
+  );
+}
+
+function OptionAttributesReadonlyList({ entries }: { entries: [string, string][] }) {
+  if (entries.length === 0) return null;
+  return (
+    <ul className="mt-1 space-y-0.5 text-sm leading-relaxed text-gray-800">
+      {entries.map(([name, value], i) => (
+        <li key={`${name}-${i}`} className="pl-0.5">
+          <span className="text-gray-400 select-none" aria-hidden>
+            -{" "}
+          </span>
+          <span className="text-gray-600">{name}</span>
+          <span className="text-gray-400">: </span>
+          <span className="text-gray-900">{value}</span>
+        </li>
+      ))}
+    </ul>
+  );
+}
 
 function ImageLightbox({
   images,
@@ -171,27 +223,37 @@ export default function PurchaseRequestDetail() {
   }
 
   const statusInfo = statusLabels[data.status];
-  const optionsEntries = data.options && typeof data.options === "object" ? Object.entries(data.options) : [];
+  const legacyOptionsEntries = optionRecordEntries(data.options);
 
   const imageAttachments = (data.attachments ?? []).filter((a) => a.mimeType.startsWith("image/"));
+  const userAttachments = imageAttachments.filter((a) => !a.uploadedByAdmin);
+  const adminAttachments = imageAttachments.filter((a) => a.uploadedByAdmin);
 
   return (
     <div className="max-w-4xl mx-auto">
-      <Button variant="ghost" className="mb-6" onClick={() => navigate("/purchase")}>
-        <ArrowLeft className="w-4 h-4 mr-2" />
-        목록으로
-      </Button>
+      <div className="flex items-center justify-between mb-6">
+        <Button variant="ghost" onClick={() => navigate("/purchase")}>
+          <ArrowLeft className="w-4 h-4 mr-2" />
+          목록으로
+        </Button>
+        <Button variant="outline" onClick={() => navigate("/chat")}>
+          <MessageSquare className="w-4 h-4 mr-2" />
+          채팅으로 문의
+        </Button>
+      </div>
 
       <Card className="mb-6">
         <CardHeader className="pb-3">
           <div className="flex items-start justify-between gap-4">
             <div className="min-w-0">
-              <CardTitle className="text-2xl">{data.productName}</CardTitle>
+              <CardTitle className="text-2xl">{data.requestName}</CardTitle>
               <p className="text-sm text-gray-500 mt-1 break-words">
                 요청번호: {data.requestNumber}
               </p>
             </div>
-            <Badge variant={statusInfo.variant}>{statusInfo.label}</Badge>
+            <Badge variant="outline" className={cn("border-transparent font-semibold", purchaseStatusBadgeClass(data.status))}>
+              {statusInfo.label}
+            </Badge>
           </div>
         </CardHeader>
 
@@ -222,37 +284,82 @@ export default function PurchaseRequestDetail() {
           <Separator />
 
           <div className="space-y-2">
-            <p className="font-semibold">상품 URL</p>
-            {data.urls && data.urls.length > 0 ? (
-              <ul className="space-y-1">
+            <p className="font-semibold">상품 항목</p>
+            {data.items && data.items.length > 0 ? (
+              <ul className="space-y-2">
+                {data.items.map((it, idx) => {
+                  const itemOptions = optionRecordEntries(it.options);
+                  return (
+                    <li key={`${it.url}-${idx}`} className="border rounded-lg p-3 sm:p-4 space-y-2">
+                      <ProductUrlBlock shop={it.shop} url={it.url} />
+                      <div className="text-sm text-gray-700 pt-1 border-t border-gray-100">
+                        단가 ₩{(it.priceKrw ?? 0).toLocaleString()} × {it.quantity ?? 0}개 =
+                        <span className="font-semibold ml-1">
+                          ₩{((it.priceKrw ?? 0) * (it.quantity ?? 0)).toLocaleString()}
+                        </span>
+                      </div>
+                      {itemOptions.length > 0 ? (
+                        <div className="pt-2 border-t border-gray-50">
+                          <p className="text-sm font-medium text-gray-600 mb-1">옵션</p>
+                          <OptionAttributesReadonlyList entries={itemOptions} />
+                        </div>
+                      ) : null}
+                    </li>
+                  );
+                })}
+              </ul>
+            ) : data.urls && data.urls.length > 0 ? (
+              <ul className="space-y-3">
                 {data.urls.map((u, idx) => (
-                  <li key={`${u}-${idx}`}>
-                    <a className="text-blue-600 underline break-all" href={u} target="_blank" rel="noreferrer">
-                      {u}
-                    </a>
+                  <li key={`${u}-${idx}`} className="border rounded-lg p-3">
+                    <ProductUrlBlock url={u} />
                   </li>
                 ))}
               </ul>
             ) : (
-              <p className="text-sm text-gray-500">등록된 URL이 없습니다.</p>
+              <p className="text-sm text-gray-500">등록된 상품 항목이 없습니다.</p>
             )}
           </div>
 
-          <div className="space-y-2">
-            <p className="font-semibold">옵션</p>
-            {optionsEntries.length > 0 ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                {optionsEntries.map(([k, v]) => (
-                  <div key={k} className="flex items-center justify-between rounded border p-3">
-                    <span className="text-sm text-gray-600">{k}</span>
-                    <span className="text-sm font-medium text-gray-900 truncate ml-2">{String(v)}</span>
+          {legacyOptionsEntries.length > 0 && (
+            <div className="space-y-1">
+              <p className="text-sm font-medium text-gray-600">공통 옵션</p>
+              <OptionAttributesReadonlyList entries={legacyOptionsEntries} />
+            </div>
+          )}
+
+          {(hasShippingSnapshot(data.shipping) && data.shipping) || data.trackingNumber ? (
+            <div id="purchase-shipping" className="scroll-mt-28 space-y-4">
+              {hasShippingSnapshot(data.shipping) && data.shipping && (
+                <div className="space-y-2">
+                  <p className="font-semibold">배송지</p>
+                  <div className="rounded-lg border border-gray-200 bg-gray-50/80 p-3 text-sm text-gray-800 space-y-1">
+                    {data.shipping.label ? <p className="font-medium text-gray-900">{data.shipping.label}</p> : null}
+                    {(data.shipping.recipientName || data.shipping.recipientPhone) && (
+                      <p>
+                        {data.shipping.recipientName ?? ""}
+                        {data.shipping.recipientPhone ? (
+                          <span className="text-gray-600"> · {data.shipping.recipientPhone}</span>
+                        ) : null}
+                      </p>
+                    )}
+                    <p className="break-words leading-relaxed">
+                      {data.shipping.postalCode ? <span className="mr-1">({data.shipping.postalCode})</span> : null}
+                      {data.shipping.addressLine1}
+                      {data.shipping.addressLine2 ? ` ${data.shipping.addressLine2}` : ""}
+                    </p>
                   </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-sm text-gray-500">등록된 옵션이 없습니다.</p>
-            )}
-          </div>
+                </div>
+              )}
+
+              {data.trackingNumber && (
+                <div className="space-y-1">
+                  <p className="font-semibold">운송장번호</p>
+                  <p className="text-sm font-mono text-gray-900">{data.trackingNumber}</p>
+                </div>
+              )}
+            </div>
+          ) : null}
 
           {data.memo && (
             <div className="space-y-2">
@@ -261,24 +368,52 @@ export default function PurchaseRequestDetail() {
             </div>
           )}
 
-          {imageAttachments.length > 0 && (
+          {userAttachments.length > 0 && (
             <div className="pt-4 border-t border-gray-200">
-              <p className="text-sm font-medium text-gray-700 mb-3">첨부 이미지</p>
+              <p className="text-sm font-medium text-gray-700 mb-3">내가 등록한 사진</p>
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-                {imageAttachments.map((att, idx) => (
-                  <div
-                    key={att.id}
-                    className="relative group cursor-pointer rounded overflow-hidden border"
-                    onClick={() => setLightboxIndex(idx)}
-                  >
-                    <img
-                      src={att.thumbnailUrl ?? att.viewUrl ?? att.storedUrl}
-                      alt={att.originalFilename}
-                      className="h-28 w-full object-cover group-hover:opacity-90 transition-opacity"
-                    />
-                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors" />
-                  </div>
-                ))}
+                {userAttachments.map((att) => {
+                  const idx = imageAttachments.findIndex((a) => a.id === att.id);
+                  return (
+                    <div
+                      key={att.id}
+                      className="relative group cursor-pointer rounded overflow-hidden border"
+                      onClick={() => setLightboxIndex(idx)}
+                    >
+                      <img
+                        src={att.thumbnailUrl ?? att.viewUrl ?? att.storedUrl}
+                        alt={att.originalFilename}
+                        className="h-28 w-full object-cover group-hover:opacity-90 transition-opacity"
+                      />
+                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors" />
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {adminAttachments.length > 0 && (
+            <div className="pt-4 border-t border-gray-200">
+              <p className="text-sm font-medium text-gray-700 mb-3">관리자가 등록한 사진 (배송/수령 등)</p>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                {adminAttachments.map((att) => {
+                  const idx = imageAttachments.findIndex((a) => a.id === att.id);
+                  return (
+                    <div
+                      key={att.id}
+                      className="relative group cursor-pointer rounded overflow-hidden border"
+                      onClick={() => setLightboxIndex(idx)}
+                    >
+                      <img
+                        src={att.thumbnailUrl ?? att.viewUrl ?? att.storedUrl}
+                        alt={att.originalFilename}
+                        className="h-28 w-full object-cover group-hover:opacity-90 transition-opacity"
+                      />
+                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors" />
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}

@@ -5,6 +5,7 @@ import com.ruxpress.common.exception.ErrorCode;
 import com.ruxpress.domain.banktransfer.dto.request.AdminMemoRequest;
 import com.ruxpress.domain.banktransfer.dto.request.DepositReportRequest;
 import com.ruxpress.domain.banktransfer.dto.request.SettlementOrRefundRequest;
+import com.ruxpress.domain.banktransfer.dto.response.SettlementAccountResponse;
 import com.ruxpress.domain.banktransfer.dto.response.TransferLedgerEntryResponse;
 import com.ruxpress.domain.banktransfer.entity.SettlementAccount;
 import com.ruxpress.domain.banktransfer.entity.TransferLedgerEntry;
@@ -12,6 +13,7 @@ import com.ruxpress.domain.banktransfer.entity.TransferLedgerEntryType;
 import com.ruxpress.domain.banktransfer.entity.TransferLedgerStatus;
 import com.ruxpress.domain.banktransfer.repository.SettlementAccountRepository;
 import com.ruxpress.domain.banktransfer.repository.TransferLedgerEntryRepository;
+import com.ruxpress.domain.adminnotification.service.AdminNotificationService;
 import com.ruxpress.domain.balance.service.BalanceService;
 import com.ruxpress.domain.notification.service.NotificationService;
 import com.ruxpress.domain.user.entity.SignupType;
@@ -26,6 +28,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -44,6 +47,9 @@ class BankTransferServiceTest {
 
     @Mock
     private NotificationService notificationService;
+
+    @Mock
+    private AdminNotificationService adminNotificationService;
 
     @Mock
     private UserRepository userRepository;
@@ -66,6 +72,18 @@ class BankTransferServiceTest {
         ReflectionTestUtils.setField(user1, "id", 1L);
         user2 = User.create("user2@test.com", "유저2", SignupType.EMAIL);
         ReflectionTestUtils.setField(user2, "id", 2L);
+    }
+
+    @Test
+    void listActiveSettlementAccountsForUser_returnsUnmaskedAccountNumber() {
+        when(settlementAccountRepository.findByActiveTrueAndDeletedAtIsNullOrderByIdAsc())
+                .thenReturn(List.of(settlementAccount));
+
+        List<SettlementAccountResponse> result = bankTransferService.listActiveSettlementAccountsForUser();
+
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).getAccountNumber()).isEqualTo("1234567890");
+        assertThat(result.get(0).getAccountNumber()).doesNotContain("*");
     }
 
     @Test

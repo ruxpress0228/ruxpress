@@ -21,9 +21,14 @@ const statusLabels: Record<NoticeStatus, { label: string; variant: "default" | "
   HIDDEN: { label: "숨김", variant: "destructive" },
 };
 
+const PAGE_SIZE_OPTIONS = [20, 30, 50, 100] as const;
+
 export default function AdminNotices() {
   const [notices, setNotices] = useState<Notice[]>([]);
   const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(0);
+  const [size, setSize] = useState(20);
+  const [totalPages, setTotalPages] = useState(0);
   const [formOpen, setFormOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<Notice | null>(null);
   const [formTitle, setFormTitle] = useState("");
@@ -33,15 +38,19 @@ export default function AdminNotices() {
   const [formScheduledAt, setFormScheduledAt] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
-  const loadList = useCallback(() => {
+  const loadList = useCallback((p: number, s: number) => {
     setLoading(true);
-    api.get<PageResponse<Notice>>("/v1/admin/notices?page=0&size=100")
-      .then((res) => setNotices(unwrap(res).content))
+    api.get<PageResponse<Notice>>(`/v1/admin/notices?page=${p}&size=${s}`)
+      .then((res) => {
+        const data = unwrap(res);
+        setNotices(data.content);
+        setTotalPages(data.totalPages);
+      })
       .catch(() => { toast.error("공지사항을 불러오지 못했습니다"); setNotices([]); })
       .finally(() => setLoading(false));
   }, []);
 
-  useEffect(() => { loadList(); }, [loadList]);
+  useEffect(() => { loadList(page, size); }, [page, size, loadList]);
 
   const openCreate = () => {
     setEditTarget(null);
@@ -77,7 +86,7 @@ export default function AdminNotices() {
         toast.success("공지사항이 등록되었습니다");
       }
       setFormOpen(false);
-      loadList();
+      loadList(page, size);
     } catch { toast.error("저장에 실패했습니다"); }
     finally { setSubmitting(false); }
   };
@@ -86,14 +95,14 @@ export default function AdminNotices() {
     try {
       await api.delete<void>(`/v1/admin/notices/${id}`);
       toast.success("삭제되었습니다");
-      loadList();
+      loadList(page, size);
     } catch { toast.error("삭제에 실패했습니다"); }
   };
 
   const togglePin = async (id: number) => {
     try {
       await api.patch<Notice>(`/v1/admin/notices/${id}/pin`, {});
-      loadList();
+      loadList(page, size);
     } catch { toast.error("고정 변경에 실패했습니다"); }
   };
 
@@ -112,6 +121,7 @@ export default function AdminNotices() {
           {loading ? (
             <div className="py-12 text-center text-gray-500">불러오는 중...</div>
           ) : (
+            <>
             <Table>
               <TableHeader>
                 <TableRow>
@@ -146,6 +156,25 @@ export default function AdminNotices() {
                 ))}
               </TableBody>
             </Table>
+            <div className="flex items-center justify-between p-4 border-t flex-wrap gap-2">
+              <div className="flex items-center gap-2 text-sm text-gray-500">
+                <span>페이지당</span>
+                <Select value={String(size)} onValueChange={(v) => { setSize(Number(v)); setPage(0); }}>
+                  <SelectTrigger className="w-[80px] h-8 text-xs"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {PAGE_SIZE_OPTIONS.map((s) => (
+                      <SelectItem key={s} value={String(s)}>{s}건</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button variant="outline" size="sm" disabled={page <= 0} onClick={() => setPage((p) => p - 1)}>이전</Button>
+                <span className="text-sm text-gray-500">{page + 1} / {Math.max(1, totalPages)}</span>
+                <Button variant="outline" size="sm" disabled={page >= totalPages - 1} onClick={() => setPage((p) => p + 1)}>다음</Button>
+              </div>
+            </div>
+            </>
           )}
         </CardContent>
       </Card>

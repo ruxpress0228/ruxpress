@@ -39,6 +39,8 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/v1/admin/bank-transfers/**")
                         .hasAnyRole("SUPER_ADMIN", "COUNSELOR")
                         .requestMatchers("/api/v1/admin/bank-transfers/**").hasRole("SUPER_ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/api/v1/admin/purchases/*/attachments")
+                        .hasAnyRole("SUPER_ADMIN", "COUNSELOR")
                         .requestMatchers(HttpMethod.GET, "/api/v1/admin/purchases/**")
                         .hasAnyRole("SUPER_ADMIN", "COUNSELOR")
                         .requestMatchers("/api/v1/admin/purchases/**").hasRole("SUPER_ADMIN")
