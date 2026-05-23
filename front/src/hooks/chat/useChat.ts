@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Client, type IMessage } from '@stomp/stompjs';
-import { STORAGE_KEYS } from '@/utils/constants';
+import { STORAGE_KEYS, USER_AUTH_CHANGE_EVENT } from '@/utils/constants';
 import { readAuthValue } from '@/utils/api';
 import type { ChatMessage } from '@/types/chat';
 import { getChatMessages, getAdminRoomMessages } from '@/api/chat';
@@ -20,7 +20,15 @@ export function useChat(roomId: string | null, options: UseChatOptions = {}) {
   const { isAdmin = false, connectLive = true } = options;
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [connected, setConnected] = useState(false);
+  const [authToken, setAuthToken] = useState(() => readAuthValue(STORAGE_KEYS.TOKEN));
   const clientRef = useRef<Client | null>(null);
+
+  useEffect(() => {
+    const syncToken = () => setAuthToken(readAuthValue(STORAGE_KEYS.TOKEN));
+    syncToken();
+    window.addEventListener(USER_AUTH_CHANGE_EVENT, syncToken);
+    return () => window.removeEventListener(USER_AUTH_CHANGE_EVENT, syncToken);
+  }, []);
 
   // Load history whenever the room changes
   useEffect(() => {
@@ -38,12 +46,14 @@ export function useChat(roomId: string | null, options: UseChatOptions = {}) {
       setConnected(false);
       return;
     }
-    const token = readAuthValue(STORAGE_KEYS.TOKEN);
-    if (!token) return;
+    if (!authToken) {
+      setConnected(false);
+      return;
+    }
 
     const client = new Client({
       brokerURL: buildWsUrl(),
-      connectHeaders: { Authorization: `Bearer ${token}` },
+      connectHeaders: { Authorization: `Bearer ${authToken}` },
       reconnectDelay: 5000,
       onConnect: () => {
         setConnected(true);
@@ -54,7 +64,12 @@ export function useChat(roomId: string | null, options: UseChatOptions = {}) {
       },
       onDisconnect: () => setConnected(false),
       onStompError: (frame) => {
-        console.error('STOMP error', frame.headers['message']);
+        console.error('STOMP error', frame.headers['message'], frame.body);
+        setConnected(false);
+      },
+      onWebSocketError: (event) => {
+        console.error('WebSocket error', event);
+        setConnected(false);
       },
     });
 
@@ -66,7 +81,7 @@ export function useChat(roomId: string | null, options: UseChatOptions = {}) {
       clientRef.current = null;
       setConnected(false);
     };
-  }, [roomId, connectLive]);
+  }, [roomId, connectLive, authToken]);
 
   const sendMessage = (content: string) => {
     if (!clientRef.current?.connected || !roomId || !connectLive) return;
