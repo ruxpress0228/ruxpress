@@ -19,6 +19,7 @@ import com.ruxpress.domain.inquiry.entity.InquiryReply;
 import com.ruxpress.domain.inquiry.entity.InquiryStatus;
 import com.ruxpress.domain.inquiry.repository.InquiryReplyRepository;
 import com.ruxpress.domain.inquiry.repository.InquiryRepository;
+import com.ruxpress.domain.notification.service.NotificationService;
 import com.ruxpress.domain.user.entity.User;
 import com.ruxpress.domain.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -45,6 +46,7 @@ public class InquiryService {
     private final UserRepository userRepository;
     private final AttachmentRepository attachmentRepository;
     private final FileStoragePort fileStoragePort;
+    private final NotificationService notificationService;
 
     @Transactional
     public InquiryResponse createInquiry(Long userId, InquiryCreateRequest request,
@@ -166,6 +168,7 @@ public class InquiryService {
         inquiryReplyRepository.save(reply);
         inquiry.markAsReplied();
         inquiryRepository.save(inquiry);
+        notificationService.notifyInquiryReply(inquiry.getUserId(), inquiry.getId(), inquiry.getTitle());
         return toDetailResponse(inquiry);
     }
 

@@ -342,6 +342,7 @@ public class PurchaseService {
         PurchaseRequest pr = purchaseRequestRepository.findById(id)
                 .filter(p -> p.getDeletedAt() == null)
                 .orElseThrow(() -> new BusinessException(ErrorCode.PURCHASE_NOT_FOUND));
+        PurchaseRequestStatus previousStatus = pr.getStatus();
         pr.changeStatus(request.getStatus());
         pr.updateAdminMemo(request.getAdminMemo());
         pr.updateTrackingNumber(request.getTrackingNumber());
@@ -352,6 +353,14 @@ public class PurchaseService {
 
         if (request.getStatus() == PurchaseRequestStatus.CANCELLED) {
             balanceService.creditForPurchaseRefund(saved.getUserId(), saved.getId());
+        }
+
+        if (previousStatus != request.getStatus()) {
+            notificationService.notifyPurchaseStatusChanged(
+                    saved.getUserId(),
+                    saved.getId(),
+                    saved.getRequestNumber(),
+                    request.getStatus());
         }
 
         return toResponse(saved);

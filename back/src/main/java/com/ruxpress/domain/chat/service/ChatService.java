@@ -11,6 +11,7 @@ import com.ruxpress.domain.chat.entity.ChatRoomStatus;
 import com.ruxpress.domain.chat.entity.SenderType;
 import com.ruxpress.domain.chat.repository.ChatMessageRepository;
 import com.ruxpress.domain.chat.repository.ChatRoomRepository;
+import com.ruxpress.domain.notification.service.NotificationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -28,6 +29,7 @@ public class ChatService {
     private final ChatRoomRepository chatRoomRepository;
     private final ChatMessageRepository chatMessageRepository;
     private final SimpMessagingTemplate messagingTemplate;
+    private final NotificationService notificationService;
 
     @Transactional
     public ChatRoomResponse getOrCreateRoom(Long userId) {
@@ -72,6 +74,10 @@ public class ChatService {
         ChatMessage message = chatMessageRepository.save(
                 ChatMessage.create(roomId, senderId, senderType, content)
         );
+
+        if (senderType == SenderType.ADMIN) {
+            notificationService.notifyChatMessageFromAdmin(room.getUserId(), roomId, content);
+        }
 
         // TODO (Kafka phase 2): publish ChatMessageEvent to Kafka topic instead of direct broadcast
         messagingTemplate.convertAndSend("/topic/chat/" + roomId, ChatMessageResponse.from(message));

@@ -23,7 +23,7 @@ MVP는 **JSON 문자열** 메시지 본문입니다.
 | `eventId` | string (UUID) | 멱등·중복 처리용 |
 | `notificationId` | number | `notifications.id` |
 | `userId` | number | `notifications.user_id` |
-| `type` | string | DDL `notifications.type`: `SIGNUP`, `NEW_DEVICE`, `INQUIRY_REPLY`, `NOTICE`, `PROMOTION`, `PURCHASE_STATUS`, `BALANCE` |
+| `type` | string | DDL `notifications.type`: `SIGNUP`, `NEW_DEVICE`, `INQUIRY_REPLY`, `NOTICE`, `PROMOTION`, `PURCHASE_STATUS`, `BALANCE`, `BANK_DEPOSIT`, `CHAT` |
 | `title` | string | 최대 200자 |
 | `body` | string | 본문 |
 | `dataJson` | object 또는 string \| null | DDL `data_json`와 동일 의미 |
