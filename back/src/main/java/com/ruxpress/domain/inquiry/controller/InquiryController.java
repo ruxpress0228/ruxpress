@@ -2,10 +2,14 @@ package com.ruxpress.domain.inquiry.controller;
 
 import com.ruxpress.common.dto.ApiResponse;
 import com.ruxpress.common.dto.PageResponse;
+import com.ruxpress.common.exception.BusinessException;
+import com.ruxpress.common.exception.ErrorCode;
+import com.ruxpress.common.util.JwtUtil;
 import com.ruxpress.domain.inquiry.dto.request.InquiryCreateRequest;
 import com.ruxpress.domain.inquiry.dto.response.InquiryListResponse;
 import com.ruxpress.domain.inquiry.dto.response.InquiryResponse;
 import com.ruxpress.domain.inquiry.service.InquiryService;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.io.Resource;
@@ -29,44 +33,52 @@ public class InquiryController {
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ApiResponse<InquiryResponse> createInquiry(
-            @RequestHeader(value = "X-User-Id", required = false) Long userId,
-            @RequestPart("inquiry") @Valid InquiryCreateRequest request,
+            HttpServletRequest request,
+            @RequestPart("inquiry") @Valid InquiryCreateRequest body,
             @RequestPart(value = "files", required = false) List<MultipartFile> files) {
-        Long effectiveUserId = userId != null ? userId : 1L; // TODO: JWT에서 추출
-        InquiryResponse response = inquiryService.createInquiry(effectiveUserId, request, files);
+        Long userId = resolveUserId(request);
+        InquiryResponse response = inquiryService.createInquiry(userId, body, files);
         return ApiResponse.success(response);
     }
 
     @GetMapping
     public ApiResponse<PageResponse<InquiryListResponse>> getMyInquiries(
-            @RequestHeader(value = "X-User-Id", required = false) Long userId,
+            HttpServletRequest request,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
-        Long effectiveUserId = userId != null ? userId : 1L; // TODO: JWT에서 추출
+        Long userId = resolveUserId(request);
         PageResponse<InquiryListResponse> response = inquiryService.getMyInquiries(
-                effectiveUserId, PageRequest.of(page, size));
+                userId, PageRequest.of(page, size));
         return ApiResponse.success(response);
     }
 
     @GetMapping("/{id}")
     public ApiResponse<InquiryResponse> getInquiryDetail(
-            @RequestHeader(value = "X-User-Id", required = false) Long userId,
+            HttpServletRequest request,
             @PathVariable Long id) {
-        Long effectiveUserId = userId != null ? userId : 1L; // TODO: JWT에서 추출
-        InquiryResponse response = inquiryService.getInquiryDetail(effectiveUserId, id);
+        Long userId = resolveUserId(request);
+        InquiryResponse response = inquiryService.getInquiryDetail(userId, id);
         return ApiResponse.success(response);
     }
 
     @GetMapping("/attachments/{attachmentId}/download")
     public ResponseEntity<Resource> downloadAttachment(
-            @RequestHeader(value = "X-User-Id", required = false) Long userId,
+            HttpServletRequest request,
             @PathVariable Long attachmentId) {
-        Long effectiveUserId = userId != null ? userId : 1L; // TODO: JWT에서 추출
-        Resource resource = inquiryService.getAttachmentResource(attachmentId, effectiveUserId);
+        Long userId = resolveUserId(request);
+        Resource resource = inquiryService.getAttachmentResource(attachmentId, userId);
         String filename = inquiryService.getAttachmentOriginalFilename(attachmentId);
         String encodedFilename = URLEncoder.encode(filename, StandardCharsets.UTF_8).replace("+", "%20");
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename*=UTF-8''" + encodedFilename)
                 .body(resource);
+    }
+
+    private Long resolveUserId(HttpServletRequest request) {
+        Long userId = JwtUtil.getUserId(request);
+        if (userId == null) {
+            throw new BusinessException(ErrorCode.UNAUTHORIZED);
+        }
+        return userId;
     }
 }

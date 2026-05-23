@@ -59,11 +59,6 @@ function getHeaders(): Record<string, string> {
     headers['Accept-Language'] = locale;
   }
 
-  const userId = readAuthValue(STORAGE_KEYS.USER_ID);
-  if (userId) {
-    headers['X-User-Id'] = userId;
-  }
-
   return headers;
 }
 
@@ -73,8 +68,6 @@ function getHeadersForUpload(): Record<string, string> {
   if (token) headers['Authorization'] = `Bearer ${token}`;
   const locale = localStorage.getItem(STORAGE_KEYS.LOCALE);
   if (locale) headers['Accept-Language'] = locale;
-  const userId = readAuthValue(STORAGE_KEYS.USER_ID);
-  if (userId) headers['X-User-Id'] = userId;
   return headers;
 }
 
