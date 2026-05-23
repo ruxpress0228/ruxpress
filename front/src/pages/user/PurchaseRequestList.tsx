@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router";
 import { Plus, Search, Filter, Wallet } from "lucide-react";
 import { Button } from "../../components/ui/button";
@@ -11,6 +11,8 @@ import { useBalance } from "../../hooks/balance/useBalance";
 import type { PurchaseRequestStatus } from "../../types";
 import type { PurchaseRequestListItem } from "../../types/purchase";
 import { toast } from "sonner";
+
+const PAGE_SIZE_OPTIONS = [20, 30, 50, 100] as const;
 
 const statusLabels: Record<PurchaseRequestStatus, { label: string; variant: 'default' | 'secondary' | 'outline' | 'destructive' }> = {
   DRAFT: { label: '작성중', variant: 'outline' },
@@ -34,26 +36,33 @@ export default function PurchaseRequestList() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [sortValue, setSortValue] = useState<"latest" | "oldest">("latest");
   const [loading, setLoading] = useState(false);
+  const [page, setPage] = useState(0);
+  const [size, setSize] = useState(20);
+  const [totalPages, setTotalPages] = useState(0);
+
+  const loadRequests = useCallback(async (p: number, s: number) => {
+    try {
+      setLoading(true);
+      const sort = sortValue === "oldest" ? "createdAt,asc" : "createdAt,desc";
+      const status = statusFilter === "all" ? undefined : (statusFilter as PurchaseRequestStatus);
+      const pageData = await getMyPurchaseRequests({ page: p, size: s, sort, status });
+      setRequests(pageData.content);
+      setTotalPages(pageData.totalPages ?? 0);
+      setPage(pageData.page ?? p);
+    } catch {
+      toast.error("구매 요청 목록 조회에 실패했습니다.");
+    } finally {
+      setLoading(false);
+    }
+  }, [statusFilter, sortValue, getMyPurchaseRequests]);
 
   useEffect(() => {
-    const load = async () => {
-      try {
-        setLoading(true);
-        const sort = sortValue === "oldest" ? "createdAt,asc" : "createdAt,desc";
-        const status = statusFilter === "all" ? undefined : (statusFilter as PurchaseRequestStatus);
-        const [pageData, recentData] = await Promise.all([
-          getMyPurchaseRequests({ page: 0, size: 20, sort, status }),
-          getRecentPurchaseRequests(),
-        ]);
-        setRequests(pageData.content);
-        setRecentRequests(recentData);
-      } catch {
-        toast.error("구매 요청 목록 조회에 실패했습니다.");
-      } finally {
-        setLoading(false);
-      }
-    };
-    void load();
+    void getRecentPurchaseRequests().then(setRecentRequests).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    setPage(0);
+    void loadRequests(0, size);
   }, [statusFilter, sortValue]);
 
   const filteredRequests = useMemo(() => {
@@ -234,6 +243,30 @@ export default function PurchaseRequestList() {
             </Link>
           </div>
         </Card>
+      )}
+
+      {(totalPages > 1 || requests.length > 0) && (
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <div className="flex items-center gap-2 text-sm text-gray-500">
+            <span>페이지당</span>
+            <Select
+              value={String(size)}
+              onValueChange={(v) => { const s = Number(v); setSize(s); setPage(0); void loadRequests(0, s); }}
+            >
+              <SelectTrigger className="w-[80px] h-8 text-xs"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {PAGE_SIZE_OPTIONS.map((s) => (
+                  <SelectItem key={s} value={String(s)}>{s}건</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" disabled={page <= 0} onClick={() => void loadRequests(page - 1, size)}>이전</Button>
+            <span className="text-sm text-gray-500">{page + 1} / {Math.max(1, totalPages)}</span>
+            <Button variant="outline" size="sm" disabled={page >= totalPages - 1} onClick={() => void loadRequests(page + 1, size)}>다음</Button>
+          </div>
+        </div>
       )}
     </div>
   );

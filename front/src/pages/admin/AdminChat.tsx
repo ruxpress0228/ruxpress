@@ -11,7 +11,10 @@ import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import type { ChatRoom, ChatRoomStatus } from '@/types/chat';
+
+const PAGE_SIZE_OPTIONS = [20, 30, 50, 100] as const;
 
 function formatTime(iso: string): string {
   return new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -22,6 +25,9 @@ export default function AdminChat() {
   const [selectedRoomId, setSelectedRoomId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<ChatRoomStatus>('OPEN');
   const [input, setInput] = useState('');
+  const [roomsPage, setRoomsPage] = useState(0);
+  const [roomsSize, setRoomsSize] = useState(20);
+  const [roomsTotalPages, setRoomsTotalPages] = useState(0);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   const selectedRoom = rooms.find((r) => r.id === selectedRoomId) ?? null;
@@ -33,8 +39,8 @@ export default function AdminChat() {
   });
 
   useEffect(() => {
-    loadRooms();
-  }, []);
+    void loadRooms(roomsPage, roomsSize);
+  }, [roomsPage, roomsSize]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -44,9 +50,12 @@ export default function AdminChat() {
     setSelectedRoomId(null);
   }, [activeTab]);
 
-  async function loadRooms() {
-    const res = await getAdminChatRooms(0, 100);
-    if (res.code === 200 && res.data) setRooms(res.data.content);
+  async function loadRooms(p: number, s: number) {
+    const res = await getAdminChatRooms(p, s);
+    if (res.code === 200 && res.data) {
+      setRooms(res.data.content);
+      setRoomsTotalPages(res.data.totalPages ?? 0);
+    }
   }
 
   async function handleSelectRoom(room: ChatRoom) {
@@ -62,9 +71,9 @@ export default function AdminChat() {
   async function handleCloseRoom(roomId: string) {
     const res = await adminCloseRoom(roomId);
     if (res.code === 200 && res.data) {
-      setRooms((prev) => prev.map((r) => (r.id === roomId ? res.data! : r)));
       setSelectedRoomId(null);
       setActiveTab('CLOSED');
+      void loadRooms(roomsPage, roomsSize);
     }
   }
 
@@ -142,6 +151,27 @@ export default function AdminChat() {
             </button>
           ))}
         </ScrollArea>
+        <div className="flex items-center justify-between pt-2 flex-wrap gap-1">
+          <div className="flex items-center gap-1 text-xs text-muted-foreground">
+            <span>페이지당</span>
+            <Select
+              value={String(roomsSize)}
+              onValueChange={(v) => { setRoomsSize(Number(v)); setRoomsPage(0); }}
+            >
+              <SelectTrigger className="w-[70px] h-7 text-xs"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {PAGE_SIZE_OPTIONS.map((s) => (
+                  <SelectItem key={s} value={String(s)}>{s}건</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex items-center gap-1">
+            <Button variant="outline" size="sm" className="h-7 px-2 text-xs" disabled={roomsPage <= 0} onClick={() => setRoomsPage((p) => p - 1)}>이전</Button>
+            <span className="text-xs text-muted-foreground">{roomsPage + 1} / {Math.max(1, roomsTotalPages)}</span>
+            <Button variant="outline" size="sm" className="h-7 px-2 text-xs" disabled={roomsPage >= roomsTotalPages - 1} onClick={() => setRoomsPage((p) => p + 1)}>다음</Button>
+          </div>
+        </div>
       </div>
 
       {/* Chat area */}

@@ -26,24 +26,33 @@ interface UserStats {
   newUsersToday: number;
 }
 
+const PAGE_SIZE_OPTIONS = [20, 30, 50, 100] as const;
+
 export default function AdminUsers() {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
+  const [page, setPage] = useState(0);
+  const [size, setSize] = useState(20);
+  const [totalPages, setTotalPages] = useState(0);
   const [stats, setStats] = useState<UserStats | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
 
-  const loadUsers = useCallback(() => {
+  const loadUsers = useCallback((p: number, s: number) => {
     setLoading(true);
-    const params = new URLSearchParams({ page: "0", size: "100" });
+    const params = new URLSearchParams({ page: String(p), size: String(s) });
     if (search.trim()) params.set("keyword", search.trim());
     if (statusFilter !== "ALL") params.set("status", statusFilter);
 
     api
       .get<PageResponse<User>>(`/v1/admin/users?${params}`)
-      .then((res) => setUsers(unwrap(res).content))
+      .then((res) => {
+        const data = unwrap(res);
+        setUsers(data.content);
+        setTotalPages(data.totalPages);
+      })
       .catch(() => {
         toast.error("회원 목록을 불러오지 못했습니다");
         setUsers([]);
@@ -59,9 +68,13 @@ export default function AdminUsers() {
   }, []);
 
   useEffect(() => {
-    loadUsers();
+    setPage(0);
+  }, [search, statusFilter]);
+
+  useEffect(() => {
+    loadUsers(page, size);
     loadStats();
-  }, [loadUsers, loadStats]);
+  }, [page, size, loadUsers, loadStats]);
 
   const openDetail = async (id: number) => {
     try {
@@ -79,7 +92,7 @@ export default function AdminUsers() {
       const updated = unwrap(res);
       setSelectedUser(updated);
       toast.success("회원 상태가 변경되었습니다");
-      loadUsers();
+      loadUsers(page, size);
       loadStats();
     } catch {
       toast.error("상태 변경에 실패했습니다");
@@ -144,6 +157,7 @@ export default function AdminUsers() {
           {loading ? (
             <div className="py-12 text-center text-gray-500">불러오는 중...</div>
           ) : (
+            <>
             <Table>
               <TableHeader>
                 <TableRow>
@@ -188,6 +202,25 @@ export default function AdminUsers() {
                 )}
               </TableBody>
             </Table>
+            <div className="flex items-center justify-between p-4 border-t flex-wrap gap-2">
+              <div className="flex items-center gap-2 text-sm text-gray-500">
+                <span>페이지당</span>
+                <Select value={String(size)} onValueChange={(v) => { setSize(Number(v)); setPage(0); }}>
+                  <SelectTrigger className="w-[80px] h-8 text-xs"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {PAGE_SIZE_OPTIONS.map((s) => (
+                      <SelectItem key={s} value={String(s)}>{s}건</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button variant="outline" size="sm" disabled={page <= 0} onClick={() => setPage((p) => p - 1)}>이전</Button>
+                <span className="text-sm text-gray-500">{page + 1} / {Math.max(1, totalPages)}</span>
+                <Button variant="outline" size="sm" disabled={page >= totalPages - 1} onClick={() => setPage((p) => p + 1)}>다음</Button>
+              </div>
+            </div>
+            </>
           )}
         </CardContent>
       </Card>

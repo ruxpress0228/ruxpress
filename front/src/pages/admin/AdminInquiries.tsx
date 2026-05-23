@@ -30,10 +30,15 @@ const categoryLabels: Record<InquiryCategory, string> = {
   ETC: "기타",
 };
 
+const PAGE_SIZE_OPTIONS = [20, 30, 50, 100] as const;
+
 export default function AdminInquiries() {
   const [items, setItems] = useState<AdminInquiryListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [page, setPage] = useState(0);
+  const [size, setSize] = useState(20);
+  const [totalPages, setTotalPages] = useState(0);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [detail, setDetail] = useState<Inquiry | null>(null);
@@ -44,16 +49,20 @@ export default function AdminInquiries() {
   const [editContent, setEditContent] = useState("");
   const [templates, setTemplates] = useState<TemplateItem[]>([]);
 
-  const loadList = useCallback(() => {
+  const loadList = useCallback((p: number, s: number) => {
     setLoading(true);
     api
-      .get<PageResponse<AdminInquiryListItem>>("/v1/admin/inquiries?page=0&size=100")
-      .then((res) => setItems(unwrap(res).content))
+      .get<PageResponse<AdminInquiryListItem>>(`/v1/admin/inquiries?page=${p}&size=${s}`)
+      .then((res) => {
+        const data = unwrap(res);
+        setItems(data.content);
+        setTotalPages(data.totalPages);
+      })
       .catch(() => { toast.error("문의 목록을 불러오지 못했습니다"); setItems([]); })
       .finally(() => setLoading(false));
   }, []);
 
-  useEffect(() => { loadList(); }, [loadList]);
+  useEffect(() => { loadList(page, size); }, [page, size, loadList]);
 
   useEffect(() => {
     api.get<Array<{ id: number; key: string; value: string }>>("/v1/admin/settings/templates")
@@ -88,7 +97,7 @@ export default function AdminInquiries() {
       setDetail(unwrap(res));
       setReplyContent("");
       toast.success("답변이 등록되었습니다");
-      loadList();
+      loadList(page, size);
     } catch { toast.error("답변 등록에 실패했습니다"); }
     finally { setReplySubmitting(false); }
   };
@@ -109,7 +118,7 @@ export default function AdminInquiries() {
       const res = await api.delete<Inquiry>(`/v1/admin/inquiries/${selectedId}/replies/${replyId}`);
       setDetail(unwrap(res));
       toast.success("답변이 삭제되었습니다");
-      loadList();
+      loadList(page, size);
     } catch { toast.error("삭제에 실패했습니다"); }
   };
 
@@ -119,7 +128,7 @@ export default function AdminInquiries() {
       const res = await api.patch<Inquiry>(`/v1/admin/inquiries/${selectedId}/status`, { status: newStatus });
       setDetail(unwrap(res));
       toast.success("상태가 변경되었습니다");
-      loadList();
+      loadList(page, size);
     } catch { toast.error("상태 변경에 실패했습니다"); }
   };
 
@@ -148,36 +157,56 @@ export default function AdminInquiries() {
           {loading ? (
             <div className="py-12 text-center text-gray-500">불러오는 중...</div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>카테고리</TableHead>
-                  <TableHead>제목</TableHead>
-                  <TableHead>작성자</TableHead>
-                  <TableHead>상태</TableHead>
-                  <TableHead>등록일</TableHead>
-                  <TableHead>액션</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filtered.length === 0 ? (
-                  <TableRow><TableCell colSpan={6} className="text-center text-gray-500 py-8">등록된 문의가 없습니다</TableCell></TableRow>
-                ) : filtered.map((inq) => (
-                  <TableRow key={inq.id}>
-                    <TableCell><Badge variant="outline">{categoryLabels[inq.category]}</Badge></TableCell>
-                    <TableCell className="font-medium max-w-xs truncate">{inq.title}</TableCell>
-                    <TableCell className="text-sm text-gray-500">{inq.nickname ?? `회원 #${inq.userId}`}{inq.email && <span className="block text-xs text-gray-400">{inq.email}</span>}</TableCell>
-                    <TableCell><Badge variant={statusLabels[inq.status].variant}>{statusLabels[inq.status].label}</Badge></TableCell>
-                    <TableCell className="text-sm text-gray-500">{new Date(inq.createdAt).toLocaleDateString("ko-KR")}</TableCell>
-                    <TableCell>
-                      <Button variant="outline" size="sm" onClick={() => openDetail(inq.id)}>
-                        {inq.status === "PENDING" ? "답변하기" : "보기"}
-                      </Button>
-                    </TableCell>
+            <>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>카테고리</TableHead>
+                    <TableHead>제목</TableHead>
+                    <TableHead>작성자</TableHead>
+                    <TableHead>상태</TableHead>
+                    <TableHead>등록일</TableHead>
+                    <TableHead>액션</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {filtered.length === 0 ? (
+                    <TableRow><TableCell colSpan={6} className="text-center text-gray-500 py-8">등록된 문의가 없습니다</TableCell></TableRow>
+                  ) : filtered.map((inq) => (
+                    <TableRow key={inq.id}>
+                      <TableCell><Badge variant="outline">{categoryLabels[inq.category]}</Badge></TableCell>
+                      <TableCell className="font-medium max-w-xs truncate">{inq.title}</TableCell>
+                      <TableCell className="text-sm text-gray-500">{inq.nickname ?? `회원 #${inq.userId}`}{inq.email && <span className="block text-xs text-gray-400">{inq.email}</span>}</TableCell>
+                      <TableCell><Badge variant={statusLabels[inq.status].variant}>{statusLabels[inq.status].label}</Badge></TableCell>
+                      <TableCell className="text-sm text-gray-500">{new Date(inq.createdAt).toLocaleDateString("ko-KR")}</TableCell>
+                      <TableCell>
+                        <Button variant="outline" size="sm" onClick={() => openDetail(inq.id)}>
+                          {inq.status === "PENDING" ? "답변하기" : "보기"}
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+              <div className="flex items-center justify-between p-4 border-t flex-wrap gap-2">
+                <div className="flex items-center gap-2 text-sm text-gray-500">
+                  <span>페이지당</span>
+                  <Select value={String(size)} onValueChange={(v) => { setSize(Number(v)); setPage(0); }}>
+                    <SelectTrigger className="w-[80px] h-8 text-xs"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {PAGE_SIZE_OPTIONS.map((s) => (
+                        <SelectItem key={s} value={String(s)}>{s}건</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button variant="outline" size="sm" disabled={page <= 0} onClick={() => setPage((p) => p - 1)}>이전</Button>
+                  <span className="text-sm text-gray-500">{page + 1} / {Math.max(1, totalPages)}</span>
+                  <Button variant="outline" size="sm" disabled={page >= totalPages - 1} onClick={() => setPage((p) => p + 1)}>다음</Button>
+                </div>
+              </div>
+            </>
           )}
         </CardContent>
       </Card>

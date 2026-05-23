@@ -33,6 +33,7 @@ import { readAuthValue } from "../../utils/api";
 import type { TransferLedgerEntry } from "../../types/bankTransfer";
 
 const ADMIN_STORAGE_KEY = "ruxpress_admin";
+const PAGE_SIZE_OPTIONS = [20, 30, 50, 100] as const;
 
 function getAdminRole(): string | null {
   try {
@@ -60,6 +61,7 @@ export default function AdminBankTransfers() {
   const [entryType, setEntryType] = useState<string>("");
   const [userEmailFilter, setUserEmailFilter] = useState("");
   const [page, setPage] = useState(0);
+  const [size, setSize] = useState(20);
   const [totalPages, setTotalPages] = useState(0);
 
   const [actionOpen, setActionOpen] = useState(false);
@@ -68,12 +70,12 @@ export default function AdminBankTransfers() {
   const [actionAmount, setActionAmount] = useState("");
   const [actionMemo, setActionMemo] = useState("");
 
-  const load = async (p = page) => {
+  const load = async (p = page, s = size) => {
     try {
       setLoading(true);
       const res = await adminListLedgerEntries({
         page: p,
-        size: 30,
+        size: s,
         status: status || undefined,
         entryType: entryType || undefined,
         userEmail: userEmailFilter.trim() || undefined,
@@ -204,7 +206,7 @@ export default function AdminBankTransfers() {
           <Button
             onClick={() => {
               setPage(0);
-              load(0);
+              load(0, size);
             }}
           >
             <RefreshCw className="w-4 h-4 mr-2" />
@@ -296,29 +298,27 @@ export default function AdminBankTransfers() {
               </TableBody>
             </Table>
           )}
-          {totalPages > 1 ? (
-            <div className="flex justify-center gap-2 mt-4">
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={page <= 0}
-                onClick={() => load(page - 1)}
+          <div className="flex items-center justify-between p-4 border-t flex-wrap gap-2">
+            <div className="flex items-center gap-2 text-sm text-gray-500">
+              <span>페이지당</span>
+              <Select
+                value={String(size)}
+                onValueChange={(v) => { const s = Number(v); setSize(s); setPage(0); load(0, s); }}
               >
-                Prev
-              </Button>
-              <span className="text-sm self-center">
-                {page + 1} / {totalPages}
-              </span>
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={page >= totalPages - 1}
-                onClick={() => load(page + 1)}
-              >
-                Next
-              </Button>
+                <SelectTrigger className="w-[80px] h-8 text-xs"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {PAGE_SIZE_OPTIONS.map((s) => (
+                    <SelectItem key={s} value={String(s)}>{s}건</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
-          ) : null}
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm" disabled={page <= 0} onClick={() => load(page - 1, size)}>이전</Button>
+              <span className="text-sm text-gray-500">{page + 1} / {Math.max(1, totalPages)}</span>
+              <Button variant="outline" size="sm" disabled={page >= totalPages - 1} onClick={() => load(page + 1, size)}>다음</Button>
+            </div>
+          </div>
         </CardContent>
       </Card>
 

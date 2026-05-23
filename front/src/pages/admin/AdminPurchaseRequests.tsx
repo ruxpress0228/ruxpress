@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Search, Filter, ChevronLeft, ChevronRight, MapPin, ExternalLink } from "lucide-react";
+import { Search, Filter, MapPin, ExternalLink } from "lucide-react";
 import { useNavigate } from 'react-router';
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
@@ -25,6 +25,7 @@ import { formatNumber } from "../../utils/format";
 import { readAuthValue } from "../../utils/api";
 
 const ADMIN_STORAGE_KEY = "ruxpress_admin";
+const PAGE_SIZE_OPTIONS = [20, 30, 50, 100] as const;
 
 function getAdminRole(): string | null {
   try {
@@ -89,6 +90,7 @@ export default function AdminPurchaseRequests() {
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [page, setPage] = useState(0);
+  const [size, setSize] = useState(20);
   const [totalPages, setTotalPages] = useState(0);
   const [sort, setSort] = useState<"createdAt,desc" | "createdAt,asc">("createdAt,desc");
   const [userKeyword, setUserKeyword] = useState("");
@@ -108,14 +110,14 @@ export default function AdminPurchaseRequests() {
   const [walletIdem, setWalletIdem] = useState("");
 
   const fetchPage = useCallback(
-    async (p: number, status: string, keyword: string) => {
+    async (p: number, s: number, status: string, keyword: string) => {
       setLoading(true);
       try {
         const statusParam =
           status && status !== "all" ? (status as PurchaseRequestStatus) : undefined;
         const res = await adminListPurchaseRequests({
           page: p,
-          size: 20,
+          size: s,
           status: statusParam,
           sort,
           userKeyword: keyword.trim() || undefined,
@@ -135,7 +137,7 @@ export default function AdminPurchaseRequests() {
   );
 
   useEffect(() => {
-    void fetchPage(0, statusFilter, userKeyword);
+    void fetchPage(0, size, statusFilter, userKeyword);
   }, [statusFilter, sort, fetchPage, userKeyword]);
 
   useEffect(() => {
@@ -149,7 +151,7 @@ export default function AdminPurchaseRequests() {
   }, [newStatus, dialogOpen]);
 
   const changePage = (next: number) => {
-    void fetchPage(next, statusFilter, userKeyword);
+    void fetchPage(next, size, statusFilter, userKeyword);
   };
 
   const handleStatusFilter = (value: string) => {
@@ -184,7 +186,7 @@ export default function AdminPurchaseRequests() {
       });
       toast.success("저장되었습니다");
       setSelected(updated);
-      void fetchPage(page, statusFilter, userKeyword);
+      void fetchPage(page, size, statusFilter, userKeyword);
       setDialogOpen(false);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "실패");
@@ -199,7 +201,7 @@ export default function AdminPurchaseRequests() {
       toast.success(`사진 ${adminFiles.length}장이 업로드되었습니다`);
       setSelected(updated);
       setAdminFiles([]);
-      void fetchPage(page, statusFilter, userKeyword);
+      void fetchPage(page, size, statusFilter, userKeyword);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "업로드 실패");
     } finally {
@@ -225,7 +227,7 @@ export default function AdminPurchaseRequests() {
       });
       toast.success(t("adminPurchase.walletSuccess"));
       setDialogOpen(false);
-      void fetchPage(page, statusFilter, userKeyword);
+      void fetchPage(page, size, statusFilter, userKeyword);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "실패");
     }
@@ -314,7 +316,7 @@ export default function AdminPurchaseRequests() {
                 <SelectItem value="createdAt,asc">오래된순</SelectItem>
               </SelectContent>
             </Select>
-            <Button type="button" variant="secondary" onClick={() => void fetchPage(page, statusFilter, userKeyword)}>
+            <Button type="button" variant="secondary" onClick={() => void fetchPage(page, size, statusFilter, userKeyword)}>
               새로고침
             </Button>
           </div>
@@ -410,55 +412,30 @@ export default function AdminPurchaseRequests() {
               })}
             </TableBody>
           </Table>
-          <div className="flex items-center justify-between p-4 border-t">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              disabled={page <= 0}
-              onClick={() => changePage(page - 1)}
-            >
-              이전
-            </Button>
-            <span className="text-sm text-gray-500">
-              {page + 1} / {Math.max(1, totalPages)}
-            </span>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              disabled={totalPages <= 0 || page >= totalPages - 1}
-              onClick={() => changePage(page + 1)}
-            >
-              다음
-            </Button>
+          <div className="flex items-center justify-between p-4 border-t flex-wrap gap-2">
+            <div className="flex items-center gap-2 text-sm text-gray-500">
+              <span>페이지당</span>
+              <Select
+                value={String(size)}
+                onValueChange={(v) => { const s = Number(v); setSize(s); setPage(0); void fetchPage(0, s, statusFilter, userKeyword); }}
+              >
+                <SelectTrigger className="w-[80px] h-8 text-xs"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {PAGE_SIZE_OPTIONS.map((s) => (
+                    <SelectItem key={s} value={String(s)}>{s}건</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button type="button" variant="outline" size="sm" disabled={page <= 0} onClick={() => changePage(page - 1)}>이전</Button>
+              <span className="text-sm text-gray-500">{page + 1} / {Math.max(1, totalPages)}</span>
+              <Button type="button" variant="outline" size="sm" disabled={totalPages <= 0 || page >= totalPages - 1} onClick={() => changePage(page + 1)}>다음</Button>
+            </div>
           </div>
         </CardContent>
       </Card>
 
-      {totalPages > 1 && (
-        <div className="flex items-center justify-center gap-2">
-          <Button
-            variant="outline"
-            size="icon"
-            disabled={page === 0}
-            onClick={() => changePage(page - 1)}
-          >
-            <ChevronLeft className="w-4 h-4" />
-          </Button>
-          <span className="text-sm text-gray-600">
-            {page + 1} / {totalPages}
-          </span>
-          <Button
-            variant="outline"
-            size="icon"
-            disabled={totalPages <= 0 || page >= totalPages - 1}
-            onClick={() => changePage(page + 1)}
-          >
-            <ChevronRight className="w-4 h-4" />
-          </Button>
-        </div>
-      )}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent
           className="flex h-[min(90vh,880px)] w-[calc(100%-2rem)] max-w-[calc(100%-2rem)] flex-col gap-0 overflow-hidden p-0 sm:max-w-2xl"
