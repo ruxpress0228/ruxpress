@@ -324,39 +324,43 @@ export default function PurchaseRequestDetail() {
             </div>
           )}
 
-          {hasShippingSnapshot(data.shipping) && data.shipping && (
-            <div className="space-y-2">
-              <p className="font-semibold">배송지</p>
-              <div className="rounded-lg border border-gray-200 bg-gray-50/80 p-3 text-sm text-gray-800 space-y-1">
-                {data.shipping.label ? <p className="font-medium text-gray-900">{data.shipping.label}</p> : null}
-                {(data.shipping.recipientName || data.shipping.recipientPhone) && (
-                  <p>
-                    {data.shipping.recipientName ?? ""}
-                    {data.shipping.recipientPhone ? (
-                      <span className="text-gray-600"> · {data.shipping.recipientPhone}</span>
-                    ) : null}
-                  </p>
-                )}
-                <p className="break-words leading-relaxed">
-                  {data.shipping.postalCode ? <span className="mr-1">({data.shipping.postalCode})</span> : null}
-                  {data.shipping.addressLine1}
-                  {data.shipping.addressLine2 ? ` ${data.shipping.addressLine2}` : ""}
-                </p>
-              </div>
+          {(hasShippingSnapshot(data.shipping) && data.shipping) || data.trackingNumber ? (
+            <div id="purchase-shipping" className="scroll-mt-28 space-y-4">
+              {hasShippingSnapshot(data.shipping) && data.shipping && (
+                <div className="space-y-2">
+                  <p className="font-semibold">배송지</p>
+                  <div className="rounded-lg border border-gray-200 bg-gray-50/80 p-3 text-sm text-gray-800 space-y-1">
+                    {data.shipping.label ? <p className="font-medium text-gray-900">{data.shipping.label}</p> : null}
+                    {(data.shipping.recipientName || data.shipping.recipientPhone) && (
+                      <p>
+                        {data.shipping.recipientName ?? ""}
+                        {data.shipping.recipientPhone ? (
+                          <span className="text-gray-600"> · {data.shipping.recipientPhone}</span>
+                        ) : null}
+                      </p>
+                    )}
+                    <p className="break-words leading-relaxed">
+                      {data.shipping.postalCode ? <span className="mr-1">({data.shipping.postalCode})</span> : null}
+                      {data.shipping.addressLine1}
+                      {data.shipping.addressLine2 ? ` ${data.shipping.addressLine2}` : ""}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {data.trackingNumber && (
+                <div className="space-y-1">
+                  <p className="font-semibold">운송장번호</p>
+                  <p className="text-sm font-mono text-gray-900">{data.trackingNumber}</p>
+                </div>
+              )}
             </div>
-          )}
+          ) : null}
 
           {data.memo && (
             <div className="space-y-2">
               <p className="font-semibold">메모</p>
               <p className="text-sm text-gray-700 whitespace-pre-wrap">{data.memo}</p>
-            </div>
-          )}
-
-          {data.trackingNumber && (
-            <div className="space-y-1">
-              <p className="font-semibold">운송장번호</p>
-              <p className="text-sm font-mono text-gray-900">{data.trackingNumber}</p>
             </div>
           )}
 
