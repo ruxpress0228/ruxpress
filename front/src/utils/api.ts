@@ -5,9 +5,12 @@ export function notifyUserAuthChange(): void {
   window.dispatchEvent(new Event(USER_AUTH_CHANGE_EVENT));
 }
 
-/** 자동로그인 체크 시에는 localStorage, 미체크 시에는 sessionStorage 에서 값을 읽는다. */
+/** writeAuthValue 와 동일: sessionStorage 에 TOKEN 이 있으면 세션 우선, 아니면 localStorage. */
 export function readAuthValue(key: string): string | null {
-  return localStorage.getItem(key) ?? sessionStorage.getItem(key);
+  if (sessionStorage.getItem(STORAGE_KEYS.TOKEN)) {
+    return sessionStorage.getItem(key);
+  }
+  return localStorage.getItem(key);
 }
 
 /**

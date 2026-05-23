@@ -16,7 +16,7 @@ import { Button } from "../ui/button";
 import { Sidebar, SidebarContent, SidebarHeader, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarProvider, SidebarTrigger } from "../ui/sidebar";
 import { useTranslation } from "../../hooks/useTranslation";
 import { STORAGE_KEYS } from "../../utils/constants";
-import { readAuthValue } from "../../utils/api";
+import { notifyUserAuthChange, readAuthValue } from "../../utils/api";
 import AdminNotificationBell from "./AdminNotificationBell";
 
 const ADMIN_STORAGE_KEY = "ruxpress_admin";
@@ -52,6 +52,7 @@ export default function AdminLayout() {
     sessionStorage.removeItem(STORAGE_KEYS.TOKEN);
     localStorage.removeItem(ADMIN_STORAGE_KEY);
     sessionStorage.removeItem(ADMIN_STORAGE_KEY);
+    notifyUserAuthChange();
     navigate("/admin/login");
   };
 

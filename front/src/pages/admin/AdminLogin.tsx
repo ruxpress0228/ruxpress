@@ -6,7 +6,7 @@ import { Label } from "../../components/ui/label";
 import { Checkbox } from "../../components/ui/checkbox";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../components/ui/card";
 import { toast } from "sonner";
-import { api } from "../../utils/api";
+import { api, notifyUserAuthChange } from "../../utils/api";
 import { unwrap } from "../../utils/exception";
 import { STORAGE_KEYS } from "../../utils/constants";
 
@@ -50,6 +50,7 @@ export default function AdminLogin() {
       } else {
         localStorage.removeItem(STORAGE_KEYS.REMEMBER_ME);
       }
+      notifyUserAuthChange();
       toast.success(`${data.name}님, 환영합니다`);
       navigate("/admin");
     } catch {
