@@ -937,7 +937,7 @@ export default function AdminPurchaseRequests() {
                                   : "—"}
                               </span>
                             </div>
-                            <p className="text-xs text-amber-900/90">{t("adminPurchase.walletIdempotencyHint")}</p>
+                            <p className="hidden text-xs text-amber-900/90">{t("adminPurchase.walletIdempotencyHint")}</p>
                             <div className="space-y-2">
                               <Label>{t("adminPurchase.walletAmount")}</Label>
                               <p className="text-xs text-gray-600">
@@ -964,7 +964,7 @@ export default function AdminPurchaseRequests() {
                                   : "—"}
                               </p>
                             </div>
-                            <div className="space-y-2">
+                            <div className="hidden space-y-2">
                               <Label>Idempotency key</Label>
                               <Input value={walletIdem} onChange={(e) => setWalletIdem(e.target.value)} />
                             </div>
