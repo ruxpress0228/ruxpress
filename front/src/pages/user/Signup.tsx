@@ -5,8 +5,58 @@ import { Input } from "../../components/ui/input";
 import { Label } from "../../components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../components/ui/card";
 import { Separator } from "../../components/ui/separator";
+import { Checkbox } from "../../components/ui/checkbox";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "../../components/ui/dialog";
 import { toast } from "sonner";
 import { api } from "../../utils/api";
+
+const TERMS_OF_SERVICE = `1) Цель и назначение группы
+• Эта группа предназначена для покупки и продажи товаров из Кореи, включая мерч и косметическую продукцию. Участники обязаны соблюдать правила и действовать добросовестно.
+
+2) Регистрация и участие
+• При необходимости можно указать, что пользователь должен быть совершеннолетним.
+• Следует разъяснить, что, вступая в группу, пользователь автоматически соглашается с настоящими условиями.
+
+3) Обязанности участников
+• Участникам запрещается размещать спам, запрещённые товары или запрещённые материалы.
+• Участники обязаны соблюдать правила безопасности (например, самостоятельно проверять продавцов и покупателей).
+
+4) Оплата и доставка
+• Администратор группы не несёт ответственности за сделки между пользователями.
+• Рекомендуется использовать безопасные способы оплаты.
+
+5) Ответственность
+• Администратор не несёт ответственности за качество товара, сроки доставки и действия участников группы.
+
+6) Изменение условий
+• Администратор имеет право изменять правила без предварительного уведомления.`;
+
+const PRIVACY_POLICY = `1) Сбор данных
+• Собираемые данные: имя, контактные данные, сообщения в чате, платёжная информация.
+
+2) Использование данных
+• Собранные данные используются только для оформления продажи и связи с пользователями.
+
+3) Передача третьим лицам
+• Персональные данные покупателей не передаются внешним сервисам.
+
+4) Безопасность данных
+• Мы принимаем необходимые меры для защиты персональных данных, однако не можем гарантировать абсолютную безопасность внутри Telegram.
+
+5) Права пользователя
+• Пользователь имеет право запросить удаление своих данных или выйти из группы.
+
+6) Контакты
+• По всем вопросам, связанным с персональными данными:
+  +10 5164 9833
+  @danidani_y
+  (администратор группы)`;
 
 export default function Signup() {
   const navigate = useNavigate();
@@ -23,6 +73,45 @@ export default function Signup() {
   const [emailSending, setEmailSending] = useState(false);
   const [emailVerifying, setEmailVerifying] = useState(false);
   const [signupLoading, setSignupLoading] = useState(false);
+  const [agreedTerms, setAgreedTerms] = useState(false);
+  const [agreedPrivacy, setAgreedPrivacy] = useState(false);
+  const [termsOpen, setTermsOpen] = useState(false);
+  const [privacyOpen, setPrivacyOpen] = useState(false);
+  const [termsViewed, setTermsViewed] = useState(false);
+  const [privacyViewed, setPrivacyViewed] = useState(false);
+
+  const agreedAll = agreedTerms && agreedPrivacy;
+  const canAgreeAll = termsViewed && privacyViewed;
+  const toggleAgreeAll = (checked: boolean) => {
+    if (checked && !canAgreeAll) {
+      toast.error("이용약관과 개인정보 처리방침 내용을 먼저 확인해 주세요");
+      return;
+    }
+    setAgreedTerms(checked);
+    setAgreedPrivacy(checked);
+  };
+  const handleAgreeTerms = (checked: boolean) => {
+    if (checked && !termsViewed) {
+      toast.error("이용약관 내용을 먼저 확인해 주세요");
+      return;
+    }
+    setAgreedTerms(checked);
+  };
+  const handleAgreePrivacy = (checked: boolean) => {
+    if (checked && !privacyViewed) {
+      toast.error("개인정보 처리방침 내용을 먼저 확인해 주세요");
+      return;
+    }
+    setAgreedPrivacy(checked);
+  };
+  const openTerms = () => {
+    setTermsOpen(true);
+    setTermsViewed(true);
+  };
+  const openPrivacy = () => {
+    setPrivacyOpen(true);
+    setPrivacyViewed(true);
+  };
 
   const sendEmailVerification = async () => {
     const trimmed = email.trim();
@@ -96,6 +185,14 @@ export default function Signup() {
     const line1 = addressLine1.trim();
     if (!line1) {
       toast.error("주소를 입력하세요");
+      return;
+    }
+    if (!agreedTerms) {
+      toast.error("이용약관에 동의해 주세요");
+      return;
+    }
+    if (!agreedPrivacy) {
+      toast.error("개인정보 처리방침에 동의해 주세요");
       return;
     }
     setSignupLoading(true);
@@ -244,11 +341,110 @@ export default function Signup() {
                   onKeyDown={(e) => e.key === "Enter" && submitSignup()}
                 />
               </div>
-              <Button type="button" className="w-full" size="lg" onClick={submitSignup} disabled={signupLoading}>
+              <Separator className="my-2" />
+              <div className="space-y-2">
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="agree-all"
+                    checked={agreedAll}
+                    disabled={!canAgreeAll}
+                    onCheckedChange={(v) => toggleAgreeAll(Boolean(v))}
+                  />
+                  <Label
+                    htmlFor="agree-all"
+                    className={`text-sm font-medium ${canAgreeAll ? "cursor-pointer" : "cursor-not-allowed text-gray-400"}`}
+                  >
+                    전체 동의
+                  </Label>
+                </div>
+                <div className="flex items-center justify-between pl-1">
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="agree-terms"
+                      checked={agreedTerms}
+                      disabled={!termsViewed}
+                      onCheckedChange={(v) => handleAgreeTerms(Boolean(v))}
+                    />
+                    <Label
+                      htmlFor="agree-terms"
+                      className={`text-sm ${termsViewed ? "cursor-pointer" : "cursor-not-allowed text-gray-400"}`}
+                    >
+                      <span className="text-red-500">[필수]</span> 이용약관 동의
+                      {!termsViewed && <span className="ml-1 text-xs text-gray-500">(내용 확인 필요)</span>}
+                    </Label>
+                  </div>
+                  <button
+                    type="button"
+                    className="text-xs text-blue-600 hover:underline"
+                    onClick={openTerms}
+                  >
+                    보기
+                  </button>
+                </div>
+                <div className="flex items-center justify-between pl-1">
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="agree-privacy"
+                      checked={agreedPrivacy}
+                      disabled={!privacyViewed}
+                      onCheckedChange={(v) => handleAgreePrivacy(Boolean(v))}
+                    />
+                    <Label
+                      htmlFor="agree-privacy"
+                      className={`text-sm ${privacyViewed ? "cursor-pointer" : "cursor-not-allowed text-gray-400"}`}
+                    >
+                      <span className="text-red-500">[필수]</span> 개인정보 처리방침 동의
+                      {!privacyViewed && <span className="ml-1 text-xs text-gray-500">(내용 확인 필요)</span>}
+                    </Label>
+                  </div>
+                  <button
+                    type="button"
+                    className="text-xs text-blue-600 hover:underline"
+                    onClick={openPrivacy}
+                  >
+                    보기
+                  </button>
+                </div>
+              </div>
+              <Button
+                type="button"
+                className="w-full"
+                size="lg"
+                onClick={submitSignup}
+                disabled={signupLoading || !agreedAll}
+              >
                 {signupLoading ? "가입 중..." : "가입하기"}
               </Button>
             </>
           )}
+
+          <Dialog open={termsOpen} onOpenChange={setTermsOpen}>
+            <DialogContent className="max-w-lg">
+              <DialogHeader>
+                <DialogTitle>Условия пользования / 이용약관</DialogTitle>
+                <DialogDescription>
+                  Telegram 구매대행 그룹 이용약관입니다. 가입 시 본 약관에 동의한 것으로 간주됩니다.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="max-h-[60vh] overflow-y-auto whitespace-pre-wrap text-sm text-gray-700">
+                {TERMS_OF_SERVICE}
+              </div>
+            </DialogContent>
+          </Dialog>
+
+          <Dialog open={privacyOpen} onOpenChange={setPrivacyOpen}>
+            <DialogContent className="max-w-lg">
+              <DialogHeader>
+                <DialogTitle>Политика конфиденциальности / 개인정보 처리방침</DialogTitle>
+                <DialogDescription>
+                  수집·이용되는 개인정보 항목과 처리 방침입니다.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="max-h-[60vh] overflow-y-auto whitespace-pre-wrap text-sm text-gray-700">
+                {PRIVACY_POLICY}
+              </div>
+            </DialogContent>
+          </Dialog>
 
           <div className="text-center text-sm text-gray-600 mt-6">
             이미 계정이 있으신가요?{" "}
