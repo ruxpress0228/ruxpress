@@ -1,3 +1,4 @@
+import { useCallback } from "react";
 import type { CurrentExchangeRates } from "../../utils/exchange";
 import type { ExchangeRate } from "../../types";
 import { api } from "../../utils/api";
@@ -5,17 +6,17 @@ import { api } from "../../utils/api";
 const EXCHANGE_BASE = "/v1/exchange-rates";
 
 export function useExchangeRate() {
-  const getCurrentExchangeRates = (): Promise<CurrentExchangeRates> => {
+  const getCurrentExchangeRates = useCallback((): Promise<CurrentExchangeRates> => {
     return api.get<CurrentExchangeRates>(`${EXCHANGE_BASE}/current`).then((res) => {
       if (res.code !== 200 || res.data == null) {
         throw new Error(res.message || "Failed to load exchange rates");
       }
       return res.data;
     });
-  };
+  }, []);
 
   /** @deprecated use getCurrentExchangeRates */
-  const getCurrentExchangeRate = async (): Promise<ExchangeRate> => {
+  const getCurrentExchangeRate = useCallback(async (): Promise<ExchangeRate> => {
     const data = await getCurrentExchangeRates();
     const rub = data.quotes.find((q) => q.currency === "RUB");
     if (!rub) {
@@ -31,56 +32,59 @@ export function useExchangeRate() {
       fetchedAt: rub.fetchedAt,
       createdAt: rub.fetchedAt,
     };
-  };
+  }, [getCurrentExchangeRates]);
 
-  const getExchangeRateHistory = (
-    page = 0,
-    size = 20,
-    baseCurrency?: string
-  ): Promise<{
-    content: ExchangeRate[];
-    totalElements: number;
-    totalPages: number;
-    number: number;
-    size: number;
-  }> => {
-    const params = new URLSearchParams({ page: String(page), size: String(size) });
-    if (baseCurrency) {
-      params.set("baseCurrency", baseCurrency);
-    }
-    return api
-      .get<{
-        content: ExchangeRate[];
-        totalElements: number;
-        totalPages: number;
-        number: number;
-        size: number;
-      }>(`${EXCHANGE_BASE}?${params.toString()}`)
-      .then((res) => {
-        if (res.code !== 200 || res.data == null) {
-          throw new Error(res.message || "Failed to load exchange rate history");
-        }
-        return res.data;
-      });
-  };
+  const getExchangeRateHistory = useCallback(
+    (
+      page = 0,
+      size = 20,
+      baseCurrency?: string,
+    ): Promise<{
+      content: ExchangeRate[];
+      totalElements: number;
+      totalPages: number;
+      number: number;
+      size: number;
+    }> => {
+      const params = new URLSearchParams({ page: String(page), size: String(size) });
+      if (baseCurrency) {
+        params.set("baseCurrency", baseCurrency);
+      }
+      return api
+        .get<{
+          content: ExchangeRate[];
+          totalElements: number;
+          totalPages: number;
+          number: number;
+          size: number;
+        }>(`${EXCHANGE_BASE}?${params.toString()}`)
+        .then((res) => {
+          if (res.code !== 200 || res.data == null) {
+            throw new Error(res.message || "Failed to load exchange rate history");
+          }
+          return res.data;
+        });
+    },
+    [],
+  );
 
-  const triggerExchangeRateFetch = (): Promise<CurrentExchangeRates> => {
+  const triggerExchangeRateFetch = useCallback((): Promise<CurrentExchangeRates> => {
     return api.post<CurrentExchangeRates>(`${EXCHANGE_BASE}/fetch`).then((res) => {
       if (res.code !== 200 || res.data == null) {
         throw new Error(res.message || "Failed to fetch exchange rate");
       }
       return res.data;
     });
-  };
+  }, []);
 
-  const setManualExchangeRate = (currency: string, rate: number): Promise<CurrentExchangeRates> => {
+  const setManualExchangeRate = useCallback((currency: string, rate: number): Promise<CurrentExchangeRates> => {
     return api.post<CurrentExchangeRates>(`${EXCHANGE_BASE}/manual`, { currency, rate }).then((res) => {
       if (res.code !== 200 || res.data == null) {
         throw new Error(res.message || "Failed to set manual exchange rate");
       }
       return res.data;
     });
-  };
+  }, []);
 
   return {
     getCurrentExchangeRates,
@@ -89,4 +93,4 @@ export function useExchangeRate() {
     triggerExchangeRateFetch,
     setManualExchangeRate,
   };
-};
+}

@@ -15,6 +15,11 @@ import {
   DropdownMenuTrigger,
 } from "../../components/ui/dropdown-menu";
 import { cn } from "../../components/ui/utils";
+import {
+  purchaseListSummaryChipActiveClasses,
+  purchaseStatusAccent,
+  purchaseStatusBadgeClass,
+} from "../../utils/purchaseStatusStyle";
 import type { PurchaseRequestStatus } from "../../types";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "../../components/ui/dialog";
 import { Label } from "../../components/ui/label";
@@ -43,17 +48,6 @@ function getAdminRole(): string | null {
     return null;
   }
 }
-
-const STATUS_BADGE_VARIANT: Record<
-  PurchaseRequestStatus,
-  "default" | "secondary" | "outline" | "destructive"
-> = {
-  REQUESTED: "secondary",
-  PURCHASING: "default",
-  SHIPPING: "default",
-  COMPLETED: "default",
-  CANCELLED: "destructive",
-};
 
 const FILTER_CHIPS: { value: "all" | PurchaseRequestStatus; summaryKey?: "ALL" | PurchaseRequestStatus }[] = [
   { value: "all", summaryKey: "ALL" },
@@ -93,42 +87,6 @@ function formatShortDate(iso: string, locale: string): string {
     return new Date(iso).toLocaleDateString(locale, { month: "numeric", day: "numeric" });
   } catch {
     return "";
-  }
-}
-
-function statusAccent(status: PurchaseRequestStatus): { bar: string; softBg: string; badgeClass: string } {
-  switch (status) {
-    case "REQUESTED":
-      return {
-        bar: "border-l-slate-500",
-        softBg: "bg-slate-50/90",
-        badgeClass: "border-0 bg-slate-100 text-slate-900 ring-1 ring-slate-200/80",
-      };
-    case "PURCHASING":
-      return {
-        bar: "border-l-blue-600",
-        softBg: "bg-blue-50/60",
-        badgeClass: "border-0 bg-blue-100 text-blue-900 ring-1 ring-blue-200/90",
-      };
-    case "SHIPPING":
-      return {
-        bar: "border-l-violet-600",
-        softBg: "bg-violet-50/60",
-        badgeClass: "border-0 bg-violet-100 text-violet-900 ring-1 ring-violet-200/90",
-      };
-    case "COMPLETED":
-      return {
-        bar: "border-l-emerald-600",
-        softBg: "bg-emerald-50/50",
-        badgeClass: "border-0 bg-emerald-100 text-emerald-900 ring-1 ring-emerald-200/90",
-      };
-    case "CANCELLED":
-    default:
-      return {
-        bar: "border-l-rose-600",
-        softBg: "bg-rose-50/50",
-        badgeClass: "border-0 bg-rose-100 text-rose-900 ring-1 ring-rose-200/90",
-      };
   }
 }
 
@@ -460,6 +418,7 @@ export default function AdminPurchaseRequests() {
             const key = chip.summaryKey ?? "ALL";
             const count = summaryCounts?.[key];
             const active = statusFilter === chip.value;
+            const activeChip = purchaseListSummaryChipActiveClasses(chip.value);
             return (
               <button
                 key={chip.value}
@@ -467,15 +426,13 @@ export default function AdminPurchaseRequests() {
                 onClick={() => setStatusFilter(chip.value)}
                 className={cn(
                   "flex min-h-[52px] flex-col items-center justify-center rounded-lg border px-1 py-1.5 text-center transition-all sm:min-h-[56px]",
-                  active
-                    ? "border-blue-300 bg-blue-50/90 ring-2 ring-blue-400/35"
-                    : "border-transparent bg-gray-50/80 hover:bg-gray-100/90",
+                  active ? activeChip.shell : "border-transparent bg-gray-50/80 hover:bg-gray-100/90",
                 )}
               >
                 <span
                   className={cn(
                     "text-lg font-bold tabular-nums leading-none sm:text-xl",
-                    active ? "text-blue-900" : "text-gray-900",
+                    active ? activeChip.countClass : "text-gray-900",
                   )}
                 >
                   {count == null ? "–" : count}
@@ -542,7 +499,7 @@ export default function AdminPurchaseRequests() {
           </div>
         ) : (
           filtered.map((request) => {
-            const accent = statusAccent(request.status);
+            const accent = purchaseStatusAccent(request.status);
             const sh = request.shipping;
             const shipLines = hasShippingSnapshot(sh) && sh ? shippingSummaryLines(sh) : null;
             const shipTitle =
@@ -723,7 +680,10 @@ export default function AdminPurchaseRequests() {
                       {selected.requestNumber}
                     </DialogDescription>
                   </div>
-                  <Badge variant={STATUS_BADGE_VARIANT[selected.status]} className="shrink-0">
+                  <Badge
+                    variant="outline"
+                    className={cn("shrink-0 border-transparent px-2 py-0 text-xs font-semibold", purchaseStatusBadgeClass(selected.status))}
+                  >
                     {t(`purchase.status.${selected.status}` as `purchase.status.${PurchaseRequestStatus}`)}
                   </Badge>
                 </div>

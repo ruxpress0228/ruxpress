@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { Link, useNavigate } from "react-router";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { Link, useNavigate, useSearchParams } from "react-router";
 import { MoreHorizontal, Package, Plus, Search, Truck, Wallet, MessageSquare, RotateCcw, Ban } from "lucide-react";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
@@ -14,6 +14,7 @@ import {
   DropdownMenuTrigger,
 } from "../../components/ui/dropdown-menu";
 import { cn } from "../../components/ui/utils";
+import { purchaseListSummaryChipActiveClasses, purchaseStatusAccent } from "../../utils/purchaseStatusStyle";
 import { usePurchase } from "../../hooks/purchase/usePurchase";
 import { useBalance } from "../../hooks/balance/useBalance";
 import { useI18n } from "../../i18n/I18nProvider";
@@ -32,8 +33,20 @@ const SUMMARY_STATUSES: PurchaseRequestStatus[] = [
   "CANCELLED",
 ];
 
-const FILTER_CHIPS: { value: "all" | PurchaseRequestStatus; summaryKey?: "ALL" | PurchaseRequestStatus }[] = [
+type ListStatusFilter = "all" | "progress" | PurchaseRequestStatus;
+
+function readListFilterFromSearchParams(sp: URLSearchParams): ListStatusFilter {
+  if (sp.get("bucket") === "progress") return "progress";
+  const st = sp.get("status");
+  if (st && SUMMARY_STATUSES.includes(st as PurchaseRequestStatus)) {
+    return st as PurchaseRequestStatus;
+  }
+  return "all";
+}
+
+const FILTER_CHIPS: { value: ListStatusFilter; summaryKey?: "ALL" | "PROGRESS" | PurchaseRequestStatus }[] = [
   { value: "all", summaryKey: "ALL" },
+  { value: "progress", summaryKey: "PROGRESS" },
   { value: "REQUESTED", summaryKey: "REQUESTED" },
   { value: "PURCHASING", summaryKey: "PURCHASING" },
   { value: "SHIPPING", summaryKey: "SHIPPING" },
@@ -63,42 +76,6 @@ function fillTpl(template: string, vars: Record<string, string | number>) {
     s = s.split(`{{${k}}}`).join(String(v));
   }
   return s;
-}
-
-function statusAccent(status: PurchaseRequestStatus): { bar: string; softBg: string; badgeClass: string } {
-  switch (status) {
-    case "REQUESTED":
-      return {
-        bar: "border-l-slate-500",
-        softBg: "bg-slate-50/90",
-        badgeClass: "border-0 bg-slate-100 text-slate-900 ring-1 ring-slate-200/80",
-      };
-    case "PURCHASING":
-      return {
-        bar: "border-l-blue-600",
-        softBg: "bg-blue-50/60",
-        badgeClass: "border-0 bg-blue-100 text-blue-900 ring-1 ring-blue-200/90",
-      };
-    case "SHIPPING":
-      return {
-        bar: "border-l-violet-600",
-        softBg: "bg-violet-50/60",
-        badgeClass: "border-0 bg-violet-100 text-violet-900 ring-1 ring-violet-200/90",
-      };
-    case "COMPLETED":
-      return {
-        bar: "border-l-emerald-600",
-        softBg: "bg-emerald-50/50",
-        badgeClass: "border-0 bg-emerald-100 text-emerald-900 ring-1 ring-emerald-200/90",
-      };
-    case "CANCELLED":
-    default:
-      return {
-        bar: "border-l-rose-600",
-        softBg: "bg-rose-50/50",
-        badgeClass: "border-0 bg-rose-100 text-rose-900 ring-1 ring-rose-200/90",
-      };
-  }
 }
 
 function formatShortDate(iso: string, locale: string): string {
@@ -216,6 +193,7 @@ function QuickActionsMenu({
 export default function PurchaseRequestList() {
   const { t, locale } = useI18n();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { getMyPurchaseRequests } = usePurchase();
   const { balance } = useBalance();
   const [requests, setRequests] = useState<PurchaseRequestListItem[]>([]);
@@ -223,7 +201,10 @@ export default function PurchaseRequestList() {
     null,
   );
   const [searchKeyword, setSearchKeyword] = useState("");
-  const [statusFilter, setStatusFilter] = useState<"all" | PurchaseRequestStatus>("all");
+  const [statusFilter, setStatusFilter] = useState<ListStatusFilter>(() =>
+    typeof window !== "undefined" ? readListFilterFromSearchParams(new URLSearchParams(window.location.search)) : "all",
+  );
+  const urlFilterOnce = useRef(false);
   const [sortValue, setSortValue] = useState<"latest" | "oldest">("latest");
   const [loading, setLoading] = useState(false);
   const [page, setPage] = useState(0);
@@ -232,11 +213,36 @@ export default function PurchaseRequestList() {
 
   const dateLocale = locale === "ko" ? "ko-KR" : locale === "ru" ? "ru-RU" : "en-US";
 
+  useLayoutEffect(() => {
+    if (urlFilterOnce.current) return;
+    urlFilterOnce.current = true;
+    const fromUrl = readListFilterFromSearchParams(searchParams);
+    if (fromUrl !== "all") {
+      setStatusFilter(fromUrl);
+    }
+  }, [searchParams]);
+
   const loadRequests = useCallback(
     async (p: number, s: number) => {
       try {
         setLoading(true);
         const sort = sortValue === "oldest" ? "createdAt,asc" : "createdAt,desc";
+        if (statusFilter === "progress") {
+          const cap = Math.min(Math.max(s, 20), 100);
+          const [reqPage, purPage] = await Promise.all([
+            getMyPurchaseRequests({ page: 0, size: cap, sort, status: "REQUESTED" }),
+            getMyPurchaseRequests({ page: 0, size: cap, sort, status: "PURCHASING" }),
+          ]);
+          const merged = [...reqPage.content, ...purPage.content].sort((a, b) => {
+            const ta = new Date(a.createdAt).getTime();
+            const tb = new Date(b.createdAt).getTime();
+            return sortValue === "oldest" ? ta - tb : tb - ta;
+          });
+          setRequests(merged.slice(0, s));
+          setTotalPages(1);
+          setPage(0);
+          return;
+        }
         const status = statusFilter === "all" ? undefined : statusFilter;
         const pageData = await getMyPurchaseRequests({ page: p, size: s, sort, status });
         setRequests(pageData.content);
@@ -325,11 +331,15 @@ export default function PurchaseRequestList() {
             <p className="text-xs font-semibold text-gray-700 md:text-sm">{t("purchase.list.summaryTitle")}</p>
             <Package className="h-4 w-4 text-gray-400" aria-hidden />
           </div>
-          <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-6 sm:gap-2">
+          <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-4 md:grid-cols-7 sm:gap-2">
             {FILTER_CHIPS.map((chip) => {
               const key = chip.summaryKey ?? "ALL";
-              const count = summaryCounts?.[key];
+              const count =
+                chip.summaryKey === "PROGRESS"
+                  ? (summaryCounts?.REQUESTED ?? 0) + (summaryCounts?.PURCHASING ?? 0)
+                  : summaryCounts?.[key as keyof typeof summaryCounts];
               const active = statusFilter === chip.value;
+              const activeChip = purchaseListSummaryChipActiveClasses(chip.value);
               return (
                 <button
                   key={chip.value}
@@ -337,23 +347,23 @@ export default function PurchaseRequestList() {
                   onClick={() => setStatusFilter(chip.value)}
                   className={cn(
                     "flex min-h-[52px] flex-col items-center justify-center rounded-lg border px-1 py-1.5 text-center transition-all sm:min-h-[56px]",
-                    active
-                      ? "border-blue-300 bg-blue-50/90 ring-2 ring-blue-400/35"
-                      : "border-transparent bg-gray-50/80 hover:bg-gray-100/90",
+                    active ? activeChip.shell : "border-transparent bg-gray-50/80 hover:bg-gray-100/90",
                   )}
                 >
                   <span
                     className={cn(
                       "text-lg font-bold tabular-nums leading-none sm:text-xl",
-                      active ? "text-blue-900" : "text-gray-900",
+                      active ? activeChip.countClass : "text-gray-900",
                     )}
                   >
-                    {count == null ? "–" : count}
+                    {count ?? 0}
                   </span>
                   <span className="mt-0.5 line-clamp-2 text-[10px] font-medium text-gray-600 sm:text-xs">
                     {chip.value === "all"
                       ? t("purchase.list.filterAll")
-                      : t(`purchase.status.${chip.value}` as `purchase.status.${PurchaseRequestStatus}`)}
+                      : chip.value === "progress"
+                        ? t("purchase.list.filterProgress")
+                        : t(`purchase.status.${chip.value}` as `purchase.status.${PurchaseRequestStatus}`)}
                   </span>
                 </button>
               );
@@ -397,7 +407,7 @@ export default function PurchaseRequestList() {
       {/* 목록 */}
       <div className="space-y-2 md:space-y-2.5">
         {filteredRequests.map((request) => {
-          const accent = statusAccent(request.status);
+          const accent = purchaseStatusAccent(request.status);
           const refundDue = isRefundPending(request);
           const total = toAmountNumber(request.totalAmountKrw);
           const progressKey = refundDue
@@ -491,7 +501,7 @@ export default function PurchaseRequestList() {
         </Card>
       )}
 
-      {(totalPages > 1 || requests.length > 0) && (
+      {statusFilter !== "progress" && (totalPages > 1 || requests.length > 0) && (
         <div className="mt-4 flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-2 text-xs text-gray-500 md:text-sm">
             <span>{t("purchase.list.perPage")}</span>

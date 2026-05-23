@@ -3,6 +3,8 @@ import { useNavigate, useParams } from "react-router";
 import { ArrowLeft, X, Download, ChevronLeft, ChevronRight, MessageSquare, ExternalLink } from "lucide-react";
 import { Button } from "../../components/ui/button";
 import { Badge } from "../../components/ui/badge";
+import { cn } from "../../components/ui/utils";
+import { purchaseStatusBadgeClass } from "../../utils/purchaseStatusStyle";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card";
 import { Separator } from "../../components/ui/separator";
 import { usePurchase } from "../../hooks/purchase/usePurchase";
@@ -14,12 +16,12 @@ function hasShippingSnapshot(s?: PurchaseShipping | null): boolean {
   return Boolean(s.addressLine1 || s.recipientName);
 }
 
-const statusLabels: Record<PurchaseRequestStatus, { label: string; variant: "default" | "secondary" | "outline" | "destructive" }> = {
-  REQUESTED: { label: "요청접수", variant: "secondary" },
-  PURCHASING: { label: "구매진행중", variant: "default" },
-  SHIPPING: { label: "배송중", variant: "default" },
-  COMPLETED: { label: "완료", variant: "default" },
-  CANCELLED: { label: "취소", variant: "destructive" },
+const statusLabels: Record<PurchaseRequestStatus, { label: string }> = {
+  REQUESTED: { label: "요청접수" },
+  PURCHASING: { label: "구매진행중" },
+  SHIPPING: { label: "배송중" },
+  COMPLETED: { label: "완료" },
+  CANCELLED: { label: "취소" },
 };
 
 function optionRecordEntries(opt: unknown): [string, string][] {
@@ -249,7 +251,9 @@ export default function PurchaseRequestDetail() {
                 요청번호: {data.requestNumber}
               </p>
             </div>
-            <Badge variant={statusInfo.variant}>{statusInfo.label}</Badge>
+            <Badge variant="outline" className={cn("border-transparent font-semibold", purchaseStatusBadgeClass(data.status))}>
+              {statusInfo.label}
+            </Badge>
           </div>
         </CardHeader>
 
