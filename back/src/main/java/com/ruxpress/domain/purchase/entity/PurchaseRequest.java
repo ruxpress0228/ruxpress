@@ -24,8 +24,8 @@ public class PurchaseRequest extends BaseEntity {
     @Column(name = "request_number", nullable = false, length = 30)
     private String requestNumber;
 
-    @Column(name = "product_name", nullable = false, length = 300)
-    private String productName;
+    @Column(name = "request_name", nullable = false, length = 300)
+    private String requestName;
 
     @Column(nullable = false)
     private Integer quantity = 1;
@@ -79,10 +79,31 @@ public class PurchaseRequest extends BaseEntity {
     @Column(name = "tracking_number", length = 64)
     private String trackingNumber;
 
+    @Column(name = "shipping_user_address_id")
+    private Long shippingUserAddressId;
+
+    @Column(name = "shipping_label", length = 50)
+    private String shippingLabel;
+
+    @Column(name = "shipping_recipient_name", length = 50)
+    private String shippingRecipientName;
+
+    @Column(name = "shipping_recipient_phone", length = 20)
+    private String shippingRecipientPhone;
+
+    @Column(name = "shipping_postal_code", length = 10)
+    private String shippingPostalCode;
+
+    @Column(name = "shipping_address_line1", length = 255)
+    private String shippingAddressLine1;
+
+    @Column(name = "shipping_address_line2", length = 255)
+    private String shippingAddressLine2;
+
     public static PurchaseRequest create(
             Long userId,
             String requestNumber,
-            String productName,
+            String requestName,
             Integer quantity,
             String urls,
             String options,
@@ -93,12 +114,13 @@ public class PurchaseRequest extends BaseEntity {
             BigDecimal feeAmount,
             BigDecimal totalAmountKrw,
             String memo,
-            PurchaseRequestStatus status
+            PurchaseRequestStatus status,
+            PurchaseShippingSnapshot shippingSnapshot
     ) {
         PurchaseRequest pr = new PurchaseRequest();
         pr.userId = userId;
         pr.requestNumber = requestNumber;
-        pr.productName = productName;
+        pr.requestName = requestName;
         pr.quantity = quantity != null ? quantity : 1;
         pr.urls = urls;
         pr.options = options;
@@ -110,6 +132,15 @@ public class PurchaseRequest extends BaseEntity {
         pr.totalAmountKrw = totalAmountKrw;
         pr.memo = memo;
         pr.status = status != null ? status : PurchaseRequestStatus.DRAFT;
+        if (shippingSnapshot != null) {
+            pr.shippingUserAddressId = shippingSnapshot.getUserAddressId();
+            pr.shippingLabel = shippingSnapshot.getLabel();
+            pr.shippingRecipientName = shippingSnapshot.getRecipientName();
+            pr.shippingRecipientPhone = shippingSnapshot.getRecipientPhone();
+            pr.shippingPostalCode = shippingSnapshot.getPostalCode();
+            pr.shippingAddressLine1 = shippingSnapshot.getAddressLine1();
+            pr.shippingAddressLine2 = shippingSnapshot.getAddressLine2();
+        }
         return pr;
     }
 

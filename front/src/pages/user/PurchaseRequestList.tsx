@@ -60,7 +60,7 @@ export default function PurchaseRequestList() {
     const keyword = searchKeyword.trim().toLowerCase();
     if (!keyword) return requests;
     return requests.filter((r) =>
-      r.requestNumber.toLowerCase().includes(keyword) || r.productName.toLowerCase().includes(keyword)
+      r.requestNumber.toLowerCase().includes(keyword) || r.requestName.toLowerCase().includes(keyword)
     );
   }, [requests, searchKeyword]);
 
@@ -144,7 +144,7 @@ export default function PurchaseRequestList() {
             <div className="space-y-2">
               {recentRequests.map((item) => (
                 <div key={item.id} className="flex items-center justify-between gap-2 text-sm min-w-0">
-                  <span className="truncate min-w-0">{item.productName}</span>
+                  <span className="truncate min-w-0">{item.requestName}</span>
                   <span
                     className="text-gray-500 truncate min-w-0 max-w-[45%] text-right"
                     title={item.requestNumber}
@@ -169,7 +169,7 @@ export default function PurchaseRequestList() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center space-x-3 mb-2">
                       <h3 className="text-lg font-semibold text-gray-900">
-                        {request.productName}
+                        {request.requestName}
                       </h3>
                       <Badge variant={statusInfo.variant}>
                         {statusInfo.label}

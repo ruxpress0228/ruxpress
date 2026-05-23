@@ -10,6 +10,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.math.BigDecimal;
+import java.util.Map;
 
 @Getter
 @Setter
@@ -29,4 +30,7 @@ public class PurchaseItemRequest {
     @NotNull
     @Min(value = 1, message = "수량은 1 이상이어야 합니다")
     private Integer quantity;
+
+    /** 이 상품 줄에만 해당하는 옵션 (색상·사이즈 등). 없으면 생략. */
+    private Map<String, String> options;
 }

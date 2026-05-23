@@ -74,7 +74,7 @@ export interface PurchaseRequest {
   id: number;
   userId: number;
   requestNumber: string;
-  productName: string;
+  requestName: string;
   quantity: number;
   urls?: Array<{ url: string; shop: string }>;
   options?: Array<{ name: string; value: string }>;

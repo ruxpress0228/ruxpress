@@ -19,7 +19,7 @@ public class PurchaseRequestResponse {
     private final String userEmail;
     private final String userNickname;
     private final String requestNumber;
-    private final String productName;
+    private final String requestName;
     private final Integer quantity;
     private final List<String> urls;
     private final JsonNode options;
@@ -36,6 +36,7 @@ public class PurchaseRequestResponse {
     private final String adminMemo;
     private final Long assignedAdminId;
     private final String trackingNumber;
+    private final PurchaseShippingResponse shipping;
     private final List<PurchaseItemResponse> items;
     private final List<AttachmentResponse> attachments;
     private final LocalDateTime createdAt;

@@ -7,7 +7,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/ca
 import { Separator } from "../../components/ui/separator";
 import { usePurchase } from "../../hooks/purchase/usePurchase";
 import type { PurchaseRequestStatus } from "../../types";
-import type { PurchaseAttachment, PurchaseRequestDetail } from "../../types/purchase";
+import type { PurchaseAttachment, PurchaseRequestDetail, PurchaseShipping } from "../../types/purchase";
+
+function hasShippingSnapshot(s?: PurchaseShipping | null): boolean {
+  if (!s) return false;
+  return Boolean(s.addressLine1 || s.recipientName);
+}
 
 const statusLabels: Record<PurchaseRequestStatus, { label: string; variant: "default" | "secondary" | "outline" | "destructive" }> = {
   DRAFT: { label: "작성중", variant: "outline" },
@@ -21,6 +26,31 @@ const statusLabels: Record<PurchaseRequestStatus, { label: string; variant: "def
   CANCELLED: { label: "취소됨", variant: "destructive" },
   REFUNDED: { label: "환불됨", variant: "destructive" },
 };
+
+function optionRecordEntries(opt: unknown): [string, string][] {
+  if (opt == null || typeof opt !== "object" || Array.isArray(opt)) return [];
+  return Object.entries(opt as Record<string, unknown>)
+    .filter(([, v]) => v != null && String(v) !== "")
+    .map(([k, v]) => [k, String(v)]);
+}
+
+function OptionAttributesReadonlyList({ entries }: { entries: [string, string][] }) {
+  if (entries.length === 0) return null;
+  return (
+    <ul className="mt-1 space-y-0.5 text-sm leading-relaxed text-gray-800">
+      {entries.map(([name, value], i) => (
+        <li key={`${name}-${i}`} className="pl-0.5">
+          <span className="text-gray-400 select-none" aria-hidden>
+            -{" "}
+          </span>
+          <span className="text-gray-600">{name}</span>
+          <span className="text-gray-400">: </span>
+          <span className="text-gray-900">{value}</span>
+        </li>
+      ))}
+    </ul>
+  );
+}
 
 function ImageLightbox({
   images,
@@ -134,7 +164,7 @@ export default function AdminPurchaseRequestDetail() {
   }
 
   const statusInfo = statusLabels[data.status];
-  const optionsEntries = data.options && typeof data.options === "object" ? Object.entries(data.options) : [];
+  const legacyOptionsEntries = optionRecordEntries(data.options);
   const imageAttachments = (data.attachments ?? []).filter((a) => a.mimeType.startsWith("image/"));
   const userAttachments = imageAttachments.filter((a) => !a.uploadedByAdmin);
   const adminAttachments = imageAttachments.filter((a) => a.uploadedByAdmin);
@@ -156,7 +186,7 @@ export default function AdminPurchaseRequestDetail() {
         <CardHeader className="pb-3">
           <div className="flex items-start justify-between gap-4">
             <div className="min-w-0">
-              <CardTitle className="text-2xl">{data.productName}</CardTitle>
+              <CardTitle className="text-2xl">{data.requestName}</CardTitle>
               <p className="text-sm text-gray-500 mt-1">요청번호: {data.requestNumber}</p>
             </div>
             <Badge variant={statusInfo.variant}>{statusInfo.label}</Badge>
@@ -189,19 +219,28 @@ export default function AdminPurchaseRequestDetail() {
             <p className="font-semibold">상품 항목</p>
             {data.items && data.items.length > 0 ? (
               <ul className="space-y-2">
-                {data.items.map((it, idx) => (
-                  <li key={`${it.url}-${idx}`} className="border rounded p-3 space-y-1">
-                    <a className="text-blue-600 underline break-all" href={it.url} target="_blank" rel="noreferrer">
-                      {it.shop ? `[${it.shop}] ` : ""}{it.url}
-                    </a>
-                    <div className="text-sm text-gray-700">
-                      단가 ₩{(it.priceKrw ?? 0).toLocaleString()} × {it.quantity ?? 0}개 =
-                      <span className="font-semibold ml-1">
-                        ₩{((it.priceKrw ?? 0) * (it.quantity ?? 0)).toLocaleString()}
-                      </span>
-                    </div>
-                  </li>
-                ))}
+                {data.items.map((it, idx) => {
+                  const itemOptions = optionRecordEntries(it.options);
+                  return (
+                    <li key={`${it.url}-${idx}`} className="border rounded-lg p-3 sm:p-4 space-y-2">
+                      <a className="text-blue-600 underline break-all" href={it.url} target="_blank" rel="noreferrer">
+                        {it.shop ? `[${it.shop}] ` : ""}{it.url}
+                      </a>
+                      <div className="text-sm text-gray-700 pt-1 border-t border-gray-100">
+                        단가 ₩{(it.priceKrw ?? 0).toLocaleString()} × {it.quantity ?? 0}개 =
+                        <span className="font-semibold ml-1">
+                          ₩{((it.priceKrw ?? 0) * (it.quantity ?? 0)).toLocaleString()}
+                        </span>
+                      </div>
+                      {itemOptions.length > 0 ? (
+                        <div className="pt-2 border-t border-gray-50">
+                          <p className="text-sm font-medium text-gray-600 mb-1">옵션</p>
+                          <OptionAttributesReadonlyList entries={itemOptions} />
+                        </div>
+                      ) : null}
+                    </li>
+                  );
+                })}
               </ul>
             ) : data.urls && data.urls.length > 0 ? (
               <ul className="space-y-1">
@@ -216,21 +255,34 @@ export default function AdminPurchaseRequestDetail() {
             )}
           </div>
 
-          <div className="space-y-2">
-            <p className="font-semibold">옵션</p>
-            {optionsEntries.length > 0 ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                {optionsEntries.map(([k, v]) => (
-                  <div key={k} className="flex items-center justify-between rounded border p-3">
-                    <span className="text-sm text-gray-600">{k}</span>
-                    <span className="text-sm font-medium text-gray-900 truncate ml-2">{String(v)}</span>
-                  </div>
-                ))}
+          {legacyOptionsEntries.length > 0 && (
+            <div className="space-y-1">
+              <p className="text-sm font-medium text-gray-600">공통 옵션</p>
+              <OptionAttributesReadonlyList entries={legacyOptionsEntries} />
+            </div>
+          )}
+
+          {hasShippingSnapshot(data.shipping) && data.shipping && (
+            <div className="space-y-2">
+              <p className="font-semibold">배송지</p>
+              <div className="rounded-lg border border-gray-200 bg-gray-50/80 p-3 text-sm text-gray-800 space-y-1">
+                {data.shipping.label ? <p className="font-medium text-gray-900">{data.shipping.label}</p> : null}
+                {(data.shipping.recipientName || data.shipping.recipientPhone) && (
+                  <p>
+                    {data.shipping.recipientName ?? ""}
+                    {data.shipping.recipientPhone ? (
+                      <span className="text-gray-600"> · {data.shipping.recipientPhone}</span>
+                    ) : null}
+                  </p>
+                )}
+                <p className="break-words leading-relaxed">
+                  {data.shipping.postalCode ? <span className="mr-1">({data.shipping.postalCode})</span> : null}
+                  {data.shipping.addressLine1}
+                  {data.shipping.addressLine2 ? ` ${data.shipping.addressLine2}` : ""}
+                </p>
               </div>
-            ) : (
-              <p className="text-sm text-gray-500">등록된 옵션이 없습니다.</p>
-            )}
-          </div>
+            </div>
+          )}
 
           {data.memo && (
             <div className="space-y-2">

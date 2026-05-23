@@ -10,18 +10,20 @@ import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 import java.math.BigDecimal;
 import java.util.List;
 
 @Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 public class PurchaseRequestCreateRequest {
 
-    @NotBlank(message = "상품명을 입력해주세요")
+    @NotBlank(message = "요청명을 입력해주세요")
     @Size(max = 300)
-    private String productName;
+    private String requestName;
 
     @Min(value = 1, message = "수량은 1 이상이어야 합니다")
     private Integer quantity;
@@ -52,6 +54,9 @@ public class PurchaseRequestCreateRequest {
     private String memo;
 
     private PurchaseRequestStatus status;
+
+    /** 제출 시 필수. 회원 소유 배송지(user_addresses.id) */
+    private Long shippingUserAddressId;
 
     public boolean isValid() {
         if (status == PurchaseRequestStatus.SUBMITTED) {

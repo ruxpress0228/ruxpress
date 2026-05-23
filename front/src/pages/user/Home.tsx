@@ -128,7 +128,7 @@ export default function Home() {
                 >
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="font-medium text-gray-900">{request.productName}</p>
+                      <p className="font-medium text-gray-900">{request.requestName}</p>
                       <p className="text-sm text-gray-500">{request.requestNumber}</p>
                     </div>
                     <Badge variant="secondary">{request.status}</Badge>

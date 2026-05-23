@@ -213,7 +213,7 @@ export default function AdminPurchaseRequests() {
       list = list.filter(
         (r) =>
           r.requestNumber.includes(search.trim()) ||
-          r.productName.toLowerCase().includes(q)
+          r.requestName.toLowerCase().includes(q)
       );
     }
     return list;
@@ -235,7 +235,7 @@ export default function AdminPurchaseRequests() {
             <div className="relative lg:col-span-2">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
               <Input
-                placeholder="요청번호, 상품명 검색"
+                placeholder="요청번호, 요청명 검색"
                 className="pl-10"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
@@ -327,7 +327,7 @@ export default function AdminPurchaseRequests() {
                         <span className="text-gray-500">#{request.userId}</span>
                       )}
                     </TableCell>
-                    <TableCell className="font-medium">{request.productName}</TableCell>
+                    <TableCell className="font-medium">{request.requestName}</TableCell>
                     <TableCell>{request.quantity}</TableCell>
                     <TableCell>
                       {request.totalAmountKrw != null
@@ -417,7 +417,7 @@ export default function AdminPurchaseRequests() {
                   {selected.userEmail ? ` (${selected.userEmail})` : ""}
                 </p>
                 <p>
-                  <span className="text-gray-500">상품</span> {selected.productName}
+                  <span className="text-gray-500">요청</span> {selected.requestName}
                 </p>
               </div>
               <div className="space-y-2">

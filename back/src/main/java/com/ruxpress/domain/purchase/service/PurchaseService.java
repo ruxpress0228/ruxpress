@@ -16,8 +16,11 @@ import com.ruxpress.domain.admin.entity.SystemSetting;
 import com.ruxpress.domain.admin.repository.SystemSettingRepository;
 import com.ruxpress.domain.balance.service.BalanceService;
 import com.ruxpress.domain.notification.service.NotificationService;
+import com.ruxpress.domain.purchase.dto.response.PurchaseShippingResponse;
+import com.ruxpress.domain.purchase.entity.PurchaseShippingSnapshot;
 import com.ruxpress.domain.user.entity.User;
 import com.ruxpress.domain.user.repository.UserRepository;
+import com.ruxpress.domain.user.service.UserAddressService;
 import com.ruxpress.domain.purchase.dto.request.AdminPurchaseStatusRequest;
 import com.ruxpress.domain.purchase.dto.request.AdminPurchaseWalletCreditRequest;
 import com.ruxpress.domain.purchase.dto.request.PurchaseItemRequest;
@@ -63,6 +66,7 @@ public class PurchaseService {
     private final SystemSettingRepository systemSettingRepository;
     private final UserRepository userRepository;
     private final ExchangeService exchangeService;
+    private final UserAddressService userAddressService;
 
     private BigDecimal currentFeeRatePercent() {
         return systemSettingRepository.findBySettingKey(FEE_RATE_KEY)
@@ -142,11 +146,13 @@ public class PurchaseService {
                 .divide(HUNDRED, 2, RoundingMode.HALF_UP);
         BigDecimal totalAmountKrw = priceKrw.add(feeAmount);
 
+        PurchaseShippingSnapshot shippingSnapshot = resolveShippingSnapshot(userId, request, effectiveStatus);
+
         String requestNumber = IDGenerateUtil.generatePurchaseRequestNumber();
         PurchaseRequest purchaseRequest = PurchaseRequest.create(
                 userId,
                 requestNumber,
-                request.getProductName(),
+                request.getRequestName(),
                 quantity,
                 urlsJson,
                 jsonUtils.toJson(request.getOptions()),
@@ -157,7 +163,8 @@ public class PurchaseService {
                 feeAmount,
                 totalAmountKrw,
                 request.getMemo(),
-                effectiveStatus);
+                effectiveStatus,
+                shippingSnapshot);
         PurchaseRequest saved = purchaseRequestRepository.save(purchaseRequest);
         if (effectiveStatus == PurchaseRequestStatus.SUBMITTED) {
             balanceService.debitForPurchase(userId, totalAmountKrw, saved.getId());
@@ -428,7 +435,7 @@ public class PurchaseService {
         return new PurchaseRequestListResponse(
                 entity.getId(),
                 entity.getRequestNumber(),
-                entity.getProductName(),
+                entity.getRequestName(),
                 entity.getQuantity(),
                 entity.getTotalAmountKrw(),
                 entity.getChargedAmountKrw(),
@@ -472,7 +479,21 @@ public class PurchaseService {
                     Integer qty = element.has("quantity") && !element.get("quantity").isNull()
                             ? element.get("quantity").asInt()
                             : null;
-                    itemsList.add(new PurchaseItemResponse(url, shop, priceKrw, qty));
+                    Map<String, String> itemOptions = null;
+                    if (element.has("options") && element.get("options").isObject()) {
+                        var optNode = element.get("options");
+                        Map<String, String> parsed = new HashMap<>();
+                        optNode.fields().forEachRemaining(e -> {
+                            var v = e.getValue();
+                            if (v != null && !v.isNull()) {
+                                parsed.put(e.getKey(), v.isValueNode() ? v.asText() : v.toString());
+                            }
+                        });
+                        if (!parsed.isEmpty()) {
+                            itemOptions = parsed;
+                        }
+                    }
+                    itemsList.add(new PurchaseItemResponse(url, shop, priceKrw, qty, itemOptions));
                     if (url != null && !url.isBlank()) {
                         urlsList.add(url);
                     }
@@ -488,7 +509,7 @@ public class PurchaseService {
                 user != null ? user.getEmail() : null,
                 user != null ? user.getNickname() : null,
                 entity.getRequestNumber(),
-                entity.getProductName(),
+                entity.getRequestName(),
                 entity.getQuantity(),
                 urlsList,
                 jsonUtils.parseJsonNode(entity.getOptions()),
@@ -505,9 +526,46 @@ public class PurchaseService {
                 entity.getAdminMemo(),
                 entity.getAssignedAdminId(),
                 entity.getTrackingNumber(),
+                toShippingResponse(entity),
                 itemsList,
                 attachmentResponses,
                 entity.getCreatedAt(),
                 entity.getUpdatedAt());
+    }
+
+    private PurchaseShippingSnapshot resolveShippingSnapshot(
+            Long userId,
+            PurchaseRequestCreateRequest request,
+            PurchaseRequestStatus effectiveStatus) {
+        Long addrId = request.getShippingUserAddressId();
+        if (addrId == null) {
+            if (effectiveStatus == PurchaseRequestStatus.SUBMITTED) {
+                throw new BusinessException(ErrorCode.INVALID_INPUT, "배송지를 선택해주세요.");
+            }
+            return null;
+        }
+        var ua = userAddressService.getOwnedAddressOrThrow(userId, addrId);
+        return new PurchaseShippingSnapshot(
+                ua.getId(),
+                ua.getLabel(),
+                ua.getRecipientName(),
+                ua.getRecipientPhone(),
+                ua.getPostalCode(),
+                ua.getAddressLine1(),
+                ua.getAddressLine2());
+    }
+
+    private PurchaseShippingResponse toShippingResponse(PurchaseRequest entity) {
+        if (entity.getShippingAddressLine1() == null && entity.getShippingUserAddressId() == null) {
+            return null;
+        }
+        return new PurchaseShippingResponse(
+                entity.getShippingUserAddressId(),
+                entity.getShippingLabel(),
+                entity.getShippingRecipientName(),
+                entity.getShippingRecipientPhone(),
+                entity.getShippingPostalCode(),
+                entity.getShippingAddressLine1(),
+                entity.getShippingAddressLine2());
     }
 }

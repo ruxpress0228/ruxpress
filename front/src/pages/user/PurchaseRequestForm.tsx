@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate } from "react-router";
+import { Link, useNavigate } from "react-router";
 import { Plus, X, Upload } from "lucide-react";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
@@ -8,6 +8,7 @@ import { Textarea } from "../../components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../components/ui/card";
 import { Badge } from "../../components/ui/badge";
 import { Tabs, TabsList, TabsTrigger } from "../../components/ui/tabs";
+import { RadioGroup, RadioGroupItem } from "../../components/ui/radio-group";
 import { toast } from "sonner";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useExchangeRate } from "../../hooks/exchange/useExchangeRate";
@@ -16,6 +17,7 @@ import { api } from "../../utils/api";
 import { formatDate, formatNumber } from "../../utils/format";
 import { USER_BALANCE_CHANGE_EVENT } from "../../utils/constants";
 import type { PurchaseRequestStatus } from "../../types";
+import type { UserAddress } from "../../types/domain";
 import {
   type QuoteCurrency,
   type CurrentExchangeRates,
@@ -31,6 +33,25 @@ const MAX_IMAGES = 10;
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024; // 5MB
 const ALLOWED_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 
+/** 옵션: 전형적인 입력 박스보다 덜 강조된 밑줄 스타일(상품 속성 메모 느낌) */
+const OPTION_FIELD_CLASS =
+  "h-9 min-w-0 w-full border-0 border-b border-gray-200 rounded-none bg-transparent px-1 py-1 shadow-none " +
+  "focus-visible:ring-0 focus-visible:border-gray-500 focus-visible:ring-offset-0 " +
+  "placeholder:text-gray-400 text-sm text-gray-900";
+
+type LineOption = { name: string; value: string };
+type PurchaseLineItem = { url: string; shop: string; priceKrw: number; quantity: number; options: LineOption[] };
+
+function optionsToRecord(rows: LineOption[]): Record<string, string> | undefined {
+  const acc: Record<string, string> = {};
+  for (const cur of rows) {
+    const key = cur.name.trim();
+    const value = cur.value.trim();
+    if (key && value) acc[key] = value;
+  }
+  return Object.keys(acc).length ? acc : undefined;
+}
+
 export default function PurchaseRequestForm() {
   const { t, locale } = useTranslation();
   const navigate = useNavigate();
@@ -40,15 +61,17 @@ export default function PurchaseRequestForm() {
   const [ratesData, setRatesData] = useState<CurrentExchangeRates | null>(null);
   const [quoteCurrency, setQuoteCurrency] = useState<QuoteCurrency>("RUB");
   const [feeRatePercent, setFeeRatePercent] = useState<number>(DEFAULT_FEE_PERCENT);
-  const [items, setItems] = useState<Array<{ url: string; shop: string; priceKrw: number; quantity: number }>>([
-    { url: "", shop: "", priceKrw: 0, quantity: 1 },
+  const [items, setItems] = useState<PurchaseLineItem[]>([
+    { url: "", shop: "", priceKrw: 0, quantity: 1, options: [] },
   ]);
-  const [options, setOptions] = useState<Array<{ name: string; value: string }>>([]);
-  const [productName, setProductName] = useState("");
+  const [requestName, setRequestName] = useState("");
   const [memo, setMemo] = useState("");
   const [images, setImages] = useState<File[]>([]);
   const [isDragOver, setIsDragOver] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [addresses, setAddresses] = useState<UserAddress[]>([]);
+  const [addressesLoading, setAddressesLoading] = useState(false);
+  const [selectedShippingId, setSelectedShippingId] = useState<number | null>(null);
 
   const rateMap = useMemo(
     () => (ratesData ? buildRateMap(ratesData.quotes) : new Map<string, number>()),
@@ -77,6 +100,36 @@ export default function PurchaseRequestForm() {
       });
   }, []);
 
+  useEffect(() => {
+    let cancelled = false;
+    setAddressesLoading(true);
+    api
+      .get<UserAddress[]>("/v1/users/me/addresses")
+      .then((res) => {
+        if (cancelled) return;
+        if (res.code === 200 && Array.isArray(res.data)) {
+          setAddresses(res.data);
+          const preferred = res.data.find((a) => a.isDefault) ?? res.data[0];
+          setSelectedShippingId(preferred?.id ?? null);
+        } else {
+          setAddresses([]);
+          setSelectedShippingId(null);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setAddresses([]);
+          setSelectedShippingId(null);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setAddressesLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const imagePreviews = useMemo(() => {
     return images.map((file) => ({ file, url: URL.createObjectURL(file) }));
   }, [images]);
@@ -88,7 +141,7 @@ export default function PurchaseRequestForm() {
   }, [imagePreviews]);
 
   const addItem = () => {
-    setItems([...items, { url: "", shop: "", priceKrw: 0, quantity: 1 }]);
+    setItems([...items, { url: "", shop: "", priceKrw: 0, quantity: 1, options: [] }]);
   };
 
   const removeItem = (index: number) => {
@@ -118,18 +171,30 @@ export default function PurchaseRequestForm() {
     0
   );
 
-  const addOption = () => {
-    setOptions([...options, { name: "", value: "" }]);
+  const addLineOption = (itemIndex: number) => {
+    const next = [...items];
+    next[itemIndex] = {
+      ...next[itemIndex],
+      options: [...next[itemIndex].options, { name: "", value: "" }],
+    };
+    setItems(next);
   };
 
-  const removeOption = (index: number) => {
-    setOptions(options.filter((_, i) => i !== index));
+  const removeLineOption = (itemIndex: number, optIndex: number) => {
+    const next = [...items];
+    next[itemIndex] = {
+      ...next[itemIndex],
+      options: next[itemIndex].options.filter((_, i) => i !== optIndex),
+    };
+    setItems(next);
   };
 
-  const updateOption = (index: number, field: "name" | "value", value: string) => {
-    const newOptions = [...options];
-    newOptions[index][field] = value;
-    setOptions(newOptions);
+  const updateLineOption = (itemIndex: number, optIndex: number, field: "name" | "value", value: string) => {
+    const next = [...items];
+    const rowOpts = [...next[itemIndex].options];
+    rowOpts[optIndex] = { ...rowOpts[optIndex], [field]: value };
+    next[itemIndex] = { ...next[itemIndex], options: rowOpts };
+    setItems(next);
   };
 
   const calculateTotal = () => {
@@ -211,6 +276,7 @@ export default function PurchaseRequestForm() {
           shop: it.shop.trim(),
           priceKrw: Number(it.priceKrw) || 0,
           quantity: Math.max(1, Number(it.quantity) || 1),
+          options: it.options,
         }))
         .filter((it) => it.url !== "" && it.priceKrw > 0);
 
@@ -220,12 +286,11 @@ export default function PurchaseRequestForm() {
         return;
       }
 
-      const optionMap = options.reduce<Record<string, string>>((acc, cur) => {
-        const key = cur.name.trim();
-        const value = cur.value.trim();
-        if (key && value) acc[key] = value;
-        return acc;
-      }, {});
+      if (selectedShippingId == null) {
+        toast.error(t("purchase.shipping.required"));
+        setSubmitting(false);
+        return;
+      }
 
       const feeAmount = totals.feeKrw;
       const status: PurchaseRequestStatus = "SUBMITTED";
@@ -237,14 +302,17 @@ export default function PurchaseRequestForm() {
       }
 
       const payload = {
-        productName: productName.trim(),
-        items: cleanedItems.map((it) => ({
-          url: it.url,
-          shop: it.shop || undefined,
-          priceKrw: it.priceKrw,
-          quantity: it.quantity,
-        })),
-        options: Object.keys(optionMap).length ? optionMap : undefined,
+        requestName: requestName.trim(),
+        items: cleanedItems.map((it) => {
+          const opt = optionsToRecord(it.options);
+          return {
+            url: it.url,
+            shop: it.shop || undefined,
+            priceKrw: it.priceKrw,
+            quantity: it.quantity,
+            ...(opt ? { options: opt } : {}),
+          };
+        }),
         quoteCurrency,
         priceRub: totals.priceQuote,
         exchangeRateId: selectedQuoteRate?.id,
@@ -252,6 +320,7 @@ export default function PurchaseRequestForm() {
         totalAmountKrw: totals.totalKrw,
         memo: memo.trim() || undefined,
         status,
+        shippingUserAddressId: selectedShippingId,
         files: images.length > 0 ? images : undefined,
       };
 
@@ -283,19 +352,19 @@ export default function PurchaseRequestForm() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="productName">{t("purchase.productName")}</Label>
+              <Label htmlFor="requestName">{t("purchase.requestName")}</Label>
               <Input
-                id="productName"
-                placeholder={t("purchase.productNamePlaceholder")}
-                value={productName}
-                onChange={(e) => setProductName(e.target.value)}
+                id="requestName"
+                placeholder={t("purchase.requestNamePlaceholder")}
+                value={requestName}
+                onChange={(e) => setRequestName(e.target.value)}
                 required
               />
             </div>
 
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <Label>상품 항목 (URL · 단가 · 수량)</Label>
+                <Label>{t("purchase.itemLinesLabel")}</Label>
                 <Button type="button" variant="outline" size="sm" onClick={addItem}>
                   <Plus className="w-4 h-4 mr-1" />
                   항목 추가
@@ -347,6 +416,62 @@ export default function PurchaseRequestForm() {
                       />
                     </div>
                   </div>
+                  <div className="space-y-2 pt-2 border-t border-gray-50">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-sm font-medium text-gray-600">{t("purchase.optionHeading")}</span>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 shrink-0 gap-1 text-xs text-gray-600 hover:text-gray-900"
+                        onClick={() => addLineOption(index)}
+                      >
+                        <Plus className="h-3.5 w-3.5" />
+                        {t("purchase.addLineOption")}
+                      </Button>
+                    </div>
+                    {item.options.length > 0 ? (
+                      <ul className="space-y-2 pl-0.5">
+                        {item.options.map((option, optIdx) => (
+                          <li key={optIdx} className="flex items-start gap-2">
+                            <span className="mt-2 shrink-0 text-gray-300 select-none" aria-hidden>
+                              -
+                            </span>
+                            <div className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row sm:items-center sm:gap-2">
+                              <Input
+                                aria-label={t("purchase.optionNamePlaceholder")}
+                                placeholder={t("purchase.optionNamePlaceholder")}
+                                value={option.name}
+                                onChange={(e) => updateLineOption(index, optIdx, "name", e.target.value)}
+                                className={`${OPTION_FIELD_CLASS} sm:max-w-[40%]`}
+                              />
+                              <span className="hidden shrink-0 text-gray-300 sm:inline" aria-hidden>
+                                :
+                              </span>
+                              <Input
+                                aria-label={t("purchase.optionValuePlaceholder")}
+                                placeholder={t("purchase.optionValuePlaceholder")}
+                                value={option.value}
+                                onChange={(e) => updateLineOption(index, optIdx, "value", e.target.value)}
+                                className={OPTION_FIELD_CLASS}
+                              />
+                            </div>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              className="h-9 w-9 shrink-0 text-gray-400 hover:text-gray-700"
+                              onClick={() => removeLineOption(index, optIdx)}
+                              aria-label="옵션 줄 삭제"
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : null}
+                    <p className="text-xs text-gray-400">{t("purchase.itemOptionHint")}</p>
+                  </div>
                   <p className="text-xs text-gray-400">
                     소계: ₩{formatNumber((item.priceKrw || 0) * (item.quantity || 0), locale, numOpt)}
                   </p>
@@ -358,36 +483,63 @@ export default function PurchaseRequestForm() {
                 <span className="font-semibold">₩{formatNumber(aggregatedPriceKrw, locale, numOpt)}</span>
               </p>
             </div>
+          </CardContent>
+        </Card>
 
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label>{t("purchase.option")}</Label>
-                <Button type="button" variant="outline" size="sm" onClick={addOption}>
-                  <Plus className="w-4 h-4 mr-1" />
-                  {t("purchase.addOption")}
+        <Card>
+          <CardHeader>
+            <CardTitle>{t("purchase.shipping.title")}</CardTitle>
+            <CardDescription>{t("purchase.shipping.desc")}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {addressesLoading ? (
+              <p className="text-sm text-gray-500">{t("purchase.shipping.loading")}</p>
+            ) : addresses.length === 0 ? (
+              <div className="space-y-3">
+                <p className="text-sm text-gray-600">{t("purchase.shipping.empty")}</p>
+                <Button type="button" variant="outline" size="sm" asChild>
+                  <Link to="/mypage">{t("purchase.shipping.manage")}</Link>
                 </Button>
               </div>
-              {options.map((option, index) => (
-                <div key={index} className="flex space-x-2">
-                  <Input
-                    placeholder={t("purchase.optionNamePlaceholder")}
-                    value={option.name}
-                    onChange={(e) => updateOption(index, "name", e.target.value)}
-                    className="w-1/3"
-                  />
-                  <Input
-                    placeholder={t("purchase.optionValuePlaceholder")}
-                    value={option.value}
-                    onChange={(e) => updateOption(index, "value", e.target.value)}
-                    className="flex-1"
-                  />
-                  <Button type="button" variant="ghost" size="icon" onClick={() => removeOption(index)}>
-                    <X className="w-4 h-4" />
-                  </Button>
-                </div>
-              ))}
-              <p className="text-xs text-gray-500">{t("purchase.optionHint")}</p>
-            </div>
+            ) : (
+              <RadioGroup
+                value={selectedShippingId != null ? String(selectedShippingId) : ""}
+                onValueChange={(v) => setSelectedShippingId(v ? Number(v) : null)}
+                className="gap-3"
+              >
+                {addresses.map((a) => (
+                  <div
+                    key={a.id}
+                    className={`flex items-start gap-3 rounded-lg border p-3 transition-colors ${
+                      selectedShippingId === a.id ? "border-gray-900 bg-gray-50" : "border-gray-200"
+                    }`}
+                  >
+                    <RadioGroupItem value={String(a.id)} id={`ship-addr-${a.id}`} className="mt-1" />
+                    <Label htmlFor={`ship-addr-${a.id}`} className="flex-1 cursor-pointer space-y-1 text-sm leading-relaxed">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="font-medium text-gray-900">{a.label?.trim() || t("purchase.shipping.title")}</span>
+                        {a.isDefault ? (
+                          <Badge variant="secondary" className="text-xs">
+                            {t("purchase.shipping.defaultBadge")}
+                          </Badge>
+                        ) : null}
+                      </div>
+                      {a.recipientName ? (
+                        <p className="text-gray-800">
+                          {a.recipientName}
+                          {a.recipientPhone ? <span className="text-gray-500"> · {a.recipientPhone}</span> : null}
+                        </p>
+                      ) : null}
+                      <p className="text-gray-700 break-words">
+                        {a.postalCode ? <span className="mr-1">({a.postalCode})</span> : null}
+                        {a.addressLine1}
+                        {a.addressLine2 ? ` ${a.addressLine2}` : ""}
+                      </p>
+                    </Label>
+                  </div>
+                ))}
+              </RadioGroup>
+            )}
           </CardContent>
         </Card>
 
