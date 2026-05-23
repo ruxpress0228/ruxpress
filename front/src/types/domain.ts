@@ -58,17 +58,12 @@ export interface NotificationSettings {
   };
 }
 
-export type PurchaseRequestStatus = 
-  | 'DRAFT' 
-  | 'SUBMITTED' 
-  | 'REVIEWING' 
-  | 'CONFIRMED' 
-  | 'PURCHASING' 
-  | 'PURCHASED' 
-  | 'SHIPPING' 
-  | 'DELIVERED' 
-  | 'CANCELLED' 
-  | 'REFUNDED';
+export type PurchaseRequestStatus =
+  | 'REQUESTED'
+  | 'PURCHASING'
+  | 'SHIPPING'
+  | 'COMPLETED'
+  | 'CANCELLED';
 
 export interface PurchaseRequest {
   id: number;

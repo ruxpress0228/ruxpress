@@ -41,16 +41,11 @@ const statusLabels: Record<
   PurchaseRequestStatus,
   { label: string; variant: "default" | "secondary" | "outline" | "destructive" }
 > = {
-  DRAFT: { label: "작성중", variant: "outline" },
-  SUBMITTED: { label: "제출됨", variant: "secondary" },
-  REVIEWING: { label: "검토중", variant: "secondary" },
-  CONFIRMED: { label: "확정", variant: "default" },
-  PURCHASING: { label: "구매중", variant: "default" },
-  PURCHASED: { label: "구매완료", variant: "default" },
+  REQUESTED: { label: "요청접수", variant: "secondary" },
+  PURCHASING: { label: "구매진행중", variant: "default" },
   SHIPPING: { label: "배송중", variant: "default" },
-  DELIVERED: { label: "배송완료", variant: "default" },
-  CANCELLED: { label: "취소됨", variant: "destructive" },
-  REFUNDED: { label: "환불됨", variant: "destructive" },
+  COMPLETED: { label: "완료", variant: "default" },
+  CANCELLED: { label: "취소", variant: "destructive" },
 };
 
 function hasShippingSnapshot(s?: PurchaseShipping | null): boolean {
@@ -71,16 +66,11 @@ function shippingSummaryLines(s: PurchaseShipping): { title: string; subtitle: s
 }
 
 const ALL_STATUSES: PurchaseRequestStatus[] = [
-  "DRAFT",
-  "SUBMITTED",
-  "REVIEWING",
-  "CONFIRMED",
+  "REQUESTED",
   "PURCHASING",
-  "PURCHASED",
   "SHIPPING",
-  "DELIVERED",
+  "COMPLETED",
   "CANCELLED",
-  "REFUNDED",
 ];
 
 export default function AdminPurchaseRequests() {
@@ -98,7 +88,7 @@ export default function AdminPurchaseRequests() {
   const [totalElements, setTotalElements] = useState(0);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selected, setSelected] = useState<PurchaseRequestDetail | null>(null);
-  const [newStatus, setNewStatus] = useState<PurchaseRequestStatus>("REVIEWING");
+  const [newStatus, setNewStatus] = useState<PurchaseRequestStatus>("PURCHASING");
   const [statusMemo, setStatusMemo] = useState("");
   const [trackingNumber, setTrackingNumber] = useState("");
   const [adminFiles, setAdminFiles] = useState<File[]>([]);
@@ -142,7 +132,7 @@ export default function AdminPurchaseRequests() {
 
   useEffect(() => {
     if (!dialogOpen) return;
-    if (newStatus === "SHIPPING" || newStatus === "DELIVERED") {
+    if (newStatus === "SHIPPING") {
       const id = window.setTimeout(() => {
         document.getElementById("purchase-admin-tracking")?.focus();
       }, 120);
@@ -170,7 +160,17 @@ export default function AdminPurchaseRequests() {
     setStatusMemo(r.adminMemo ?? "");
     setTrackingNumber(r.trackingNumber ?? "");
     setAdminFiles([]);
-    setWalletAmount("");
+    const refundDefault =
+      r.chargedAmountKrw != null
+        ? Number(r.chargedAmountKrw)
+        : r.totalAmountKrw != null
+          ? Number(r.totalAmountKrw)
+          : null;
+    setWalletAmount(
+      refundDefault != null && Number.isFinite(refundDefault)
+        ? String(Math.round(refundDefault))
+        : ""
+    );
     setWalletMemo("");
     setWalletIdem(`purchase-${r.id}-${Date.now()}`);
     setDialogOpen(true);
@@ -295,16 +295,11 @@ export default function AdminPurchaseRequests() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">전체</SelectItem>
-                <SelectItem value="DRAFT">작성중</SelectItem>
-                <SelectItem value="SUBMITTED">제출됨</SelectItem>
-                <SelectItem value="REVIEWING">검토중</SelectItem>
-                <SelectItem value="CONFIRMED">확정</SelectItem>
-                <SelectItem value="PURCHASING">구매중</SelectItem>
-                <SelectItem value="PURCHASED">구매완료</SelectItem>
+                <SelectItem value="REQUESTED">요청접수</SelectItem>
+                <SelectItem value="PURCHASING">구매진행중</SelectItem>
                 <SelectItem value="SHIPPING">배송중</SelectItem>
-                <SelectItem value="DELIVERED">배송완료</SelectItem>
-                <SelectItem value="CANCELLED">취소됨</SelectItem>
-                <SelectItem value="REFUNDED">환불됨</SelectItem>
+                <SelectItem value="COMPLETED">완료</SelectItem>
+                <SelectItem value="CANCELLED">취소</SelectItem>
               </SelectContent>
             </Select>
             <Select value={sort} onValueChange={handleSort}>
@@ -588,7 +583,7 @@ export default function AdminPurchaseRequests() {
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            {ALL_STATUSES.filter((s) => s !== "DRAFT").map((s) => (
+                            {ALL_STATUSES.map((s) => (
                               <SelectItem key={s} value={s}>
                                 {statusLabels[s].label}
                               </SelectItem>
@@ -676,6 +671,9 @@ export default function AdminPurchaseRequests() {
                             <p className="text-xs text-amber-900/90">{t("adminPurchase.walletIdempotencyHint")}</p>
                             <div className="space-y-2">
                               <Label>{t("adminPurchase.walletAmount")}</Label>
+                              <p className="text-xs text-gray-600">
+                                모달을 열면 선차감 금액(없으면 총액)이 기본 입력됩니다. 전액 환급 시 그대로 제출하면 됩니다.
+                              </p>
                               <Input
                                 type="number"
                                 min="0"

@@ -14,17 +14,31 @@ function hasShippingSnapshot(s?: PurchaseShipping | null): boolean {
   return Boolean(s.addressLine1 || s.recipientName);
 }
 
+function isImageMime(mimeType: string | undefined): boolean {
+  return (mimeType ?? "").toLowerCase().startsWith("image/");
+}
+
+/**
+ * 구매 첨부의 관리자 업로드 여부. JSON 키·타입 차이(camel/snake, 0/1)를 흡수한다.
+ * 명시적으로 관리자 업로드가 아닌 것은 모두 고객 첨부로 본다.
+ */
+function isAttachmentUploadedByAdmin(att: PurchaseAttachment): boolean {
+  const r = att as unknown as Record<string, unknown>;
+  const v = r.uploadedByAdmin ?? r.uploaded_by_admin;
+  if (v === true || v === 1) return true;
+  if (typeof v === "string") {
+    const s = v.trim().toLowerCase();
+    return s === "true" || s === "1" || s === "yes";
+  }
+  return false;
+}
+
 const statusLabels: Record<PurchaseRequestStatus, { label: string; variant: "default" | "secondary" | "outline" | "destructive" }> = {
-  DRAFT: { label: "작성중", variant: "outline" },
-  SUBMITTED: { label: "제출됨", variant: "secondary" },
-  REVIEWING: { label: "검토중", variant: "secondary" },
-  CONFIRMED: { label: "확정", variant: "default" },
-  PURCHASING: { label: "구매중", variant: "default" },
-  PURCHASED: { label: "구매완료", variant: "default" },
+  REQUESTED: { label: "요청접수", variant: "secondary" },
+  PURCHASING: { label: "구매진행중", variant: "default" },
   SHIPPING: { label: "배송중", variant: "default" },
-  DELIVERED: { label: "배송완료", variant: "default" },
-  CANCELLED: { label: "취소됨", variant: "destructive" },
-  REFUNDED: { label: "환불됨", variant: "destructive" },
+  COMPLETED: { label: "완료", variant: "default" },
+  CANCELLED: { label: "취소", variant: "destructive" },
 };
 
 function optionRecordEntries(opt: unknown): [string, string][] {
@@ -165,9 +179,13 @@ export default function AdminPurchaseRequestDetail() {
 
   const statusInfo = statusLabels[data.status];
   const legacyOptionsEntries = optionRecordEntries(data.options);
-  const imageAttachments = (data.attachments ?? []).filter((a) => a.mimeType.startsWith("image/"));
-  const userAttachments = imageAttachments.filter((a) => !a.uploadedByAdmin);
-  const adminAttachments = imageAttachments.filter((a) => a.uploadedByAdmin);
+  const allAttachments = data.attachments ?? [];
+  const imageAttachments = allAttachments.filter((a) => isImageMime(a.mimeType));
+  const userImageAttachments = imageAttachments.filter((a) => !isAttachmentUploadedByAdmin(a));
+  const adminImageAttachments = imageAttachments.filter((a) => isAttachmentUploadedByAdmin(a));
+  const userOtherAttachments = allAttachments.filter(
+    (a) => !isImageMime(a.mimeType) && !isAttachmentUploadedByAdmin(a)
+  );
 
   return (
     <div className="max-w-4xl mx-auto">
@@ -334,57 +352,87 @@ export default function AdminPurchaseRequestDetail() {
 
           {data.memo && (
             <div className="space-y-2">
-              <p className="font-semibold">메모</p>
+              <p className="font-semibold">고객 요청 메모</p>
               <p className="text-sm text-gray-700 whitespace-pre-wrap">{data.memo}</p>
             </div>
           )}
 
-          {data.adminMemo && (
-            <div className="space-y-2">
-              <p className="font-semibold">관리자 메모</p>
-              <p className="text-sm text-gray-700 whitespace-pre-wrap">{data.adminMemo}</p>
+          {(data.adminMemo?.trim() || adminImageAttachments.length > 0) && (
+            <div className="rounded-lg border border-slate-200 bg-slate-50/80 p-4 space-y-4">
+              {data.adminMemo?.trim() ? (
+                <div className="space-y-1">
+                  <p className="text-sm font-semibold text-gray-900">내부 메모</p>
+                  <p className="text-sm text-gray-800 whitespace-pre-wrap leading-relaxed">{data.adminMemo}</p>
+                </div>
+              ) : null}
+              {adminImageAttachments.length > 0 ? (
+                <div className={data.adminMemo?.trim() ? "space-y-2 border-t border-slate-200 pt-4" : "space-y-2"}>
+                  <p className="text-sm font-semibold text-gray-900">관리자 사진 첨부 · 피드백</p>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                    {adminImageAttachments.map((att) => {
+                      const idx = imageAttachments.findIndex((a) => a.id === att.id);
+                      return (
+                        <div
+                          key={att.id}
+                          className="relative group cursor-pointer rounded overflow-hidden border bg-white"
+                          onClick={() => setLightboxIndex(idx)}
+                        >
+                          <img
+                            src={att.thumbnailUrl ?? att.viewUrl ?? att.storedUrl}
+                            alt={att.originalFilename}
+                            className="h-28 w-full object-cover group-hover:opacity-90 transition-opacity"
+                          />
+                          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors" />
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : null}
             </div>
           )}
 
-          {userAttachments.length > 0 && (
-            <div className="pt-4 border-t border-gray-200">
-              <p className="text-sm font-medium text-gray-700 mb-3">고객 등록 사진</p>
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-                {userAttachments.map((att) => {
-                  const idx = imageAttachments.findIndex((a) => a.id === att.id);
-                  return (
-                    <div key={att.id} className="relative group cursor-pointer rounded overflow-hidden border" onClick={() => setLightboxIndex(idx)}>
-                      <img
-                        src={att.thumbnailUrl ?? att.viewUrl ?? att.storedUrl}
-                        alt={att.originalFilename}
-                        className="h-28 w-full object-cover group-hover:opacity-90 transition-opacity"
-                      />
-                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors" />
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
-          {adminAttachments.length > 0 && (
-            <div className="pt-4 border-t border-gray-200">
-              <p className="text-sm font-medium text-gray-700 mb-3">관리자 등록 사진</p>
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-                {adminAttachments.map((att) => {
-                  const idx = imageAttachments.findIndex((a) => a.id === att.id);
-                  return (
-                    <div key={att.id} className="relative group cursor-pointer rounded overflow-hidden border" onClick={() => setLightboxIndex(idx)}>
-                      <img
-                        src={att.thumbnailUrl ?? att.viewUrl ?? att.storedUrl}
-                        alt={att.originalFilename}
-                        className="h-28 w-full object-cover group-hover:opacity-90 transition-opacity"
-                      />
-                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors" />
-                    </div>
-                  );
-                })}
-              </div>
+          {(userImageAttachments.length > 0 || userOtherAttachments.length > 0) && (
+            <div className="pt-4 border-t border-gray-200 space-y-3">
+              <p className="text-sm font-medium text-gray-700">고객 등록 첨부</p>
+              {userImageAttachments.length > 0 ? (
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                  {userImageAttachments.map((att) => {
+                    const idx = imageAttachments.findIndex((a) => a.id === att.id);
+                    return (
+                      <div
+                        key={att.id}
+                        className="relative group cursor-pointer rounded overflow-hidden border"
+                        onClick={() => setLightboxIndex(idx)}
+                      >
+                        <img
+                          src={att.thumbnailUrl ?? att.viewUrl ?? att.storedUrl}
+                          alt={att.originalFilename}
+                          className="h-28 w-full object-cover group-hover:opacity-90 transition-opacity"
+                        />
+                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors" />
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : null}
+              {userOtherAttachments.length > 0 ? (
+                <ul className="space-y-1.5 text-sm">
+                  {userOtherAttachments.map((att) => (
+                    <li key={att.id}>
+                      <a
+                        href={att.viewUrl ?? att.storedUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-blue-600 underline break-all"
+                      >
+                        {att.originalFilename}
+                      </a>
+                      <span className="text-gray-400"> ({att.mimeType})</span>
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
             </div>
           )}
 

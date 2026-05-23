@@ -59,7 +59,7 @@ public class PurchaseRequestCreateRequest {
     private Long shippingUserAddressId;
 
     public boolean isValid() {
-        if (status == PurchaseRequestStatus.SUBMITTED) {
+        if (status == PurchaseRequestStatus.REQUESTED) {
             boolean hasItems = items != null && !items.isEmpty();
             boolean hasLegacyPrice = priceKrw != null && priceKrw.compareTo(BigDecimal.ZERO) > 0;
             if (!hasItems && !hasLegacyPrice) {

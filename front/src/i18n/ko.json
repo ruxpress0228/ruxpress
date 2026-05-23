@@ -183,6 +183,11 @@
   "purchase.submit": "구매 요청 제출",
   "purchase.toastSuccess": "구매 요청이 제출되었습니다",
   "purchase.summary.adminWalletNote": "구매 요청 제출 시 예상 금액만큼 지갑(포인트)이 즉시 차감됩니다. 실제 비용이 더 적으면 관리자가 차액을 환급합니다.",
+  "purchase.status.REQUESTED": "요청접수",
+  "purchase.status.PURCHASING": "구매진행중",
+  "purchase.status.SHIPPING": "배송중",
+  "purchase.status.COMPLETED": "완료",
+  "purchase.status.CANCELLED": "취소",
 
   "wallet.title": "지갑",
   "wallet.subtitle": "입금 충전 및 구매 차감·환급 내역을 확인합니다",

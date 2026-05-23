@@ -15,16 +15,11 @@ import { toast } from "sonner";
 const PAGE_SIZE_OPTIONS = [20, 30, 50, 100] as const;
 
 const statusLabels: Record<PurchaseRequestStatus, { label: string; variant: 'default' | 'secondary' | 'outline' | 'destructive' }> = {
-  DRAFT: { label: '작성중', variant: 'outline' },
-  SUBMITTED: { label: '제출됨', variant: 'secondary' },
-  REVIEWING: { label: '검토중', variant: 'secondary' },
-  CONFIRMED: { label: '확정', variant: 'default' },
-  PURCHASING: { label: '구매중', variant: 'default' },
-  PURCHASED: { label: '구매완료', variant: 'default' },
+  REQUESTED: { label: '요청접수', variant: 'secondary' },
+  PURCHASING: { label: '구매진행중', variant: 'default' },
   SHIPPING: { label: '배송중', variant: 'default' },
-  DELIVERED: { label: '배송완료', variant: 'default' },
-  CANCELLED: { label: '취소됨', variant: 'destructive' },
-  REFUNDED: { label: '환불됨', variant: 'destructive' },
+  COMPLETED: { label: '완료', variant: 'default' },
+  CANCELLED: { label: '취소', variant: 'destructive' },
 };
 
 export default function PurchaseRequestList() {
@@ -123,12 +118,11 @@ export default function PurchaseRequestList() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">전체</SelectItem>
-                <SelectItem value="REVIEWING">검토중</SelectItem>
-                <SelectItem value="PURCHASING">구매중</SelectItem>
+                <SelectItem value="REQUESTED">요청접수</SelectItem>
+                <SelectItem value="PURCHASING">구매진행중</SelectItem>
                 <SelectItem value="SHIPPING">배송중</SelectItem>
-                <SelectItem value="DELIVERED">배송완료</SelectItem>
-                <SelectItem value="DRAFT">작성중</SelectItem>
-                <SelectItem value="SUBMITTED">제출됨</SelectItem>
+                <SelectItem value="COMPLETED">완료</SelectItem>
+                <SelectItem value="CANCELLED">취소</SelectItem>
               </SelectContent>
             </Select>
             <Select value={sortValue} onValueChange={(v) => setSortValue(v as "latest" | "oldest")}>

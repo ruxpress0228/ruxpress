@@ -15,6 +15,7 @@ import { usePurchase } from "../../hooks/purchase/usePurchase";
 import { formatDate } from "../../utils/format";
 import type { Notice, PageResponse } from "../../types";
 import type { PurchaseRequestListItem } from "../../types/purchase";
+import type { PurchaseRequestStatus } from "../../types";
 import {
   type QuoteCurrency,
   type CurrentExchangeRates,
@@ -131,7 +132,9 @@ export default function Home() {
                       <p className="font-medium text-gray-900">{request.requestName}</p>
                       <p className="text-sm text-gray-500">{request.requestNumber}</p>
                     </div>
-                    <Badge variant="secondary">{request.status}</Badge>
+                    <Badge variant="secondary">
+                      {t(`purchase.status.${request.status}` as `purchase.status.${PurchaseRequestStatus}`)}
+                    </Badge>
                   </div>
                 </Link>
               ))}

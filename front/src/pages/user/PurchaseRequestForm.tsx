@@ -293,7 +293,7 @@ export default function PurchaseRequestForm() {
       }
 
       const feeAmount = totals.feeKrw;
-      const status: PurchaseRequestStatus = "SUBMITTED";
+      const status: PurchaseRequestStatus = "REQUESTED";
       const quoteRate = quoteCurrency === "KRW" ? 1 : rateToKrw(quoteCurrency, rateMap);
       if (quoteCurrency !== "KRW" && (quoteRate == null || !selectedQuoteRate)) {
         toast.error("선택한 통화의 환율 정보가 없습니다.");

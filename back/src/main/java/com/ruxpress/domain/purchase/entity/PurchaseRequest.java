@@ -68,7 +68,7 @@ public class PurchaseRequest extends BaseEntity {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private PurchaseRequestStatus status = PurchaseRequestStatus.DRAFT;
+    private PurchaseRequestStatus status = PurchaseRequestStatus.REQUESTED;
 
     @Column(name = "admin_memo", columnDefinition = "TEXT")
     private String adminMemo;
@@ -131,7 +131,7 @@ public class PurchaseRequest extends BaseEntity {
         pr.feeAmount = feeAmount;
         pr.totalAmountKrw = totalAmountKrw;
         pr.memo = memo;
-        pr.status = status != null ? status : PurchaseRequestStatus.DRAFT;
+        pr.status = status != null ? status : PurchaseRequestStatus.REQUESTED;
         if (shippingSnapshot != null) {
             pr.shippingUserAddressId = shippingSnapshot.getUserAddressId();
             pr.shippingLabel = shippingSnapshot.getLabel();

@@ -15,16 +15,11 @@ function hasShippingSnapshot(s?: PurchaseShipping | null): boolean {
 }
 
 const statusLabels: Record<PurchaseRequestStatus, { label: string; variant: "default" | "secondary" | "outline" | "destructive" }> = {
-  DRAFT: { label: "작성중", variant: "outline" },
-  SUBMITTED: { label: "제출됨", variant: "secondary" },
-  REVIEWING: { label: "검토중", variant: "secondary" },
-  CONFIRMED: { label: "확정", variant: "default" },
-  PURCHASING: { label: "구매중", variant: "default" },
-  PURCHASED: { label: "구매완료", variant: "default" },
+  REQUESTED: { label: "요청접수", variant: "secondary" },
+  PURCHASING: { label: "구매진행중", variant: "default" },
   SHIPPING: { label: "배송중", variant: "default" },
-  DELIVERED: { label: "배송완료", variant: "default" },
-  CANCELLED: { label: "취소됨", variant: "destructive" },
-  REFUNDED: { label: "환불됨", variant: "destructive" },
+  COMPLETED: { label: "완료", variant: "default" },
+  CANCELLED: { label: "취소", variant: "destructive" },
 };
 
 function optionRecordEntries(opt: unknown): [string, string][] {

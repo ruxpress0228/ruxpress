@@ -115,7 +115,7 @@ public class PurchaseService {
         exchangeService.validateExchangeRateIdForCurrency(request.getExchangeRateId(), quoteCurrency);
         PurchaseRequestStatus effectiveStatus = request.getStatus() != null
                 ? request.getStatus()
-                : PurchaseRequestStatus.DRAFT;
+                : PurchaseRequestStatus.REQUESTED;
 
         // items 가 있으면 URL별 단가·수량 모델을 신뢰값으로 사용. 없으면 레거시 priceKrw 단일 사용.
         boolean hasItems = request.getItems() != null && !request.getItems().isEmpty();
@@ -166,7 +166,7 @@ public class PurchaseService {
                 effectiveStatus,
                 shippingSnapshot);
         PurchaseRequest saved = purchaseRequestRepository.save(purchaseRequest);
-        if (effectiveStatus == PurchaseRequestStatus.SUBMITTED) {
+        if (effectiveStatus == PurchaseRequestStatus.REQUESTED) {
             balanceService.debitForPurchase(userId, totalAmountKrw, saved.getId());
             saved.recordChargedAmount(totalAmountKrw);
             saved = purchaseRequestRepository.save(saved);
@@ -350,7 +350,7 @@ public class PurchaseService {
         }
         PurchaseRequest saved = purchaseRequestRepository.save(pr);
 
-        if (request.getStatus() == PurchaseRequestStatus.REFUNDED) {
+        if (request.getStatus() == PurchaseRequestStatus.CANCELLED) {
             balanceService.creditForPurchaseRefund(saved.getUserId(), saved.getId());
         }
 
@@ -539,7 +539,7 @@ public class PurchaseService {
             PurchaseRequestStatus effectiveStatus) {
         Long addrId = request.getShippingUserAddressId();
         if (addrId == null) {
-            if (effectiveStatus == PurchaseRequestStatus.SUBMITTED) {
+            if (effectiveStatus == PurchaseRequestStatus.REQUESTED) {
                 throw new BusinessException(ErrorCode.INVALID_INPUT, "배송지를 선택해주세요.");
             }
             return null;

@@ -182,6 +182,11 @@
   "purchase.submit": "Отправить заявку",
   "purchase.toastSuccess": "Заявка отправлена",
   "purchase.summary.adminWalletNote": "При отправке заявки расчётная сумма сразу списывается с кошелька. Если фактическая стоимость ниже, администратор вернёт разницу.",
+  "purchase.status.REQUESTED": "Принято",
+  "purchase.status.PURCHASING": "Покупка",
+  "purchase.status.SHIPPING": "Доставка",
+  "purchase.status.COMPLETED": "Завершено",
+  "purchase.status.CANCELLED": "Отменено",
 
   "wallet.title": "Кошелёк",
   "wallet.subtitle": "Пополнения, списания и возвраты",

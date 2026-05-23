@@ -76,7 +76,7 @@ CREATE TABLE `purchase_requests` (
 	`charged_amount_krw`	DECIMAL(18, 2)	NULL	COMMENT '지갑 선차감',
 	`settled_amount_krw`	DECIMAL(18, 2)	NULL	COMMENT '확정 실제 비용',
 	`memo`	TEXT	NULL	COMMENT '특이사항 메모',
-	`status`	ENUM('DRAFT', 'SUBMITTED', 'REVIEWING', 'CONFIRMED', 'PURCHASING', 'PURCHASED', 'SHIPPING', 'DELIVERED', 'CANCELLED', 'REFUNDED')	NOT NULL	DEFAULT 'DRAFT'	COMMENT '상태',
+	`status`	ENUM('REQUESTED', 'PURCHASING', 'SHIPPING', 'COMPLETED', 'CANCELLED')	NOT NULL	DEFAULT 'REQUESTED'	COMMENT '상태',
 	`admin_memo`	TEXT	NULL	COMMENT '관리자 내부 메모',
 	`assigned_admin_id`	BIGINT	NULL	COMMENT '담당 관리자 ID',
 	`tracking_number`	VARCHAR(64)	NULL	COMMENT '운송장번호 (관리자 입력)',

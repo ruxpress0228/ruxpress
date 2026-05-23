@@ -182,6 +182,11 @@
   "purchase.submit": "Submit request",
   "purchase.toastSuccess": "Purchase request submitted",
   "purchase.summary.adminWalletNote": "When you submit, the estimated amount is debited from your wallet immediately. If actual cost is lower, staff refunds the difference.",
+  "purchase.status.REQUESTED": "Received",
+  "purchase.status.PURCHASING": "Purchasing",
+  "purchase.status.SHIPPING": "Shipping",
+  "purchase.status.COMPLETED": "Completed",
+  "purchase.status.CANCELLED": "Cancelled",
 
   "wallet.title": "Wallet",
   "wallet.subtitle": "Top-ups, purchase debits, and refunds",
