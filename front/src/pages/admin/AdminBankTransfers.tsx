@@ -29,11 +29,14 @@ import {
 } from "../../api/bankTransfer";
 import { useTranslation } from "../../hooks/useTranslation";
 import { formatDate } from "../../utils/format";
+import { readAuthValue } from "../../utils/api";
 import type { TransferLedgerEntry } from "../../types/bankTransfer";
+
+const ADMIN_STORAGE_KEY = "ruxpress_admin";
 
 function getAdminRole(): string | null {
   try {
-    const raw = localStorage.getItem("ruxpress_admin");
+    const raw = readAuthValue(ADMIN_STORAGE_KEY);
     if (!raw) return null;
     return JSON.parse(raw).role as string;
   } catch {
