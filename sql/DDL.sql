@@ -67,7 +67,8 @@ CREATE TABLE `purchase_requests` (
 	`quantity`	INT	NOT NULL	DEFAULT 1	COMMENT '수량',
 	`urls`	JSON	NULL	COMMENT '상품 URL 목록 JSON',
 	`options`	JSON	NULL	COMMENT '옵션 목록 JSON (색상/사이즈 등)',
-	`price_rub`	DECIMAL(18, 2)	NULL	COMMENT '상품 가격 (루블)',
+	`price_rub`	DECIMAL(18, 2)	NULL	COMMENT '상품 가격 (quote 통화 금액)',
+	`quote_currency`	VARCHAR(3)	NOT NULL	DEFAULT 'RUB'	COMMENT '표시·스냅샷 기준 외화 (RUB, USD, CNY)',
 	`price_krw`	DECIMAL(18, 2)	NULL	COMMENT '환산 가격 (원화)',
 	`exchange_rate_id`	BIGINT	NULL	COMMENT '적용 환율 ID',
 	`fee_amount`	DECIMAL(18, 2)	NULL	COMMENT '수수료',
@@ -200,13 +201,14 @@ CREATE TABLE `exchange_rates` (
 	`id`	BIGINT	NOT NULL AUTO_INCREMENT,
 	`base_currency`	VARCHAR(3)	NOT NULL	DEFAULT 'RUB'	COMMENT '기준 통화',
 	`target_currency`	VARCHAR(3)	NOT NULL	DEFAULT 'KRW'	COMMENT '대상 통화',
-	`rate`	DECIMAL(18, 6)	NOT NULL	COMMENT '환율 (1 RUB = ? KRW)',
+	`rate`	DECIMAL(18, 6)	NOT NULL	COMMENT '환율 (1 base_currency = ? KRW)',
 	`source`	ENUM('API', 'MANUAL')	NOT NULL	DEFAULT 'API'	COMMENT '출처',
 	`admin_id`	BIGINT	NULL	COMMENT '수동 입력 시 관리자 ID',
 	`is_current`	TINYINT(1)	NOT NULL	DEFAULT 0	COMMENT '현재 적용 환율',
 	`fetched_at`	DATETIME	NOT NULL	COMMENT '조회/입력 시각',
 	`created_at`	DATETIME	NOT NULL,
-	PRIMARY KEY (`id`)
+	PRIMARY KEY (`id`),
+	KEY `IX_EXCHANGE_RATES_BASE_CURRENT` (`base_currency`, `is_current`)
 );
 
 -- REQ-017: 입금 계좌 (관리자 등록)

@@ -25,6 +25,7 @@ export interface PurchaseRequestCreatePayload {
   items?: PurchaseItem[];
   options?: Record<string, string>;
   priceRub?: number;
+  quoteCurrency?: string;
   priceKrw?: number;
   exchangeRateId?: number;
   feeAmount?: number;
@@ -53,6 +54,7 @@ export interface PurchaseRequestDetail extends PurchaseRequestListItem {
   urls?: string[];
   options?: Record<string, unknown>;
   priceRub?: number;
+  quoteCurrency?: string;
   priceKrw?: number;
   exchangeRateId?: number;
   feeAmount?: number;

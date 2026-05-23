@@ -27,6 +27,7 @@ import com.ruxpress.domain.purchase.dto.response.PurchaseRequestListResponse;
 import com.ruxpress.domain.purchase.dto.response.PurchaseRequestResponse;
 import com.ruxpress.domain.purchase.entity.PurchaseRequest;
 import com.ruxpress.domain.purchase.entity.PurchaseRequestStatus;
+import com.ruxpress.domain.exchange.service.ExchangeService;
 import com.ruxpress.domain.purchase.repository.PurchaseRequestRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -61,6 +62,7 @@ public class PurchaseService {
     private final NotificationService notificationService;
     private final SystemSettingRepository systemSettingRepository;
     private final UserRepository userRepository;
+    private final ExchangeService exchangeService;
 
     private BigDecimal currentFeeRatePercent() {
         return systemSettingRepository.findBySettingKey(FEE_RATE_KEY)
@@ -103,6 +105,10 @@ public class PurchaseService {
 
     private PurchaseRequest createAndPersistPurchaseRequest(Long userId, PurchaseRequestCreateRequest request) {
         request.isValid();
+        String quoteCurrency = request.getQuoteCurrency() != null && !request.getQuoteCurrency().isBlank()
+                ? request.getQuoteCurrency().trim().toUpperCase()
+                : "RUB";
+        exchangeService.validateExchangeRateIdForCurrency(request.getExchangeRateId(), quoteCurrency);
         PurchaseRequestStatus effectiveStatus = request.getStatus() != null
                 ? request.getStatus()
                 : PurchaseRequestStatus.DRAFT;
@@ -145,6 +151,7 @@ public class PurchaseService {
                 urlsJson,
                 jsonUtils.toJson(request.getOptions()),
                 request.getPriceRub(),
+                quoteCurrency,
                 priceKrw,
                 request.getExchangeRateId(),
                 feeAmount,
@@ -486,6 +493,7 @@ public class PurchaseService {
                 urlsList,
                 jsonUtils.parseJsonNode(entity.getOptions()),
                 entity.getPriceRub(),
+                entity.getQuoteCurrency(),
                 entity.getPriceKrw(),
                 entity.getExchangeRateId(),
                 entity.getFeeAmount(),

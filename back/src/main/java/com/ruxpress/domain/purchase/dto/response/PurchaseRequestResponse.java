@@ -24,6 +24,7 @@ public class PurchaseRequestResponse {
     private final List<String> urls;
     private final JsonNode options;
     private final BigDecimal priceRub;
+    private final String quoteCurrency;
     private final BigDecimal priceKrw;
     private final Long exchangeRateId;
     private final BigDecimal feeAmount;

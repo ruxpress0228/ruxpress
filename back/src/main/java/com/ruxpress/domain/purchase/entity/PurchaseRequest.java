@@ -39,6 +39,10 @@ public class PurchaseRequest extends BaseEntity {
     @Column(name = "price_rub", precision = 18, scale = 2)
     private BigDecimal priceRub;
 
+    /** 표시·스냅샷 기준 외화 (RUB, USD, CNY). price_rub 컬럼에 quote 금액 저장 */
+    @Column(name = "quote_currency", nullable = false, length = 3)
+    private String quoteCurrency = "RUB";
+
     @Column(name = "price_krw", precision = 18, scale = 2)
     private BigDecimal priceKrw;
 
@@ -83,6 +87,7 @@ public class PurchaseRequest extends BaseEntity {
             String urls,
             String options,
             BigDecimal priceRub,
+            String quoteCurrency,
             BigDecimal priceKrw,
             Long exchangeRateId,
             BigDecimal feeAmount,
@@ -98,6 +103,7 @@ public class PurchaseRequest extends BaseEntity {
         pr.urls = urls;
         pr.options = options;
         pr.priceRub = priceRub;
+        pr.quoteCurrency = (quoteCurrency != null && !quoteCurrency.isBlank()) ? quoteCurrency.toUpperCase() : "RUB";
         pr.priceKrw = priceKrw;
         pr.exchangeRateId = exchangeRateId;
         pr.feeAmount = feeAmount;

@@ -34,7 +34,11 @@ public class PurchaseRequestCreateRequest {
 
     private JsonNode options;
 
+    /** quote 통화 금액 (컬럼명 price_rub, RUB/USD/CNY) */
     private BigDecimal priceRub;
+
+    /** RUB, USD, CNY (기본 RUB) */
+    private String quoteCurrency;
 
     private BigDecimal priceKrw;
 

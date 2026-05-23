@@ -1,21 +1,42 @@
+import type { CurrentExchangeRates } from "../../utils/exchange";
 import type { ExchangeRate } from "../../types";
 import { api } from "../../utils/api";
 
 const EXCHANGE_BASE = "/v1/exchange-rates";
 
 export function useExchangeRate() {
-  const getCurrentExchangeRate = (): Promise<ExchangeRate> => {
-    return api.get<ExchangeRate>(`${EXCHANGE_BASE}/current`).then((res) => {
+  const getCurrentExchangeRates = (): Promise<CurrentExchangeRates> => {
+    return api.get<CurrentExchangeRates>(`${EXCHANGE_BASE}/current`).then((res) => {
       if (res.code !== 200 || res.data == null) {
-        throw new Error(res.message || "Failed to load exchange rate");
+        throw new Error(res.message || "Failed to load exchange rates");
       }
       return res.data;
     });
   };
 
+  /** @deprecated use getCurrentExchangeRates */
+  const getCurrentExchangeRate = async (): Promise<ExchangeRate> => {
+    const data = await getCurrentExchangeRates();
+    const rub = data.quotes.find((q) => q.currency === "RUB");
+    if (!rub) {
+      throw new Error("RUB exchange rate not found");
+    }
+    return {
+      id: rub.id,
+      baseCurrency: "RUB",
+      targetCurrency: "KRW",
+      rate: rub.rateToKrw,
+      source: rub.source,
+      isCurrent: true,
+      fetchedAt: rub.fetchedAt,
+      createdAt: rub.fetchedAt,
+    };
+  };
+
   const getExchangeRateHistory = (
     page = 0,
-    size = 20
+    size = 20,
+    baseCurrency?: string
   ): Promise<{
     content: ExchangeRate[];
     totalElements: number;
@@ -23,6 +44,10 @@ export function useExchangeRate() {
     number: number;
     size: number;
   }> => {
+    const params = new URLSearchParams({ page: String(page), size: String(size) });
+    if (baseCurrency) {
+      params.set("baseCurrency", baseCurrency);
+    }
     return api
       .get<{
         content: ExchangeRate[];
@@ -30,7 +55,7 @@ export function useExchangeRate() {
         totalPages: number;
         number: number;
         size: number;
-      }>(`${EXCHANGE_BASE}?page=${page}&size=${size}`)
+      }>(`${EXCHANGE_BASE}?${params.toString()}`)
       .then((res) => {
         if (res.code !== 200 || res.data == null) {
           throw new Error(res.message || "Failed to load exchange rate history");
@@ -39,8 +64,8 @@ export function useExchangeRate() {
       });
   };
 
-  const triggerExchangeRateFetch = (): Promise<ExchangeRate> => {
-    return api.post<ExchangeRate>(`${EXCHANGE_BASE}/fetch`).then((res) => {
+  const triggerExchangeRateFetch = (): Promise<CurrentExchangeRates> => {
+    return api.post<CurrentExchangeRates>(`${EXCHANGE_BASE}/fetch`).then((res) => {
       if (res.code !== 200 || res.data == null) {
         throw new Error(res.message || "Failed to fetch exchange rate");
       }
@@ -48,8 +73,8 @@ export function useExchangeRate() {
     });
   };
 
-  const setManualExchangeRate = (rate: number): Promise<ExchangeRate> => {
-    return api.post<ExchangeRate>(`${EXCHANGE_BASE}/manual`, { rate }).then((res) => {
+  const setManualExchangeRate = (currency: string, rate: number): Promise<CurrentExchangeRates> => {
+    return api.post<CurrentExchangeRates>(`${EXCHANGE_BASE}/manual`, { currency, rate }).then((res) => {
       if (res.code !== 200 || res.data == null) {
         throw new Error(res.message || "Failed to set manual exchange rate");
       }
@@ -58,9 +83,10 @@ export function useExchangeRate() {
   };
 
   return {
+    getCurrentExchangeRates,
     getCurrentExchangeRate,
     getExchangeRateHistory,
     triggerExchangeRateFetch,
     setManualExchangeRate,
   };
-}
+};
