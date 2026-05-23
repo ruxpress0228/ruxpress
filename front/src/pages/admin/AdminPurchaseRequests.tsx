@@ -1,13 +1,20 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Search, Filter, MapPin, ExternalLink } from "lucide-react";
-import { useNavigate } from 'react-router';
+import { Search, MapPin, ExternalLink, MoreHorizontal, Package, RefreshCw, ClipboardCopy, Pencil } from "lucide-react";
+import { Link, useNavigate } from "react-router";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import { Badge } from "../../components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../components/ui/card";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "../../components/ui/accordion";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../components/ui/select";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../components/ui/table";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "../../components/ui/dropdown-menu";
+import { cn } from "../../components/ui/utils";
 import type { PurchaseRequestStatus } from "../../types";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "../../components/ui/dialog";
 import { Label } from "../../components/ui/label";
@@ -37,16 +44,101 @@ function getAdminRole(): string | null {
   }
 }
 
-const statusLabels: Record<
+const STATUS_BADGE_VARIANT: Record<
   PurchaseRequestStatus,
-  { label: string; variant: "default" | "secondary" | "outline" | "destructive" }
+  "default" | "secondary" | "outline" | "destructive"
 > = {
-  REQUESTED: { label: "요청접수", variant: "secondary" },
-  PURCHASING: { label: "구매진행중", variant: "default" },
-  SHIPPING: { label: "배송중", variant: "default" },
-  COMPLETED: { label: "완료", variant: "default" },
-  CANCELLED: { label: "취소", variant: "destructive" },
+  REQUESTED: "secondary",
+  PURCHASING: "default",
+  SHIPPING: "default",
+  COMPLETED: "default",
+  CANCELLED: "destructive",
 };
+
+const FILTER_CHIPS: { value: "all" | PurchaseRequestStatus; summaryKey?: "ALL" | PurchaseRequestStatus }[] = [
+  { value: "all", summaryKey: "ALL" },
+  { value: "REQUESTED", summaryKey: "REQUESTED" },
+  { value: "PURCHASING", summaryKey: "PURCHASING" },
+  { value: "SHIPPING", summaryKey: "SHIPPING" },
+  { value: "COMPLETED", summaryKey: "COMPLETED" },
+  { value: "CANCELLED", summaryKey: "CANCELLED" },
+];
+
+function fillTpl(template: string, vars: Record<string, string | number>) {
+  let s = template;
+  for (const [k, v] of Object.entries(vars)) {
+    s = s.split(`{{${k}}}`).join(String(v));
+  }
+  return s;
+}
+
+function toAmountNumber(v: unknown): number {
+  if (v == null) return 0;
+  if (typeof v === "number") return Number.isFinite(v) ? v : 0;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : 0;
+}
+
+function isRefundPending(r: PurchaseRequestDetail): boolean {
+  if (r.status !== "COMPLETED") return false;
+  const charged = toAmountNumber(r.chargedAmountKrw ?? r.totalAmountKrw);
+  const settledRaw = r.settledAmountKrw;
+  if (settledRaw == null) return false;
+  const settled = toAmountNumber(settledRaw);
+  return charged > settled + 0.009;
+}
+
+function formatShortDate(iso: string, locale: string): string {
+  try {
+    return new Date(iso).toLocaleDateString(locale, { month: "numeric", day: "numeric" });
+  } catch {
+    return "";
+  }
+}
+
+function statusAccent(status: PurchaseRequestStatus): { bar: string; softBg: string; badgeClass: string } {
+  switch (status) {
+    case "REQUESTED":
+      return {
+        bar: "border-l-slate-500",
+        softBg: "bg-slate-50/90",
+        badgeClass: "border-0 bg-slate-100 text-slate-900 ring-1 ring-slate-200/80",
+      };
+    case "PURCHASING":
+      return {
+        bar: "border-l-blue-600",
+        softBg: "bg-blue-50/60",
+        badgeClass: "border-0 bg-blue-100 text-blue-900 ring-1 ring-blue-200/90",
+      };
+    case "SHIPPING":
+      return {
+        bar: "border-l-violet-600",
+        softBg: "bg-violet-50/60",
+        badgeClass: "border-0 bg-violet-100 text-violet-900 ring-1 ring-violet-200/90",
+      };
+    case "COMPLETED":
+      return {
+        bar: "border-l-emerald-600",
+        softBg: "bg-emerald-50/50",
+        badgeClass: "border-0 bg-emerald-100 text-emerald-900 ring-1 ring-emerald-200/90",
+      };
+    case "CANCELLED":
+    default:
+      return {
+        bar: "border-l-rose-600",
+        softBg: "bg-rose-50/50",
+        badgeClass: "border-0 bg-rose-100 text-rose-900 ring-1 ring-rose-200/90",
+      };
+  }
+}
+
+function listProgressKey(r: PurchaseRequestDetail): string {
+  if (isRefundPending(r)) return "adminPurchase.list.progress.refundPending";
+  if (r.status === "SHIPPING" && !(r.trackingNumber && String(r.trackingNumber).trim())) {
+    return "adminPurchase.list.progress.trackingMissing";
+  }
+  return `adminPurchase.list.progress.${r.status}`;
+}
 
 function hasShippingSnapshot(s?: PurchaseShipping | null): boolean {
   if (!s) return false;
@@ -73,12 +165,65 @@ const ALL_STATUSES: PurchaseRequestStatus[] = [
   "CANCELLED",
 ];
 
+function AdminRowQuickMenu({
+  request,
+  t,
+  onManage,
+  onCopied,
+}: {
+  request: PurchaseRequestDetail;
+  t: (key: string) => string;
+  onManage: () => void;
+  onCopied: () => void;
+}) {
+  const copyNumber = () => {
+    void navigator.clipboard.writeText(request.requestNumber).then(() => onCopied());
+  };
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8 text-gray-600"
+          aria-label={t("adminPurchase.list.quickActions")}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <MoreHorizontal className="h-4 w-4" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-48" onClick={(e) => e.stopPropagation()}>
+        <DropdownMenuItem className="cursor-pointer" onSelect={onManage}>
+          <Pencil className="mr-2 h-4 w-4 shrink-0" />
+          {t("adminPurchase.list.actionManage")}
+        </DropdownMenuItem>
+        <DropdownMenuItem asChild>
+          <Link
+            to={`/admin/purchase-requests/${request.id}`}
+            className="flex cursor-pointer items-center"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <ExternalLink className="mr-2 h-4 w-4 shrink-0" />
+            {t("adminPurchase.list.actionDetail")}
+          </Link>
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem className="cursor-pointer" onSelect={copyNumber}>
+          <ClipboardCopy className="mr-2 h-4 w-4 shrink-0" />
+          {t("adminPurchase.list.actionCopyNumber")}
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
 export default function AdminPurchaseRequests() {
   const { t, locale } = useTranslation();
   const isSuper = getAdminRole() === "SUPER_ADMIN";
   const [rows, setRows] = useState<PurchaseRequestDetail[]>([]);
   const [loading, setLoading] = useState(true);
-  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [statusFilter, setStatusFilter] = useState<"all" | PurchaseRequestStatus>("all");
   const [page, setPage] = useState(0);
   const [size, setSize] = useState(20);
   const [totalPages, setTotalPages] = useState(0);
@@ -86,6 +231,9 @@ export default function AdminPurchaseRequests() {
   const [userKeyword, setUserKeyword] = useState("");
   const [search, setSearch] = useState("");
   const [totalElements, setTotalElements] = useState(0);
+  const [summaryCounts, setSummaryCounts] = useState<
+    Partial<Record<"ALL" | PurchaseRequestStatus, number>> | null
+  >(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selected, setSelected] = useState<PurchaseRequestDetail | null>(null);
   const [newStatus, setNewStatus] = useState<PurchaseRequestStatus>("PURCHASING");
@@ -99,12 +247,13 @@ export default function AdminPurchaseRequests() {
   const [walletMemo, setWalletMemo] = useState("");
   const [walletIdem, setWalletIdem] = useState("");
 
+  const dateLocale = locale === "ko" ? "ko-KR" : locale === "ru" ? "ru-RU" : "en-US";
+
   const fetchPage = useCallback(
-    async (p: number, s: number, status: string, keyword: string) => {
+    async (p: number, s: number, status: "all" | PurchaseRequestStatus, keyword: string) => {
       setLoading(true);
       try {
-        const statusParam =
-          status && status !== "all" ? (status as PurchaseRequestStatus) : undefined;
+        const statusParam = status !== "all" ? status : undefined;
         const res = await adminListPurchaseRequests({
           page: p,
           size: s,
@@ -123,12 +272,34 @@ export default function AdminPurchaseRequests() {
         setLoading(false);
       }
     },
-    [t, sort]
+    [t, sort],
   );
+
+  const loadSummary = useCallback(async () => {
+    const kw = userKeyword.trim() || undefined;
+    const base = { page: 0, size: 1, sort, userKeyword: kw };
+    try {
+      const [all, ...per] = await Promise.all([
+        adminListPurchaseRequests(base),
+        ...ALL_STATUSES.map((st) => adminListPurchaseRequests({ ...base, status: st })),
+      ]);
+      const next: Partial<Record<"ALL" | PurchaseRequestStatus, number>> = { ALL: all.totalElements };
+      ALL_STATUSES.forEach((st, i) => {
+        next[st] = per[i]?.totalElements ?? 0;
+      });
+      setSummaryCounts(next);
+    } catch {
+      setSummaryCounts({});
+    }
+  }, [sort, userKeyword]);
 
   useEffect(() => {
     void fetchPage(0, size, statusFilter, userKeyword);
-  }, [statusFilter, sort, fetchPage, userKeyword]);
+  }, [statusFilter, sort, size, fetchPage, userKeyword]);
+
+  useEffect(() => {
+    void loadSummary();
+  }, [loadSummary]);
 
   useEffect(() => {
     if (!dialogOpen) return;
@@ -142,16 +313,6 @@ export default function AdminPurchaseRequests() {
 
   const changePage = (next: number) => {
     void fetchPage(next, size, statusFilter, userKeyword);
-  };
-
-  const handleStatusFilter = (value: string) => {
-    setStatusFilter(value);
-    setPage(0);
-  };
-
-  const handleSort = (value: string) => {
-    setSort(value as "createdAt,desc" | "createdAt,asc");
-    setPage(0);
   };
 
   const openManage = (r: PurchaseRequestDetail) => {
@@ -186,6 +347,7 @@ export default function AdminPurchaseRequests() {
       });
       toast.success("저장되었습니다");
       setSelected(updated);
+      void loadSummary();
       void fetchPage(page, size, statusFilter, userKeyword);
       setDialogOpen(false);
     } catch (e) {
@@ -201,6 +363,7 @@ export default function AdminPurchaseRequests() {
       toast.success(`사진 ${adminFiles.length}장이 업로드되었습니다`);
       setSelected(updated);
       setAdminFiles([]);
+      void loadSummary();
       void fetchPage(page, size, statusFilter, userKeyword);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "업로드 실패");
@@ -227,6 +390,7 @@ export default function AdminPurchaseRequests() {
       });
       toast.success(t("adminPurchase.walletSuccess"));
       setDialogOpen(false);
+      void loadSummary();
       void fetchPage(page, size, statusFilter, userKeyword);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "실패");
@@ -262,174 +426,279 @@ export default function AdminPurchaseRequests() {
   }, [rows, search]);
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">{t("nav.admin.purchaseRequests")}</h1>
-          <p className="text-gray-600 mt-1">고객 구매 요청 · 선차감 확인 및 차액 환급</p>
+    <div className="space-y-4 md:space-y-5">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
+          <h1 className="text-2xl font-bold tracking-tight text-gray-900 md:text-3xl">{t("nav.admin.purchaseRequests")}</h1>
+          <p className="mt-0.5 text-sm text-gray-600 md:text-base">{t("adminPurchase.list.subtitle")}</p>
+          <p className="mt-1 text-xs text-gray-500">{fillTpl(t("adminPurchase.list.countLine"), { total: totalElements })}</p>
         </div>
-        <span className="text-sm text-gray-500">총 {totalElements}건</span>
+        <div className="flex shrink-0 items-center gap-2 self-start sm:self-auto">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="gap-1.5"
+            onClick={() => {
+              void loadSummary();
+              void fetchPage(page, size, statusFilter, userKeyword);
+            }}
+          >
+            <RefreshCw className="h-4 w-4" aria-hidden />
+            {t("adminPurchase.list.refresh")}
+          </Button>
+        </div>
       </div>
 
-      <Card>
-        <CardContent className="pt-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
-            <div className="relative lg:col-span-2">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <Input
-                placeholder="요청번호, 요청명, 배송지(수령인·주소) 검색"
-                className="pl-10"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-              />
-            </div>
-            <Input
-              placeholder="회원 이름/이메일"
-              value={userKeyword}
-              onChange={(e) => setUserKeyword(e.target.value)}
-            />
-            <Select value={statusFilter} onValueChange={handleStatusFilter}>
-              <SelectTrigger>
-                <Filter className="w-4 h-4 mr-2" />
-                <SelectValue placeholder="상태" />
+      <div className="rounded-xl border border-gray-100 bg-white p-3 shadow-sm md:p-3.5">
+        <div className="mb-2 flex items-center justify-between gap-2">
+          <p className="text-xs font-semibold text-gray-700 md:text-sm">{t("adminPurchase.list.summaryTitle")}</p>
+          <Package className="h-4 w-4 text-gray-400" aria-hidden />
+        </div>
+        <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-6 sm:gap-2">
+          {FILTER_CHIPS.map((chip) => {
+            const key = chip.summaryKey ?? "ALL";
+            const count = summaryCounts?.[key];
+            const active = statusFilter === chip.value;
+            return (
+              <button
+                key={chip.value}
+                type="button"
+                onClick={() => setStatusFilter(chip.value)}
+                className={cn(
+                  "flex min-h-[52px] flex-col items-center justify-center rounded-lg border px-1 py-1.5 text-center transition-all sm:min-h-[56px]",
+                  active
+                    ? "border-blue-300 bg-blue-50/90 ring-2 ring-blue-400/35"
+                    : "border-transparent bg-gray-50/80 hover:bg-gray-100/90",
+                )}
+              >
+                <span
+                  className={cn(
+                    "text-lg font-bold tabular-nums leading-none sm:text-xl",
+                    active ? "text-blue-900" : "text-gray-900",
+                  )}
+                >
+                  {count == null ? "–" : count}
+                </span>
+                <span className="mt-0.5 line-clamp-2 text-[10px] font-medium text-gray-600 sm:text-xs">
+                  {chip.value === "all"
+                    ? t("adminPurchase.list.filterAll")
+                    : t(`purchase.status.${chip.value}` as `purchase.status.${PurchaseRequestStatus}`)}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      <div className="flex flex-col gap-2 rounded-xl border border-gray-100 bg-white p-3 shadow-sm lg:flex-row lg:items-center lg:gap-3">
+        <div className="relative min-w-0 flex-1">
+          <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" aria-hidden />
+          <Input
+            placeholder={t("adminPurchase.list.searchClientPlaceholder")}
+            className="h-9 border-gray-200 pl-9 text-sm"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </div>
+        <div className="relative min-w-0 flex-1 lg:max-w-xs">
+          <Input
+            placeholder={t("adminPurchase.list.userKeywordPlaceholder")}
+            className="h-9 border-gray-200 text-sm"
+            value={userKeyword}
+            onChange={(e) => setUserKeyword(e.target.value)}
+          />
+        </div>
+        <div className="flex shrink-0 items-center gap-1 rounded-lg border border-gray-200 bg-gray-50/80 p-0.5">
+          <Button
+            type="button"
+            variant={sort === "createdAt,desc" ? "default" : "ghost"}
+            size="sm"
+            className="h-8 flex-1 px-2 text-xs lg:flex-none lg:px-3"
+            onClick={() => setSort("createdAt,desc")}
+          >
+            {t("adminPurchase.list.sortLatest")}
+          </Button>
+          <Button
+            type="button"
+            variant={sort === "createdAt,asc" ? "default" : "ghost"}
+            size="sm"
+            className="h-8 flex-1 px-2 text-xs lg:flex-none lg:px-3"
+            onClick={() => setSort("createdAt,asc")}
+          >
+            {t("adminPurchase.list.sortOldest")}
+          </Button>
+        </div>
+      </div>
+
+      <div className="space-y-2 md:space-y-2.5">
+        {loading ? (
+          <div className="rounded-lg border border-dashed border-gray-200 py-10 text-center text-sm text-gray-500">
+            {t("adminPurchase.list.loading")}
+          </div>
+        ) : filtered.length === 0 ? (
+          <div className="rounded-lg border border-dashed border-gray-200 py-10 text-center text-sm text-gray-500">
+            {t("adminPurchase.list.empty")}
+          </div>
+        ) : (
+          filtered.map((request) => {
+            const accent = statusAccent(request.status);
+            const sh = request.shipping;
+            const shipLines = hasShippingSnapshot(sh) && sh ? shippingSummaryLines(sh) : null;
+            const shipTitle =
+              hasShippingSnapshot(sh) && sh
+                ? [sh.label, sh.recipientName, sh.recipientPhone, sh.postalCode, sh.addressLine1, sh.addressLine2]
+                    .filter(Boolean)
+                    .join("\n")
+                : undefined;
+            const total = toAmountNumber(request.totalAmountKrw);
+            const charged =
+              request.chargedAmountKrw != null ? toAmountNumber(request.chargedAmountKrw) : null;
+            const progressKey = listProgressKey(request);
+            const refundStyle = isRefundPending(request);
+
+            return (
+              <article
+                key={request.id}
+                role="button"
+                tabIndex={0}
+                onClick={() => openManage(request)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    openManage(request);
+                  }
+                }}
+                className={cn(
+                  "relative flex cursor-pointer rounded-lg border border-gray-100/90 border-l-4 bg-white py-2.5 pl-2 pr-2 shadow-sm outline-none transition-colors hover:border-gray-200 hover:bg-gray-50/40 md:py-3 md:pl-2.5 md:pr-3",
+                  accent.bar,
+                  accent.softBg,
+                )}
+              >
+                <div className="flex min-w-0 flex-1 flex-col gap-1 pr-10 md:gap-1.5 md:pr-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <Badge variant="outline" className={cn("px-2 py-0 text-[11px] font-semibold md:text-xs", accent.badgeClass)}>
+                      {t(`purchase.status.${request.status}` as `purchase.status.${PurchaseRequestStatus}`)}
+                    </Badge>
+                    <span className="shrink-0 text-right text-base font-bold tabular-nums text-gray-900 md:hidden">
+                      ₩{total.toLocaleString(dateLocale)}
+                    </span>
+                  </div>
+
+                  <h2 className="line-clamp-2 text-[15px] font-semibold leading-snug text-gray-900 md:text-base">
+                    {request.requestName}
+                  </h2>
+
+                  <p className="truncate text-xs text-gray-700 md:text-[13px]">
+                    <span className="font-medium text-gray-800">{request.requestNumber}</span>
+                    <span className="text-gray-300"> · </span>
+                    <span title={request.userEmail ?? undefined}>
+                      {request.userNickname ?? "—"}
+                      {request.userEmail ? ` · ${request.userEmail}` : ` · #${request.userId}`}
+                    </span>
+                  </p>
+
+                  <p
+                    className={cn(
+                      "text-xs leading-snug md:text-[13px]",
+                      refundStyle ? "font-medium text-amber-800" : "text-gray-600",
+                    )}
+                  >
+                    {t(progressKey)}
+                  </p>
+
+                  {shipLines ? (
+                    <div className="flex min-w-0 gap-1.5 text-[11px] text-gray-600 md:text-xs" title={shipTitle}>
+                      <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-blue-600" aria-hidden />
+                      <span className="min-w-0 truncate">{shipLines.title}</span>
+                      <span className="text-gray-300">·</span>
+                      <span className="min-w-0 truncate">{shipLines.subtitle}</span>
+                    </div>
+                  ) : (
+                    <p className="text-[11px] text-gray-400 md:text-xs">{t("adminPurchase.list.noShipping")}</p>
+                  )}
+
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] text-gray-500 md:text-xs">
+                    <time dateTime={request.createdAt}>{formatShortDate(request.createdAt, dateLocale)}</time>
+                    <span className="text-gray-300" aria-hidden>
+                      ·
+                    </span>
+                    <span>{fillTpl(t("adminPurchase.list.qtyTpl"), { n: request.quantity })}</span>
+                    {charged != null ? (
+                      <>
+                        <span className="text-gray-300" aria-hidden>
+                          ·
+                        </span>
+                        <span>
+                          {t("adminPurchase.list.chargedShort")} ₩{charged.toLocaleString(dateLocale)}
+                        </span>
+                      </>
+                    ) : null}
+                  </div>
+                </div>
+
+                <div className="flex shrink-0 flex-col items-end gap-1 border-gray-100/80 md:border-l md:pl-3">
+                  <span className="hidden text-lg font-bold tabular-nums text-gray-900 md:inline">
+                    ₩{total.toLocaleString(dateLocale)}
+                  </span>
+                  <div className="absolute right-1.5 top-1.5 md:relative md:right-auto md:top-auto">
+                    <AdminRowQuickMenu
+                      request={request}
+                      t={t}
+                      onManage={() => openManage(request)}
+                      onCopied={() => toast.success(t("adminPurchase.list.copied"))}
+                    />
+                  </div>
+                </div>
+              </article>
+            );
+          })
+        )}
+      </div>
+
+      {(totalPages > 1 || rows.length > 0) && (
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2 text-xs text-gray-500 md:text-sm">
+            <span>{t("adminPurchase.list.perPage")}</span>
+            <Select
+              value={String(size)}
+              onValueChange={(v) => {
+                const s = Number(v);
+                setSize(s);
+                setPage(0);
+              }}
+            >
+              <SelectTrigger className="h-8 w-[76px] text-xs">
+                <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">전체</SelectItem>
-                <SelectItem value="REQUESTED">요청접수</SelectItem>
-                <SelectItem value="PURCHASING">구매진행중</SelectItem>
-                <SelectItem value="SHIPPING">배송중</SelectItem>
-                <SelectItem value="COMPLETED">완료</SelectItem>
-                <SelectItem value="CANCELLED">취소</SelectItem>
+                {PAGE_SIZE_OPTIONS.map((s) => (
+                  <SelectItem key={s} value={String(s)}>
+                    {fillTpl(t("adminPurchase.list.perPageOption"), { n: s })}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
-            <Select value={sort} onValueChange={handleSort}>
-              <SelectTrigger>
-                <SelectValue placeholder="정렬" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="createdAt,desc">최신순</SelectItem>
-                <SelectItem value="createdAt,asc">오래된순</SelectItem>
-              </SelectContent>
-            </Select>
-            <Button type="button" variant="secondary" onClick={() => void fetchPage(page, size, statusFilter, userKeyword)}>
-              새로고침
+          </div>
+          <div className="flex items-center gap-2">
+            <Button type="button" variant="outline" size="sm" disabled={page <= 0} onClick={() => changePage(page - 1)}>
+              {t("adminPurchase.list.prev")}
+            </Button>
+            <span className="text-xs text-gray-500 md:text-sm">
+              {page + 1} / {Math.max(1, totalPages)}
+            </span>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={totalPages <= 0 || page >= totalPages - 1}
+              onClick={() => changePage(page + 1)}
+            >
+              {t("adminPurchase.list.next")}
             </Button>
           </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>요청번호</TableHead>
-                <TableHead>회원</TableHead>
-                <TableHead>상품명</TableHead>
-                <TableHead className="min-w-[200px] max-w-[280px]">배송지</TableHead>
-                <TableHead>수량</TableHead>
-                <TableHead>금액(원)</TableHead>
-                <TableHead>상태</TableHead>
-                <TableHead>등록일</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {loading ? (
-                <TableRow>
-                  <TableCell colSpan={8} className="text-center text-gray-400 py-12">
-                    불러오는 중...
-                  </TableCell>
-                </TableRow>
-              ) : filtered.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={8} className="text-center text-gray-500 py-12">
-                    구매 요청이 없습니다
-                  </TableCell>
-                </TableRow>
-              ) : filtered.map((request) => {
-                const statusInfo = statusLabels[request.status];
-                const sh = request.shipping;
-                const shipLines = hasShippingSnapshot(sh) && sh ? shippingSummaryLines(sh) : null;
-                const shipTitle =
-                  hasShippingSnapshot(sh) && sh
-                    ? [sh.label, sh.recipientName, sh.recipientPhone, sh.postalCode, sh.addressLine1, sh.addressLine2]
-                        .filter(Boolean)
-                        .join("\n")
-                    : undefined;
-                return (
-                  <TableRow
-                    key={request.id}
-                    className="cursor-pointer hover:bg-gray-50"
-                    onClick={() => openManage(request)}
-                  >
-                    <TableCell className="font-medium text-sm">{request.requestNumber}</TableCell>
-                    <TableCell className="text-sm">
-                      {request.userNickname || request.userEmail ? (
-                        <div className="flex flex-col">
-                          <span className="font-medium text-gray-900">{request.userNickname ?? "—"}</span>
-                          <span className="text-xs text-gray-500">{request.userEmail ?? `#${request.userId}`}</span>
-                        </div>
-                      ) : (
-                        <span className="text-gray-500">#{request.userId}</span>
-                      )}
-                    </TableCell>
-                    <TableCell className="font-medium">{request.requestName}</TableCell>
-                    <TableCell
-                      className="text-sm align-top"
-                      title={shipTitle}
-                    >
-                      {shipLines ? (
-                        <div className="flex gap-2 min-w-0">
-                          <MapPin className="h-4 w-4 text-blue-600 shrink-0 mt-0.5" aria-hidden />
-                          <div className="min-w-0 space-y-0.5">
-                            <p className="font-medium text-gray-900 truncate">{shipLines.title}</p>
-                            <p className="text-xs text-gray-600 line-clamp-2 leading-snug">{shipLines.subtitle}</p>
-                          </div>
-                        </div>
-                      ) : (
-                        <span className="text-gray-400 text-xs">—</span>
-                      )}
-                    </TableCell>
-                    <TableCell>{request.quantity}</TableCell>
-                    <TableCell>
-                      {request.totalAmountKrw != null
-                        ? `₩${request.totalAmountKrw.toLocaleString()}`
-                        : "-"}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={statusInfo.variant}>{statusInfo.label}</Badge>
-                    </TableCell>
-                    <TableCell className="text-sm text-gray-500">
-                      {new Date(request.createdAt).toLocaleDateString("ko-KR")}
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
-          <div className="flex items-center justify-between p-4 border-t flex-wrap gap-2">
-            <div className="flex items-center gap-2 text-sm text-gray-500">
-              <span>페이지당</span>
-              <Select
-                value={String(size)}
-                onValueChange={(v) => { const s = Number(v); setSize(s); setPage(0); void fetchPage(0, s, statusFilter, userKeyword); }}
-              >
-                <SelectTrigger className="w-[80px] h-8 text-xs"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {PAGE_SIZE_OPTIONS.map((s) => (
-                    <SelectItem key={s} value={String(s)}>{s}건</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex items-center gap-2">
-              <Button type="button" variant="outline" size="sm" disabled={page <= 0} onClick={() => changePage(page - 1)}>이전</Button>
-              <span className="text-sm text-gray-500">{page + 1} / {Math.max(1, totalPages)}</span>
-              <Button type="button" variant="outline" size="sm" disabled={totalPages <= 0 || page >= totalPages - 1} onClick={() => changePage(page + 1)}>다음</Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+        </div>
+      )}
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent
@@ -454,8 +723,8 @@ export default function AdminPurchaseRequests() {
                       {selected.requestNumber}
                     </DialogDescription>
                   </div>
-                  <Badge variant={statusLabels[selected.status].variant} className="shrink-0">
-                    {statusLabels[selected.status].label}
+                  <Badge variant={STATUS_BADGE_VARIANT[selected.status]} className="shrink-0">
+                    {t(`purchase.status.${selected.status}` as `purchase.status.${PurchaseRequestStatus}`)}
                   </Badge>
                 </div>
                 <div className="flex flex-wrap items-center justify-between gap-2 text-sm text-gray-600">
@@ -585,7 +854,7 @@ export default function AdminPurchaseRequests() {
                           <SelectContent>
                             {ALL_STATUSES.map((s) => (
                               <SelectItem key={s} value={s}>
-                                {statusLabels[s].label}
+                                {t(`purchase.status.${s}` as `purchase.status.${PurchaseRequestStatus}`)}
                               </SelectItem>
                             ))}
                           </SelectContent>
