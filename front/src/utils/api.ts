@@ -10,6 +10,18 @@ export function readAuthValue(key: string): string | null {
   return localStorage.getItem(key) ?? sessionStorage.getItem(key);
 }
 
+/**
+ * 현재 토큰이 저장된 스토리지(sessionStorage 우선, 없으면 localStorage)에 값을 저장한다.
+ * 자동로그인 미체크 사용자는 sessionStorage에, 체크 사용자는 localStorage에 쓴다.
+ */
+export function writeAuthValue(key: string, value: string): void {
+  if (sessionStorage.getItem(STORAGE_KEYS.TOKEN)) {
+    sessionStorage.setItem(key, value);
+  } else {
+    localStorage.setItem(key, value);
+  }
+}
+
 /** 양쪽 스토리지에서 모두 제거 (어느 쪽에 있든 일관되게 정리). */
 function removeAuthValue(key: string): void {
   localStorage.removeItem(key);

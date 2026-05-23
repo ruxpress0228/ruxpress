@@ -17,7 +17,7 @@ import {
   DialogTitle,
 } from "../../components/ui/dialog";
 import { toast } from "sonner";
-import { api, clearUserSession, notifyUserAuthChange } from "../../utils/api";
+import { api, clearUserSession, notifyUserAuthChange, readAuthValue, writeAuthValue } from "../../utils/api";
 import { STORAGE_KEYS } from "../../utils/constants";
 import { useBalance } from "../../hooks/balance/useBalance";
 import type { User as UserProfile, UserAddress } from "../../types/domain";
@@ -79,7 +79,7 @@ export default function MyPage() {
   const [addrSubmitting, setAddrSubmitting] = useState(false);
 
   const loadProfile = useCallback(async () => {
-    const token = localStorage.getItem(STORAGE_KEYS.TOKEN);
+    const token = readAuthValue(STORAGE_KEYS.TOKEN);
     if (!token) {
       toast.error("로그인이 필요합니다");
       navigate("/login", { replace: true });
@@ -90,9 +90,9 @@ export default function MyPage() {
       const res = await api.get<UserProfile>("/v1/users/me");
       if (res.code === 200 && res.data) {
         setProfile(res.data);
-        localStorage.setItem(STORAGE_KEYS.USER_NICKNAME, res.data.nickname);
-        localStorage.setItem(STORAGE_KEYS.USER_EMAIL, res.data.email);
-        localStorage.setItem(STORAGE_KEYS.USER_ID, String(res.data.id));
+        writeAuthValue(STORAGE_KEYS.USER_NICKNAME, res.data.nickname);
+        writeAuthValue(STORAGE_KEYS.USER_EMAIL, res.data.email);
+        writeAuthValue(STORAGE_KEYS.USER_ID, String(res.data.id));
         notifyUserAuthChange();
       } else if (res.code === 401) {
         clearUserSession();
@@ -267,7 +267,7 @@ export default function MyPage() {
       });
       if (res.code === 200 && res.data) {
         setProfile(res.data);
-        localStorage.setItem(STORAGE_KEYS.USER_NICKNAME, res.data.nickname);
+        writeAuthValue(STORAGE_KEYS.USER_NICKNAME, res.data.nickname);
         notifyUserAuthChange();
         toast.success(res.message ?? "프로필이 수정되었습니다");
         setEditOpen(false);
