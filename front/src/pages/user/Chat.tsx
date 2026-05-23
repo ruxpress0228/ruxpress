@@ -5,7 +5,6 @@ import { useChat } from '@/hooks/chat/useChat';
 import { useI18n } from '@/i18n/I18nProvider';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import type { ChatRoom, ChatMessage, SenderType } from '@/types/chat';
@@ -58,8 +57,8 @@ export default function Chat() {
   const [selectedPastRoomId, setSelectedPastRoomId] = useState<string | null>(null);
   const [pastMessages, setPastMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
-  const bottomRef = useRef<HTMLDivElement>(null);
-  const pastBottomRef = useRef<HTMLDivElement>(null);
+  const chatScrollRef = useRef<HTMLDivElement>(null);
+  const pastScrollRef = useRef<HTMLDivElement>(null);
 
   const { messages, connected, sendMessage } = useChat(currentRoom?.id ?? null);
 
@@ -78,7 +77,8 @@ export default function Chat() {
   }, [loadPastRooms]);
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+    const el = chatScrollRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
   }, [messages]);
 
   useEffect(() => {
@@ -89,10 +89,10 @@ export default function Chat() {
     getChatMessages(selectedPastRoomId).then((res) => {
       if (res.code === 200 && res.data) {
         setPastMessages(res.data);
-        setTimeout(
-          () => pastBottomRef.current?.scrollIntoView({ behavior: 'auto' }),
-          0,
-        );
+        setTimeout(() => {
+          const el = pastScrollRef.current;
+          if (el) el.scrollTop = el.scrollHeight;
+        }, 0);
       }
     });
   }, [selectedPastRoomId]);
@@ -143,7 +143,7 @@ export default function Chat() {
             </Badge>
           </div>
 
-          <ScrollArea className="flex-1 min-h-0 border rounded-lg bg-muted/30">
+          <div ref={chatScrollRef} className="flex-1 min-h-0 overflow-y-auto border rounded-lg bg-muted/30">
             <div className="p-3 sm:p-4">
               {messages.length === 0 && (
                 <p className="text-center text-muted-foreground text-sm py-8">
@@ -153,9 +153,8 @@ export default function Chat() {
               {messages.map((msg) => (
                 <MessageBubble key={msg.id} msg={msg} mineType="USER" />
               ))}
-              <div ref={bottomRef} />
             </div>
-          </ScrollArea>
+          </div>
 
           <div className="flex gap-2 mt-3">
             <Input
@@ -180,7 +179,7 @@ export default function Chat() {
           className="flex-1 min-h-0 flex flex-col mt-0 data-[state=inactive]:hidden"
         >
           {selectedPastRoomId === null ? (
-            <ScrollArea className="flex-1 min-h-0 border rounded-lg">
+            <div className="flex-1 min-h-0 overflow-y-auto border rounded-lg">
               {pastRooms.length === 0 && (
                 <p className="text-center text-muted-foreground text-sm p-6">
                   {t('chat.history.empty')}
@@ -205,7 +204,7 @@ export default function Chat() {
                   </p>
                 </button>
               ))}
-            </ScrollArea>
+            </div>
           ) : (
             <div className="flex flex-col flex-1 min-h-0">
               <div className="flex items-center justify-between gap-2 mb-2">
@@ -221,7 +220,7 @@ export default function Chat() {
                   {t('chat.history.readonly')}
                 </Badge>
               </div>
-              <ScrollArea className="flex-1 min-h-0 border rounded-lg bg-muted/30">
+              <div ref={pastScrollRef} className="flex-1 min-h-0 overflow-y-auto border rounded-lg bg-muted/30">
                 <div className="p-3 sm:p-4">
                   {pastMessages.length === 0 && (
                     <p className="text-center text-muted-foreground text-sm py-8">
@@ -231,9 +230,8 @@ export default function Chat() {
                   {pastMessages.map((msg) => (
                     <MessageBubble key={msg.id} msg={msg} mineType="USER" />
                   ))}
-                  <div ref={pastBottomRef} />
                 </div>
-              </ScrollArea>
+              </div>
             </div>
           )}
         </TabsContent>
