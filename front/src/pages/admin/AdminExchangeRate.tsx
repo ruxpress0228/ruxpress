@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../..
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../components/ui/table";
 import { Label } from "../../components/ui/label";
 import { Badge } from "../../components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../components/ui/select";
 import { toast } from "sonner";
 import { api } from "../../utils/api";
 import { unwrap } from "../../utils/exception";
@@ -33,6 +34,7 @@ const fetchedAtOptions: Intl.DateTimeFormatOptions = {
 };
 
 const EMPTY_INPUTS: Record<string, string> = { RUB: "", USD: "", CNY: "" };
+const PAGE_SIZE_OPTIONS = [20, 30, 50, 100] as const;
 
 function mergeInputsFromQuotes(
   prev: Record<string, string>,
@@ -63,15 +65,20 @@ export default function AdminExchangeRate() {
   } = useExchangeRate();
   const [currentRates, setCurrentRates] = useState<CurrentExchangeRates | null>(null);
   const [history, setHistory] = useState<ExchangeRate[]>([]);
+  const [historyPage, setHistoryPage] = useState(0);
+  const [historySize, setHistorySize] = useState(20);
+  const [historyTotalPages, setHistoryTotalPages] = useState(0);
   const [loading, setLoading] = useState(true);
   const [fetching, setFetching] = useState(false);
   const [savingCurrency, setSavingCurrency] = useState<string | null>(null);
   const [manualInputs, setManualInputs] = useState<Record<string, string>>({ ...EMPTY_INPUTS });
   const [feeRate, setFeeRate] = useState("12");
 
-  const refreshHistory = async () => {
-    const historyRes = await getExchangeRateHistory(0, 30);
+  const refreshHistory = async (p = historyPage, s = historySize) => {
+    const historyRes = await getExchangeRateHistory(p, s);
     setHistory(historyRes.content ?? []);
+    setHistoryTotalPages(historyRes.totalPages ?? 0);
+    setHistoryPage(historyRes.number ?? p);
   };
 
   const loadData = async () => {
@@ -79,10 +86,12 @@ export default function AdminExchangeRate() {
       setLoading(true);
       const [current, historyRes] = await Promise.all([
         getCurrentExchangeRates(),
-        getExchangeRateHistory(0, 30),
+        getExchangeRateHistory(historyPage, historySize),
       ]);
       setCurrentRates(current);
       setHistory(historyRes.content ?? []);
+      setHistoryTotalPages(historyRes.totalPages ?? 0);
+      setHistoryPage(historyRes.number ?? 0);
       setManualInputs((prev) => mergeInputsFromQuotes(prev, current.quotes, { resetMissing: true }));
     } catch (e) {
       const msg = e instanceof Error ? e.message : t("admin.exchange.toast.loadError");
@@ -303,56 +312,79 @@ export default function AdminExchangeRate() {
           <CardDescription>{t("admin.exchange.history.desc")}</CardDescription>
         </CardHeader>
         <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>{t("admin.exchange.history.currency")}</TableHead>
-                <TableHead>{t("admin.exchange.history.rate")}</TableHead>
-                <TableHead>{t("admin.exchange.history.source")}</TableHead>
-                <TableHead>{t("admin.exchange.history.status")}</TableHead>
-                <TableHead>{t("admin.exchange.history.fetchedAt")}</TableHead>
-                <TableHead>{t("admin.exchange.history.createdAt")}</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {history.length === 0 ? (
+          <>
+            <Table>
+              <TableHeader>
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center text-gray-500 py-8">
-                    {t("admin.exchange.historyEmpty")}
-                  </TableCell>
+                  <TableHead>{t("admin.exchange.history.currency")}</TableHead>
+                  <TableHead>{t("admin.exchange.history.rate")}</TableHead>
+                  <TableHead>{t("admin.exchange.history.source")}</TableHead>
+                  <TableHead>{t("admin.exchange.history.status")}</TableHead>
+                  <TableHead>{t("admin.exchange.history.fetchedAt")}</TableHead>
+                  <TableHead>{t("admin.exchange.history.createdAt")}</TableHead>
                 </TableRow>
-              ) : (
-                history.map((rate) => (
-                  <TableRow key={rate.id}>
-                    <TableCell className="font-medium">{rate.baseCurrency}</TableCell>
-                    <TableCell>
-                      {formatRateToKrwLine(rate.baseCurrency, Number(rate.rate))}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={rate.source === "API" ? "default" : "secondary"}>
-                        {rate.source === "API"
-                          ? t("admin.exchange.badgeApi")
-                          : t("admin.exchange.badgeManual")}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      {rate.isCurrent ? (
-                        <Badge variant="default">{t("admin.exchange.statusCurrent")}</Badge>
-                      ) : (
-                        <Badge variant="outline">{t("admin.exchange.statusPrevious")}</Badge>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-sm text-gray-500">
-                      {rate.fetchedAt ? formatDate(rate.fetchedAt, locale, fetchedAtOptions) : "—"}
-                    </TableCell>
-                    <TableCell className="text-sm text-gray-500">
-                      {rate.createdAt ? formatDate(rate.createdAt, locale) : "—"}
+              </TableHeader>
+              <TableBody>
+                {history.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-center text-gray-500 py-8">
+                      {t("admin.exchange.historyEmpty")}
                     </TableCell>
                   </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
+                ) : (
+                  history.map((rate) => (
+                    <TableRow key={rate.id}>
+                      <TableCell className="font-medium">{rate.baseCurrency}</TableCell>
+                      <TableCell>
+                        {formatRateToKrwLine(rate.baseCurrency, Number(rate.rate))}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={rate.source === "API" ? "default" : "secondary"}>
+                          {rate.source === "API"
+                            ? t("admin.exchange.badgeApi")
+                            : t("admin.exchange.badgeManual")}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        {rate.isCurrent ? (
+                          <Badge variant="default">{t("admin.exchange.statusCurrent")}</Badge>
+                        ) : (
+                          <Badge variant="outline">{t("admin.exchange.statusPrevious")}</Badge>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-sm text-gray-500">
+                        {rate.fetchedAt ? formatDate(rate.fetchedAt, locale, fetchedAtOptions) : "—"}
+                      </TableCell>
+                      <TableCell className="text-sm text-gray-500">
+                        {rate.createdAt ? formatDate(rate.createdAt, locale) : "—"}
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+            <div className="flex items-center justify-between p-4 border-t flex-wrap gap-2">
+              <div className="flex items-center gap-2 text-sm text-gray-500">
+                <span>페이지당</span>
+                <Select
+                  value={String(historySize)}
+                  onValueChange={(v) => { const s = Number(v); setHistorySize(s); setHistoryPage(0); void refreshHistory(0, s); }}
+                >
+                  <SelectTrigger className="w-[80px] h-8 text-xs"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {PAGE_SIZE_OPTIONS.map((s) => (
+                      <SelectItem key={s} value={String(s)}>{s}건</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button variant="outline" size="sm" disabled={historyPage <= 0} onClick={() => { void refreshHistory(historyPage - 1, historySize); }}>이전</Button>
+                <span className="text-sm text-gray-500">{historyPage + 1} / {Math.max(1, historyTotalPages)}</span>
+                <Button variant="outline" size="sm" disabled={historyPage >= historyTotalPages - 1} onClick={() => { void refreshHistory(historyPage + 1, historySize); }}>다음</Button>
+              </div>
+            </div>
+          </>
         </CardContent>
       </Card>
     </div>
