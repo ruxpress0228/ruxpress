@@ -108,6 +108,12 @@ export async function adminListLedgerEntries(params: {
   return res.data;
 }
 
+export async function adminGetLedgerEntry(id: number): Promise<TransferLedgerEntry> {
+  const res = await api.get<TransferLedgerEntry>(`${ADMIN_BANK}/${id}`);
+  if (res.code !== 200 || res.data == null) throw new Error(res.message);
+  return res.data;
+}
+
 export async function adminConfirmLedgerEntry(id: number, adminMemo?: string): Promise<TransferLedgerEntry> {
   const res = await api.post<TransferLedgerEntry>(`${ADMIN_BANK}/${id}/confirm`, { adminMemo });
   if (res.code !== 200 || res.data == null) throw new Error(res.message);

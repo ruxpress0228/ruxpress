@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react";
-import { CheckCircle, Undo2, XCircle, RefreshCw } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { CheckCircle, Undo2, XCircle, RefreshCw, Eye, ImageOff, Landmark } from "lucide-react";
+import { cn } from "../../components/ui/utils";
 import { Button } from "../../components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../components/ui/card";
 import { Input } from "../../components/ui/input";
@@ -22,6 +23,7 @@ import { Badge } from "../../components/ui/badge";
 import { toast } from "sonner";
 import {
   adminListLedgerEntries,
+  adminGetLedgerEntry,
   adminConfirmLedgerEntry,
   adminSettleLedger,
   adminRefundLedger,
@@ -30,10 +32,19 @@ import {
 import { useTranslation } from "../../hooks/useTranslation";
 import { formatDate } from "../../utils/format";
 import { readAuthValue } from "../../utils/api";
-import type { TransferLedgerEntry } from "../../types/bankTransfer";
+import type { TransferLedgerEntry, TransferLedgerStatus } from "../../types/bankTransfer";
 
 const ADMIN_STORAGE_KEY = "ruxpress_admin";
 const PAGE_SIZE_OPTIONS = [20, 30, 50, 100] as const;
+
+type StatusChipValue = "all" | TransferLedgerStatus;
+const FILTER_CHIPS: { value: StatusChipValue; label: string }[] = [
+  { value: "all", label: "전체" },
+  { value: "PENDING", label: "PENDING" },
+  { value: "CONFIRMED", label: "CONFIRMED" },
+  { value: "CANCELLED", label: "CANCELLED" },
+];
+const COUNTABLE_STATUSES: TransferLedgerStatus[] = ["PENDING", "CONFIRMED", "CANCELLED"];
 
 function getAdminRole(): string | null {
   try {
@@ -58,17 +69,39 @@ export default function AdminBankTransfers() {
   const [rows, setRows] = useState<TransferLedgerEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState<string>("");
-  const [entryType, setEntryType] = useState<string>("");
   const [userEmailFilter, setUserEmailFilter] = useState("");
   const [page, setPage] = useState(0);
   const [size, setSize] = useState(20);
   const [totalPages, setTotalPages] = useState(0);
+  const [totalElements, setTotalElements] = useState(0);
+  const [summaryCounts, setSummaryCounts] = useState<
+    Partial<Record<"ALL" | TransferLedgerStatus, number>> | null
+  >(null);
 
   const [actionOpen, setActionOpen] = useState(false);
   const [actionKind, setActionKind] = useState<"settle" | "refund" | null>(null);
   const [actionParentId, setActionParentId] = useState<number | null>(null);
   const [actionAmount, setActionAmount] = useState("");
   const [actionMemo, setActionMemo] = useState("");
+
+  const [detailOpen, setDetailOpen] = useState(false);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [detail, setDetail] = useState<TransferLedgerEntry | null>(null);
+
+  const openDetail = async (id: number) => {
+    setDetail(null);
+    setDetailOpen(true);
+    setDetailLoading(true);
+    try {
+      const data = await adminGetLedgerEntry(id);
+      setDetail(data);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : t("admin.bank.ledger.loadError"));
+      setDetailOpen(false);
+    } finally {
+      setDetailLoading(false);
+    }
+  };
 
   const load = async (p = page, s = size) => {
     try {
@@ -77,11 +110,11 @@ export default function AdminBankTransfers() {
         page: p,
         size: s,
         status: status || undefined,
-        entryType: entryType || undefined,
         userEmail: userEmailFilter.trim() || undefined,
       });
       setRows(res.content ?? []);
       setTotalPages(res.totalPages ?? 0);
+      setTotalElements(res.totalElements ?? 0);
       setPage(res.page ?? 0);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : t("admin.bank.ledger.loadError"));
@@ -90,9 +123,72 @@ export default function AdminBankTransfers() {
     }
   };
 
+  const loadSummary = useCallback(async () => {
+    const base = {
+      page: 0,
+      size: 1,
+      userEmail: userEmailFilter.trim() || undefined,
+    };
+    try {
+      const [all, ...per] = await Promise.all([
+        adminListLedgerEntries(base),
+        ...COUNTABLE_STATUSES.map((st) => adminListLedgerEntries({ ...base, status: st })),
+      ]);
+      const next: Partial<Record<"ALL" | TransferLedgerStatus, number>> = { ALL: all.totalElements };
+      COUNTABLE_STATUSES.forEach((st, i) => {
+        next[st] = per[i]?.totalElements ?? 0;
+      });
+      setSummaryCounts(next);
+    } catch {
+      setSummaryCounts({});
+    }
+  }, [userEmailFilter]);
+
   useEffect(() => {
     load(0);
+    void loadSummary();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const firstEmailMount = useRef(true);
+  useEffect(() => {
+    if (firstEmailMount.current) {
+      firstEmailMount.current = false;
+      return;
+    }
+    const id = setTimeout(() => {
+      setPage(0);
+      void load(0, size);
+      void loadSummary();
+    }, 300);
+    return () => clearTimeout(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userEmailFilter]);
+
+  const setStatusFilter = (next: StatusChipValue) => {
+    const value = next === "all" ? "" : next;
+    setStatus(value);
+    setPage(0);
+    void (async () => {
+      try {
+        setLoading(true);
+        const res = await adminListLedgerEntries({
+          page: 0,
+          size,
+          status: value || undefined,
+          userEmail: userEmailFilter.trim() || undefined,
+        });
+        setRows(res.content ?? []);
+        setTotalPages(res.totalPages ?? 0);
+        setTotalElements(res.totalElements ?? 0);
+        setPage(res.page ?? 0);
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : t("admin.bank.ledger.loadError"));
+      } finally {
+        setLoading(false);
+      }
+    })();
+  };
 
   const onConfirm = async (id: number) => {
     if (!isSuper) {
@@ -157,6 +253,46 @@ export default function AdminBankTransfers() {
       <div>
         <h1 className="text-2xl font-bold text-gray-900">{t("admin.bank.ledger.title")}</h1>
         <p className="text-gray-600 text-sm">{t("admin.bank.ledger.subtitle")}</p>
+        <p className="mt-1 text-xs text-gray-500">전체 {totalElements.toLocaleString(locale === "en" ? "en-US" : "ko-KR")}건</p>
+      </div>
+
+      <div className="rounded-xl border border-gray-100 bg-white p-3 shadow-sm md:p-3.5">
+        <div className="mb-2 flex items-center justify-between gap-2">
+          <p className="text-xs font-semibold text-gray-700 md:text-sm">상태별 건수</p>
+          <Landmark className="h-4 w-4 text-gray-400" aria-hidden />
+        </div>
+        <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-4 sm:gap-2">
+          {FILTER_CHIPS.map((chip) => {
+            const key = chip.value === "all" ? "ALL" : chip.value;
+            const count = summaryCounts?.[key];
+            const active = (status === "" && chip.value === "all") || status === chip.value;
+            return (
+              <button
+                key={chip.value}
+                type="button"
+                onClick={() => setStatusFilter(chip.value)}
+                className={cn(
+                  "flex min-h-[52px] flex-col items-center justify-center rounded-lg border px-1 py-1.5 text-center transition-all sm:min-h-[56px]",
+                  active
+                    ? "border-blue-300 bg-blue-50/90 ring-2 ring-blue-400/35"
+                    : "border-transparent bg-gray-50/80 hover:bg-gray-100/90",
+                )}
+              >
+                <span
+                  className={cn(
+                    "text-lg font-bold tabular-nums leading-none sm:text-xl",
+                    active ? "text-blue-900" : "text-gray-900",
+                  )}
+                >
+                  {count == null ? "–" : count}
+                </span>
+                <span className="mt-0.5 line-clamp-2 text-[10px] font-medium text-gray-600 sm:text-xs">
+                  {chip.label}
+                </span>
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       <Card>
@@ -165,38 +301,10 @@ export default function AdminBankTransfers() {
         </CardHeader>
         <CardContent className="flex flex-wrap gap-4 items-end">
           <div className="space-y-1">
-            <Label>{t("admin.bank.ledger.status")}</Label>
-            <Select value={status || "ALL"} onValueChange={(v) => setStatus(v === "ALL" ? "" : v)}>
-              <SelectTrigger className="w-[160px]">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="ALL">{t("admin.bank.all")}</SelectItem>
-                <SelectItem value="PENDING">PENDING</SelectItem>
-                <SelectItem value="CONFIRMED">CONFIRMED</SelectItem>
-                <SelectItem value="CANCELLED">CANCELLED</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-1">
-            <Label>{t("admin.bank.ledger.entryType")}</Label>
-            <Select value={entryType || "ALL"} onValueChange={(v) => setEntryType(v === "ALL" ? "" : v)}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="ALL">{t("admin.bank.all")}</SelectItem>
-                <SelectItem value="DEPOSIT">DEPOSIT</SelectItem>
-                <SelectItem value="SETTLEMENT">SETTLEMENT</SelectItem>
-                <SelectItem value="REFUND">REFUND</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-1">
             <Label>{t("admin.bank.ledger.userEmail")}</Label>
             <Input
               className="w-64"
-              type="email"
+              type="text"
               autoComplete="off"
               placeholder={t("admin.bank.ledger.userEmailPlaceholder")}
               value={userEmailFilter}
@@ -207,6 +315,7 @@ export default function AdminBankTransfers() {
             onClick={() => {
               setPage(0);
               load(0, size);
+              void loadSummary();
             }}
           >
             <RefreshCw className="w-4 h-4 mr-2" />
@@ -238,6 +347,7 @@ export default function AdminBankTransfers() {
                   <TableHead>Status</TableHead>
                   <TableHead>Parent</TableHead>
                   <TableHead>{t("admin.bank.table.created")}</TableHead>
+                  <TableHead className="text-center w-[80px]">상세</TableHead>
                   <TableHead className="text-right">{t("admin.bank.actions")}</TableHead>
                 </TableRow>
               </TableHeader>
@@ -257,15 +367,21 @@ export default function AdminBankTransfers() {
                     </TableCell>
                     <TableCell>{r.parentEntryId ?? "—"}</TableCell>
                     <TableCell>{formatDate(r.createdAt, locale)}</TableCell>
+                    <TableCell className="text-center">
+                      <Button size="sm" variant="ghost" onClick={() => void openDetail(r.id)}>
+                        <Eye className="w-4 h-4 mr-1" />
+                        상세
+                      </Button>
+                    </TableCell>
                     <TableCell className="text-right">
-                      <div className="flex flex-wrap justify-end gap-1">
+                      <div className="inline-flex flex-col items-stretch gap-1 min-w-[108px]">
                       {isRootDeposit(r) && r.status === "PENDING" && isSuper ? (
                         <>
-                          <Button size="sm" variant="default" onClick={() => onConfirm(r.id)}>
+                          <Button size="sm" variant="default" className="justify-start w-full" onClick={() => onConfirm(r.id)}>
                             <CheckCircle className="w-4 h-4 mr-1" />
                             {t("admin.bank.confirm")}
                           </Button>
-                          <Button size="sm" variant="outline" onClick={() => onCancel(r.id)}>
+                          <Button size="sm" variant="outline" className="justify-start w-full" onClick={() => onCancel(r.id)}>
                             <XCircle className="w-4 h-4 mr-1" />
                             {t("admin.bank.cancelReq")}
                           </Button>
@@ -276,6 +392,7 @@ export default function AdminBankTransfers() {
                           <Button
                             size="sm"
                             variant="secondary"
+                            className="justify-start w-full"
                             onClick={() => openSettleRefund("settle", r.id, r.amount)}
                           >
                             <CheckCircle className="w-4 h-4 mr-1" />
@@ -284,6 +401,7 @@ export default function AdminBankTransfers() {
                           <Button
                             size="sm"
                             variant="outline"
+                            className="justify-start w-full"
                             onClick={() => openSettleRefund("refund", r.id, r.amount)}
                           >
                             <Undo2 className="w-4 h-4 mr-1" />
@@ -321,6 +439,108 @@ export default function AdminBankTransfers() {
           </div>
         </CardContent>
       </Card>
+
+      <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>입금내역 상세 {detail ? `#${detail.id}` : ""}</DialogTitle>
+          </DialogHeader>
+          {detailLoading || !detail ? (
+            <p className="text-sm text-gray-500 py-4">불러오는 중…</p>
+          ) : (
+            <div className="space-y-4 text-sm">
+              <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                <div>
+                  <p className="text-gray-500">사용자</p>
+                  <p className="font-medium">{detail.userEmail ?? `#${detail.userId}`}</p>
+                </div>
+                <div>
+                  <p className="text-gray-500">유형</p>
+                  <p className="font-medium">{detail.entryType}</p>
+                </div>
+                <div>
+                  <p className="text-gray-500">금액</p>
+                  <p className="font-medium">
+                    {detail.amount.toLocaleString(locale === "en" ? "en-US" : "ko-KR")} {detail.currency}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-gray-500">상태</p>
+                  <Badge variant={detail.status === "CONFIRMED" ? "default" : "secondary"}>{detail.status}</Badge>
+                </div>
+                <div>
+                  <p className="text-gray-500">정산계좌</p>
+                  <p className="font-medium">
+                    {detail.settlementAccount?.bankName} · {detail.settlementAccount?.accountNumber}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-gray-500">부모 ID</p>
+                  <p className="font-medium">{detail.parentEntryId ?? "—"}</p>
+                </div>
+                <div>
+                  <p className="text-gray-500">입금자명</p>
+                  <p className="font-medium">{detail.depositorName ?? "—"}</p>
+                </div>
+                <div>
+                  <p className="text-gray-500">입금 메모</p>
+                  <p className="font-medium break-words">{detail.depositorMemo ?? "—"}</p>
+                </div>
+                <div>
+                  <p className="text-gray-500">관리자 메모</p>
+                  <p className="font-medium break-words">{detail.adminMemo ?? "—"}</p>
+                </div>
+                <div>
+                  <p className="text-gray-500">생성일</p>
+                  <p className="font-medium">{formatDate(detail.createdAt, locale)}</p>
+                </div>
+                <div>
+                  <p className="text-gray-500">확정일</p>
+                  <p className="font-medium">{detail.confirmedAt ? formatDate(detail.confirmedAt, locale) : "—"}</p>
+                </div>
+                <div>
+                  <p className="text-gray-500">확정 관리자 ID</p>
+                  <p className="font-medium">{detail.confirmedByAdminId ?? "—"}</p>
+                </div>
+              </div>
+
+              <div className="pt-2 border-t">
+                <p className="font-semibold mb-2">증빙 이미지</p>
+                {!detail.attachments || detail.attachments.length === 0 ? (
+                  <div className="flex items-center gap-2 text-gray-500 py-3">
+                    <ImageOff className="w-4 h-4" />
+                    <span>첨부된 이미지가 없습니다</span>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                    {detail.attachments.map((att) => {
+                      const src = att.viewUrl || att.storedUrl;
+                      return (
+                        <a
+                          key={att.id}
+                          href={src}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="block group"
+                          title={att.originalFilename}
+                        >
+                          <img
+                            src={att.thumbnailUrl || src}
+                            alt={att.originalFilename}
+                            className="h-32 w-full object-cover rounded border group-hover:opacity-90"
+                            loading="lazy"
+                          />
+                          <p className="text-xs text-gray-600 mt-1 truncate">{att.originalFilename}</p>
+                        </a>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={actionOpen} onOpenChange={setActionOpen}>
         <DialogContent>

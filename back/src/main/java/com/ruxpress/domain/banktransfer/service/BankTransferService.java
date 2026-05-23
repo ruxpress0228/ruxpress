@@ -181,12 +181,10 @@ public class BankTransferService {
             TransferLedgerEntryType entryType,
             String userEmail,
             PageRequest pageRequest) {
-        Long filterUserId = null;
+        List<Long> filterUserIds = null;
         if (userEmail != null && !userEmail.isBlank()) {
-            filterUserId = userRepository.findByEmail(userEmail.trim())
-                    .map(User::getId)
-                    .orElse(null);
-            if (filterUserId == null) {
+            filterUserIds = userRepository.findIdsByEmailContaining(userEmail.trim());
+            if (filterUserIds.isEmpty()) {
                 return new PageResponse<>(
                         List.of(),
                         0,
@@ -198,7 +196,7 @@ public class BankTransferService {
         Specification<TransferLedgerEntry> spec = Specification.allOf(
                 TransferLedgerSpecifications.statusEquals(status),
                 TransferLedgerSpecifications.entryTypeEquals(entryType),
-                TransferLedgerSpecifications.userIdEquals(filterUserId));
+                TransferLedgerSpecifications.userIdIn(filterUserIds));
         Page<TransferLedgerEntry> page = entryRepository.findAll(spec, pageRequest);
         List<Long> userIds = page.getContent().stream().map(TransferLedgerEntry::getUserId).distinct().toList();
         Map<Long, String> emailByUserId = new HashMap<>();

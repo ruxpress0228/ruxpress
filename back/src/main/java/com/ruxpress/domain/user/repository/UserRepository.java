@@ -9,6 +9,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.List;
 import java.util.Optional;
 import java.time.LocalDateTime;
 
@@ -17,6 +18,10 @@ public interface UserRepository extends JpaRepository<User, Long> {
     Optional<User> findByEmail(String email);
 
     boolean existsByEmail(String email);
+
+    @Query("SELECT u.id FROM User u WHERE u.deletedAt IS NULL " +
+           "AND LOWER(u.email) LIKE LOWER(CONCAT('%', :keyword, '%'))")
+    List<Long> findIdsByEmailContaining(@Param("keyword") String keyword);
 
     Page<User> findByDeletedAtIsNullOrderByCreatedAtDesc(Pageable pageable);
 
