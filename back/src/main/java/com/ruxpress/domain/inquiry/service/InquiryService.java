@@ -9,6 +9,7 @@ import com.ruxpress.common.storage.FileStoragePort;
 import com.ruxpress.common.dto.AttachmentResponse;
 import com.ruxpress.common.dto.PageResponse;
 import com.ruxpress.common.util.ModulePrefix;
+import com.ruxpress.domain.adminnotification.service.AdminNotificationService;
 import com.ruxpress.domain.inquiry.dto.request.InquiryCreateRequest;
 import com.ruxpress.domain.inquiry.dto.response.AdminInquiryListResponse;
 import com.ruxpress.domain.inquiry.dto.response.InquiryListResponse;
@@ -47,6 +48,7 @@ public class InquiryService {
     private final AttachmentRepository attachmentRepository;
     private final FileStoragePort fileStoragePort;
     private final NotificationService notificationService;
+    private final AdminNotificationService adminNotificationService;
 
     @Transactional
     public InquiryResponse createInquiry(Long userId, InquiryCreateRequest request,
@@ -88,6 +90,8 @@ public class InquiryService {
                 throw new BusinessException(ErrorCode.FILE_UPLOAD_FAILED, e.getMessage());
             }
         }
+
+        adminNotificationService.notifyNewInquiry(inquiry.getId(), inquiry.getTitle());
 
         return toDetailResponse(inquiry);
     }

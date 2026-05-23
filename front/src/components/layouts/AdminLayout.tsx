@@ -17,6 +17,7 @@ import { Sidebar, SidebarContent, SidebarHeader, SidebarMenu, SidebarMenuItem, S
 import { useTranslation } from "../../hooks/useTranslation";
 import { STORAGE_KEYS } from "../../utils/constants";
 import { readAuthValue } from "../../utils/api";
+import AdminNotificationBell from "./AdminNotificationBell";
 
 const ADMIN_STORAGE_KEY = "ruxpress_admin";
 
@@ -121,6 +122,7 @@ export default function AdminLayout() {
               </Button>
             </SidebarTrigger>
             <div className="ml-auto flex items-center space-x-4">
+              <AdminNotificationBell />
               <div className="text-right">
                 <p className="text-sm font-medium text-gray-900">{admin.name}</p>
                 <p className="text-xs text-gray-500">{admin.email}{isSuperAdmin ? " (슈퍼 관리자)" : " (상담사)"}</p>

@@ -23,6 +23,7 @@ import com.ruxpress.domain.banktransfer.entity.TransferLedgerStatus;
 import com.ruxpress.domain.banktransfer.repository.SettlementAccountRepository;
 import com.ruxpress.domain.banktransfer.repository.TransferLedgerEntryRepository;
 import com.ruxpress.domain.banktransfer.repository.TransferLedgerSpecifications;
+import com.ruxpress.domain.adminnotification.service.AdminNotificationService;
 import com.ruxpress.domain.balance.service.BalanceService;
 import com.ruxpress.domain.notification.service.NotificationService;
 import com.ruxpress.domain.user.entity.User;
@@ -51,6 +52,7 @@ public class BankTransferService {
     private final SettlementAccountRepository settlementAccountRepository;
     private final UserRepository userRepository;
     private final NotificationService notificationService;
+    private final AdminNotificationService adminNotificationService;
     private final BalanceService balanceService;
     private final AttachmentRepository attachmentRepository;
     private final FileStoragePort fileStoragePort;
@@ -110,6 +112,8 @@ public class BankTransferService {
         if (!fileList.isEmpty()) {
             saveAttachments(saved.getId(), fileList);
         }
+
+        adminNotificationService.notifyNewDepositReport(saved.getId(), saved.getAmount(), saved.getCurrency());
 
         return toResponse(saved, false, resolveUserEmail(userId));
     }

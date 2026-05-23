@@ -197,3 +197,25 @@ export interface SystemSetting {
   createdAt: string;
   updatedAt: string;
 }
+
+export type AdminNotificationType =
+  | 'NEW_PURCHASE_REQUEST'
+  | 'NEW_DEPOSIT_REPORT'
+  | 'NEW_INQUIRY';
+
+export interface AdminNotification {
+  id: number;
+  type: AdminNotificationType;
+  title: string;
+  body: string;
+  dataJson?: string;
+  linkUrl?: string;
+  isRead: boolean;
+  readAt?: string;
+  createdAt: string;
+}
+
+export interface AdminNotificationSummary {
+  unreadCount: number;
+  items: AdminNotification[];
+}

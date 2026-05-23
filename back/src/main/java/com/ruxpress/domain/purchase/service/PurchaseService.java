@@ -14,6 +14,7 @@ import com.ruxpress.common.util.JsonUtils;
 import com.ruxpress.common.util.ModulePrefix;
 import com.ruxpress.domain.admin.entity.SystemSetting;
 import com.ruxpress.domain.admin.repository.SystemSettingRepository;
+import com.ruxpress.domain.adminnotification.service.AdminNotificationService;
 import com.ruxpress.domain.balance.service.BalanceService;
 import com.ruxpress.domain.notification.service.NotificationService;
 import com.ruxpress.domain.purchase.dto.response.PurchaseShippingResponse;
@@ -63,6 +64,7 @@ public class PurchaseService {
     private final JsonUtils jsonUtils;
     private final BalanceService balanceService;
     private final NotificationService notificationService;
+    private final AdminNotificationService adminNotificationService;
     private final SystemSettingRepository systemSettingRepository;
     private final UserRepository userRepository;
     private final ExchangeService exchangeService;
@@ -170,6 +172,7 @@ public class PurchaseService {
             balanceService.debitForPurchase(userId, totalAmountKrw, saved.getId());
             saved.recordChargedAmount(totalAmountKrw);
             saved = purchaseRequestRepository.save(saved);
+            adminNotificationService.notifyNewPurchaseRequest(saved.getId(), saved.getRequestName());
         }
         return saved;
     }

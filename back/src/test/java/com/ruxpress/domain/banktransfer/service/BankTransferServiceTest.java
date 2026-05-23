@@ -13,6 +13,7 @@ import com.ruxpress.domain.banktransfer.entity.TransferLedgerEntryType;
 import com.ruxpress.domain.banktransfer.entity.TransferLedgerStatus;
 import com.ruxpress.domain.banktransfer.repository.SettlementAccountRepository;
 import com.ruxpress.domain.banktransfer.repository.TransferLedgerEntryRepository;
+import com.ruxpress.domain.adminnotification.service.AdminNotificationService;
 import com.ruxpress.domain.balance.service.BalanceService;
 import com.ruxpress.domain.notification.service.NotificationService;
 import com.ruxpress.domain.user.entity.SignupType;
@@ -46,6 +47,9 @@ class BankTransferServiceTest {
 
     @Mock
     private NotificationService notificationService;
+
+    @Mock
+    private AdminNotificationService adminNotificationService;
 
     @Mock
     private UserRepository userRepository;
