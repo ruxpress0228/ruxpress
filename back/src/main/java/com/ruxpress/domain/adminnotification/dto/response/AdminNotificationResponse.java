@@ -1,5 +1,6 @@
 package com.ruxpress.domain.adminnotification.dto.response;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.ruxpress.domain.adminnotification.entity.AdminNotification;
 import com.ruxpress.domain.adminnotification.entity.AdminNotificationType;
 import lombok.AllArgsConstructor;
@@ -17,6 +18,7 @@ public class AdminNotificationResponse {
     private final String body;
     private final String dataJson;
     private final String linkUrl;
+    @JsonProperty("isRead")
     private final boolean isRead;
     private final LocalDateTime readAt;
     private final LocalDateTime createdAt;
