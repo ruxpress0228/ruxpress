@@ -189,6 +189,8 @@
   "purchase.cancel": "취소",
   "purchase.submit": "구매 요청 제출",
   "purchase.toastSuccess": "구매 요청이 제출되었습니다",
+  "purchase.errorInsufficientBalance": "지갑 잔액이 부족하여 제출할 수 없습니다. 지갑을 충전한 뒤 다시 시도해 주세요.",
+  "purchase.toastSubmitError": "구매 요청 제출에 실패했습니다. 잠시 후 다시 시도해 주세요.",
   "purchase.summary.adminWalletNote": "구매 요청 제출 시 예상 금액만큼 지갑(포인트)이 즉시 차감됩니다. 실제 비용이 더 적으면 관리자가 차액을 환급합니다.",
   "purchase.status.REQUESTED": "요청접수",
   "purchase.status.PURCHASING": "구매진행중",

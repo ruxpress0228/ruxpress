@@ -188,6 +188,8 @@
   "purchase.cancel": "Отмена",
   "purchase.submit": "Отправить заявку",
   "purchase.toastSuccess": "Заявка отправлена",
+  "purchase.errorInsufficientBalance": "Недостаточно средств на кошельке. Пополните баланс и повторите попытку.",
+  "purchase.toastSubmitError": "Не удалось отправить заявку. Попробуйте позже.",
   "purchase.summary.adminWalletNote": "При отправке заявки расчётная сумма сразу списывается с кошелька. Если фактическая стоимость ниже, администратор вернёт разницу.",
   "purchase.status.REQUESTED": "Принято",
   "purchase.status.PURCHASING": "Покупка",

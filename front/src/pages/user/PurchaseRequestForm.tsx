@@ -328,8 +328,18 @@ export default function PurchaseRequestForm() {
       window.dispatchEvent(new Event(USER_BALANCE_CHANGE_EVENT));
       toast.success(t("purchase.toastSuccess"));
       navigate("/purchase");
-    } catch {
-      toast.error("구매 요청 등록에 실패했습니다.");
+    } catch (e) {
+      const raw = e instanceof Error ? e.message.trim() : "";
+      if (raw === "error.insufficient_balance") {
+        toast.error(t("purchase.errorInsufficientBalance"));
+      } else if (raw.startsWith("error.")) {
+        const localized = t(raw);
+        toast.error(localized !== raw ? localized : t("purchase.toastSubmitError"));
+      } else if (raw) {
+        toast.error(raw);
+      } else {
+        toast.error(t("purchase.toastSubmitError"));
+      }
     } finally {
       setSubmitting(false);
     }

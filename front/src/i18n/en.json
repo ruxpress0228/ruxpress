@@ -188,6 +188,8 @@
   "purchase.cancel": "Cancel",
   "purchase.submit": "Submit request",
   "purchase.toastSuccess": "Purchase request submitted",
+  "purchase.errorInsufficientBalance": "Your wallet balance is too low to submit this request. Please top up and try again.",
+  "purchase.toastSubmitError": "Could not submit the purchase request. Please try again later.",
   "purchase.summary.adminWalletNote": "When you submit, the estimated amount is debited from your wallet immediately. If actual cost is lower, staff refunds the difference.",
   "purchase.status.REQUESTED": "Received",
   "purchase.status.PURCHASING": "Purchasing",
