@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
-import { ChevronLeft } from 'lucide-react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { ChevronLeft, RefreshCw } from 'lucide-react';
 import {
   getAdminChatRooms,
   adminJoinRoom,
@@ -18,6 +18,7 @@ import { toast } from 'sonner';
 import type { ChatRoom, ChatRoomStatus } from '@/types/chat';
 
 const PAGE_SIZE_OPTIONS = [20, 30, 50, 100] as const;
+const ROOM_LIST_POLL_MS = 15_000;
 
 export default function AdminChat() {
   const { t } = useTranslation();
@@ -28,19 +29,38 @@ export default function AdminChat() {
   const [roomsPage, setRoomsPage] = useState(0);
   const [roomsSize, setRoomsSize] = useState(20);
   const [roomsTotalPages, setRoomsTotalPages] = useState(0);
+  const [roomsRefreshing, setRoomsRefreshing] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   const selectedRoom = rooms.find((r) => r.id === selectedRoomId) ?? null;
   const isLive = selectedRoom?.status === 'OPEN';
 
-  const { messages, connected, uploading, sendMessage, uploadAttachment } = useChat(selectedRoomId, {
+  const { messages, connected, uploading, sendMessage, uploadAttachment, reloadMessages } = useChat(selectedRoomId, {
     isAdmin: true,
     connectLive: isLive,
   });
 
+  const loadRooms = useCallback(async (p: number, s: number) => {
+    const res = await getAdminChatRooms(p, s);
+    if (res.code === 200 && res.data) {
+      setRooms(res.data.content);
+      setRoomsTotalPages(res.data.totalPages ?? 0);
+      return true;
+    }
+    return false;
+  }, []);
+
   useEffect(() => {
     void loadRooms(roomsPage, roomsSize);
-  }, [roomsPage, roomsSize]);
+  }, [roomsPage, roomsSize, loadRooms]);
+
+  useEffect(() => {
+    if (activeTab !== 'OPEN') return;
+    const timer = setInterval(() => {
+      void loadRooms(roomsPage, roomsSize);
+    }, ROOM_LIST_POLL_MS);
+    return () => clearInterval(timer);
+  }, [activeTab, roomsPage, roomsSize, loadRooms]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -50,13 +70,19 @@ export default function AdminChat() {
     setSelectedRoomId(null);
   }, [activeTab]);
 
-  async function loadRooms(p: number, s: number) {
-    const res = await getAdminChatRooms(p, s);
-    if (res.code === 200 && res.data) {
-      setRooms(res.data.content);
-      setRoomsTotalPages(res.data.totalPages ?? 0);
+  const handleRefresh = async () => {
+    setRoomsRefreshing(true);
+    try {
+      const ok = await loadRooms(roomsPage, roomsSize);
+      if (selectedRoomId) await reloadMessages();
+      if (ok) toast.success(t('admin.chat.refreshDone'));
+      else toast.error(t('admin.chat.refreshError'));
+    } catch {
+      toast.error(t('admin.chat.refreshError'));
+    } finally {
+      setRoomsRefreshing(false);
     }
-  }
+  };
 
   async function handleSelectRoom(room: ChatRoom) {
     if (room.status === 'OPEN' && room.adminId === null) {
@@ -103,7 +129,19 @@ export default function AdminChat() {
           selectedRoom ? 'hidden lg:flex' : 'flex'
         }`}
       >
-        <h2 className="font-semibold text-lg">{t('admin.chat.roomList')}</h2>
+        <div className="flex items-center justify-between gap-2">
+          <h2 className="font-semibold text-lg">{t('admin.chat.roomList')}</h2>
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-8 gap-1"
+            disabled={roomsRefreshing}
+            onClick={() => void handleRefresh()}
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${roomsRefreshing ? 'animate-spin' : ''}`} />
+            {t('admin.chat.refresh')}
+          </Button>
+        </div>
         <Tabs
           value={activeTab}
           onValueChange={(v) => setActiveTab(v as ChatRoomStatus)}
@@ -204,6 +242,16 @@ export default function AdminChat() {
                 </h3>
               </div>
               <div className="flex items-center gap-2 shrink-0">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  disabled={roomsRefreshing}
+                  title={t('admin.chat.refresh')}
+                  onClick={() => void handleRefresh()}
+                >
+                  <RefreshCw className={`w-4 h-4 ${roomsRefreshing ? 'animate-spin' : ''}`} />
+                </Button>
                 {isLive && (
                   <Badge
                     variant={connected ? 'default' : 'secondary'}

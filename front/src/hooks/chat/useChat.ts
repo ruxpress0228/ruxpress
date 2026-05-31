@@ -108,5 +108,12 @@ export function useChat(roomId: string | null, options: UseChatOptions = {}) {
     setUploading(false);
   }, [roomId, connectLive, isAdmin]);
 
-  return { messages, connected, uploading, sendMessage, uploadAttachment };
+  const reloadMessages = useCallback(async () => {
+    if (!roomId) return;
+    const fetch = isAdmin ? getAdminRoomMessages : getChatMessages;
+    const res = await fetch(roomId);
+    if (res.code === 200 && res.data) setMessages(res.data);
+  }, [roomId, isAdmin]);
+
+  return { messages, connected, uploading, sendMessage, uploadAttachment, reloadMessages };
 }
