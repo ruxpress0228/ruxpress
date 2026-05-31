@@ -21,6 +21,7 @@ import type { PurchaseRequestListItem } from "../../types/purchase";
 import type { PurchaseRequestStatus } from "../../types";
 import {
   type QuoteCurrency,
+  RUB_PAIR_TARGETS,
   type CurrentExchangeRates,
   QUOTE_CURRENCIES,
   buildRateMap,
@@ -66,7 +67,7 @@ export default function Home() {
   const { getCurrentExchangeRates } = useExchangeRate();
   const { getRecentPurchaseRequests, getMyPurchaseRequests } = usePurchase();
   const [ratesData, setRatesData] = useState<CurrentExchangeRates | null>(null);
-  const [baseCurrency, setBaseCurrency] = useState<QuoteCurrency>("KRW");
+  const [baseCurrency, setBaseCurrency] = useState<QuoteCurrency>("RUB");
   const [baseAmountInput, setBaseAmountInput] = useState("1");
   const [myRequests, setMyRequests] = useState<PurchaseRequestListItem[]>([]);
   const [recentNotices, setRecentNotices] = useState<Notice[]>([]);
@@ -139,8 +140,17 @@ export default function Home() {
 
   const krwRubSummary =
     ratesData && ratesData.quotes.length > 0
-      ? formatCrossRateLine("KRW", "RUB", rateMap, locale, 1000) ?? t("home.exchange.rateUnavailable")
+      ? formatCrossRateLine("RUB", "KRW", rateMap, locale, 1) ?? t("home.exchange.rateUnavailable")
       : null;
+
+  const rubPairLines = useMemo(
+    () =>
+      RUB_PAIR_TARGETS.map((target) => ({
+        target,
+        line: formatCrossRateLine("RUB", target, rateMap, locale, 1),
+      })),
+    [rateMap, locale]
+  );
 
   const statusHint = (status: PurchaseRequestStatus) => t(`home.recentRequests.hint.${status}`);
 
@@ -433,7 +443,20 @@ export default function Home() {
             ) : null}
           </div>
           {ratesData && ratesData.quotes.length > 0 ? (
-            <p className="text-sm font-medium tabular-nums text-gray-900">{krwRubSummary}</p>
+            <div className="space-y-3">
+              <p className="text-sm font-medium tabular-nums text-gray-900">{krwRubSummary}</p>
+              <div>
+                <p className="mb-2 text-xs font-medium text-gray-600">{t("home.exchange.rubPairsTitle")}</p>
+                <ul className="space-y-1 text-sm tabular-nums text-gray-800">
+                  {rubPairLines.map(({ target, line }) => (
+                    <li key={target} className="flex flex-wrap justify-between gap-2">
+                      <span className="text-gray-500">{currencyLabel(target)}</span>
+                      <span>{line ?? t("home.exchange.rateUnavailable")}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
           ) : (
             <p className="text-sm text-gray-500">{t("home.exchange.loading")}</p>
           )}
@@ -446,7 +469,7 @@ export default function Home() {
                 <div>
                   <p className="mb-2 text-sm text-gray-500">{t("home.exchange.baseCurrency")}</p>
                   <Tabs value={baseCurrency} onValueChange={(v) => setBaseCurrency(v as QuoteCurrency)}>
-                    <TabsList className="grid w-full grid-cols-4">
+                    <TabsList className="grid w-full grid-cols-3 sm:grid-cols-6">
                       {QUOTE_CURRENCIES.map((c) => (
                         <TabsTrigger key={c} value={c} className="text-xs sm:text-sm">
                           {c}

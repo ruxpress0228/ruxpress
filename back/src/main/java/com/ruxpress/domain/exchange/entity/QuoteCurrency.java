@@ -9,7 +9,9 @@ import com.ruxpress.common.exception.ErrorCode;
 public enum QuoteCurrency {
     RUB,
     USD,
-    CNY;
+    CNY,
+    JPY,
+    EUR;
 
     public static QuoteCurrency fromCode(String code) {
         if (code == null || code.isBlank()) {

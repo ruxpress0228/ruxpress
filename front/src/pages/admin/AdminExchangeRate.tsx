@@ -33,7 +33,7 @@ const fetchedAtOptions: Intl.DateTimeFormatOptions = {
   minute: "2-digit",
 };
 
-const EMPTY_INPUTS: Record<string, string> = { RUB: "", USD: "", CNY: "" };
+const EMPTY_INPUTS: Record<string, string> = { RUB: "", USD: "", CNY: "", JPY: "", EUR: "" };
 const PAGE_SIZE_OPTIONS = [20, 30, 50, 100] as const;
 
 function mergeInputsFromQuotes(
@@ -207,7 +207,7 @@ export default function AdminExchangeRate() {
             </Button>
           </div>
         </CardHeader>
-        <CardContent className="grid gap-4 md:grid-cols-3">
+        <CardContent className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
           {FOREIGN_QUOTE_CURRENCIES.map((currency) => {
             const quote = currentRates ? findQuoteRate(currentRates.quotes, currency) : undefined;
             return (

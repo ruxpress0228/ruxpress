@@ -1,9 +1,27 @@
 /** KRW 허브 + 외화 시세 */
-export type QuoteCurrency = "KRW" | "RUB" | "USD" | "CNY";
+export type QuoteCurrency = "KRW" | "RUB" | "USD" | "CNY" | "JPY" | "EUR";
 
-export const QUOTE_CURRENCIES: QuoteCurrency[] = ["KRW", "RUB", "USD", "CNY"];
+export const QUOTE_CURRENCIES: QuoteCurrency[] = ["KRW", "RUB", "USD", "CNY", "JPY", "EUR"];
 
-export const FOREIGN_QUOTE_CURRENCIES: Exclude<QuoteCurrency, "KRW">[] = ["RUB", "USD", "CNY"];
+export const FOREIGN_QUOTE_CURRENCIES: Exclude<QuoteCurrency, "KRW">[] = [
+  "RUB",
+  "USD",
+  "CNY",
+  "JPY",
+  "EUR",
+];
+
+/** RUB 기준 환율 표시 대상 */
+export const RUB_PAIR_TARGETS: Exclude<QuoteCurrency, "RUB">[] = ["KRW", "CNY", "JPY", "USD", "EUR"];
+
+const CURRENCY_SYMBOLS: Partial<Record<QuoteCurrency, string>> = {
+  KRW: "₩",
+  RUB: "₽",
+  USD: "$",
+  CNY: "¥",
+  JPY: "¥",
+  EUR: "€",
+};
 
 export interface QuoteRate {
   currency: string;
@@ -136,4 +154,45 @@ export function parseRateToKrwInput(raw: string): number | null {
   const num = parseFloat(raw.trim());
   if (!raw.trim() || !Number.isFinite(num) || num <= 0) return null;
   return Math.round(num * 1_000_000) / 1_000_000;
+}
+
+export function currencySymbol(currency: QuoteCurrency): string {
+  return CURRENCY_SYMBOLS[currency] ?? currency;
+}
+
+export function krwToForeignEquivalents(
+  krwBalance: number,
+  currencies: Exclude<QuoteCurrency, "KRW">[],
+  rateMap: Map<string, number>
+): { currency: Exclude<QuoteCurrency, "KRW">; amount: number }[] {
+  if (!Number.isFinite(krwBalance) || krwBalance <= 0) return [];
+  const result: { currency: Exclude<QuoteCurrency, "KRW">; amount: number }[] = [];
+  for (const c of currencies) {
+    const converted = krwToQuote(krwBalance, c, rateMap);
+    if (converted != null && converted > 0) {
+      result.push({ currency: c, amount: converted });
+    }
+  }
+  return result;
+}
+
+export function formatBalanceEquivalents(
+  krwBalance: number,
+  currencies: Exclude<QuoteCurrency, "KRW">[],
+  rateMap: Map<string, number>,
+  locale: string
+): string | null {
+  const parts = krwToForeignEquivalents(krwBalance, currencies, rateMap);
+  if (parts.length === 0) return null;
+  const localeTag = locale === "en" ? "en-US" : locale === "ru" ? "ru-RU" : "ko-KR";
+  const formatted = parts.map(({ currency, amount }) => {
+    const sym = currencySymbol(currency);
+    const decimals = currency === "JPY" ? 0 : 2;
+    const num = amount.toLocaleString(localeTag, {
+      minimumFractionDigits: decimals,
+      maximumFractionDigits: decimals,
+    });
+    return `${sym}${num}`;
+  });
+  return formatted.join(" · ");
 }

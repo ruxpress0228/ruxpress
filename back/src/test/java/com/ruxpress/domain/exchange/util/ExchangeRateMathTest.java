@@ -39,6 +39,22 @@ class ExchangeRateMathTest {
     }
 
     @Test
+    void crossRate_jpyAndEur() {
+        Map<String, BigDecimal> map = Map.of(
+                "RUB", new BigDecimal("15"),
+                "JPY", new BigDecimal("9.5"),
+                "EUR", new BigDecimal("1450")
+        );
+        BigDecimal rubToJpy = ExchangeRateMath.crossRate("RUB", "JPY", map);
+        assertThat(rubToJpy).isNotNull();
+        assertThat(rubToJpy.doubleValue()).isCloseTo(15.0 / 9.5, org.assertj.core.data.Offset.offset(0.0001));
+
+        BigDecimal rubToEur = ExchangeRateMath.crossRate("RUB", "EUR", map);
+        assertThat(rubToEur).isNotNull();
+        assertThat(rubToEur.doubleValue()).isCloseTo(15.0 / 1450.0, org.assertj.core.data.Offset.offset(0.000001));
+    }
+
+    @Test
     void crossRate_returnsNullWhenRateMissing() {
         assertThat(ExchangeRateMath.crossRate("CNY", "USD", Map.of("USD", new BigDecimal("1300")))).isNull();
     }
