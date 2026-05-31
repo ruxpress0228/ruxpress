@@ -143,7 +143,7 @@ export default function UserLayout() {
               ) : (
                 <Link to="/login">
                   <Button variant="ghost" size="sm" className="text-blue-600">
-                    로그인
+                    {t("nav.login")}
                   </Button>
                 </Link>
               )}

@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../..
 import { toast } from "sonner";
 import { api, notifyUserAuthChange } from "../../utils/api";
 import { STORAGE_KEYS } from "../../utils/constants";
+import { useTranslation } from "../../hooks/useTranslation";
 
 interface LoginResponse {
   token: string;
@@ -18,6 +19,7 @@ interface LoginResponse {
 
 export default function Login() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
@@ -27,11 +29,11 @@ export default function Login() {
     e?.preventDefault();
     const trimmedEmail = email.trim();
     if (!trimmedEmail) {
-      toast.error("이메일을 입력하세요");
+      toast.error(t("login.error.emailRequired"));
       return;
     }
     if (!password) {
-      toast.error("비밀번호를 입력하세요");
+      toast.error(t("login.error.passwordRequired"));
       return;
     }
     setLoading(true);
@@ -41,9 +43,7 @@ export default function Login() {
         password,
       });
       if (res.code === 200 && res.data?.token) {
-        // 자동로그인 체크 시 localStorage(영속), 미체크 시 sessionStorage(브라우저 세션 동안만).
         const storage: Storage = rememberMe ? localStorage : sessionStorage;
-        // 양쪽 잔존 토큰 정리 후 한 곳에만 저장.
         localStorage.removeItem(STORAGE_KEYS.TOKEN);
         sessionStorage.removeItem(STORAGE_KEYS.TOKEN);
         localStorage.removeItem(STORAGE_KEYS.USER_ID);
@@ -71,13 +71,13 @@ export default function Login() {
           }),
         );
         notifyUserAuthChange();
-        toast.success(res.message ?? "로그인되었습니다");
+        toast.success(res.message ?? t("login.toast.success"));
         navigate("/");
       } else {
-        toast.error(res.message ?? "로그인에 실패했습니다");
+        toast.error(res.message ?? t("login.toast.failed"));
       }
     } catch {
-      toast.error("로그인에 실패했습니다");
+      toast.error(t("login.toast.failed"));
     } finally {
       setLoading(false);
     }
@@ -92,57 +92,55 @@ export default function Login() {
               <span className="text-white text-2xl font-bold">R</span>
             </div>
           </div>
-          <CardTitle className="text-2xl text-center">로그인</CardTitle>
-          <CardDescription className="text-center">
-            Ruxpress에 오신 것을 환영합니다
-          </CardDescription>
+          <CardTitle className="text-2xl text-center">{t("login.title")}</CardTitle>
+          <CardDescription className="text-center">{t("login.description")}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <form onSubmit={handleLogin} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="email">이메일</Label>
-            <Input
-              id="email"
-              type="email"
-              placeholder="email@example.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-            />
-          </div>
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <Label htmlFor="password">비밀번호</Label>
-              <Button variant="link" className="px-0 h-auto text-sm" asChild>
-                <Link to="/forgot-password">비밀번호 찾기</Link>
-              </Button>
+            <div className="space-y-2">
+              <Label htmlFor="email">{t("login.email")}</Label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="email@example.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
             </div>
-            <Input
-              id="password"
-              type="password"
-              placeholder="••••••••"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-            />
-          </div>
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="remember-me"
-              checked={rememberMe}
-              onCheckedChange={(v) => setRememberMe(v === true)}
-            />
-            <Label htmlFor="remember-me" className="text-sm font-normal cursor-pointer">
-              자동 로그인 (다음 접속 시 로그인 유지)
-            </Label>
-          </div>
-          <Button type="submit" className="w-full" size="lg" disabled={loading}>
-            {loading ? "로그인 중..." : "로그인"}
-          </Button>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="password">{t("login.password")}</Label>
+                <Button variant="link" className="px-0 h-auto text-sm" asChild>
+                  <Link to="/forgot-password">{t("login.forgotPassword")}</Link>
+                </Button>
+              </div>
+              <Input
+                id="password"
+                type="password"
+                placeholder="••••••••"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+            </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="remember-me"
+                checked={rememberMe}
+                onCheckedChange={(v) => setRememberMe(v === true)}
+              />
+              <Label htmlFor="remember-me" className="text-sm font-normal cursor-pointer">
+                {t("login.rememberMe")}
+              </Label>
+            </div>
+            <Button type="submit" className="w-full" size="lg" disabled={loading}>
+              {loading ? t("login.submitting") : t("login.submit")}
+            </Button>
           </form>
 
           <div className="text-center text-sm text-gray-600">
-            아직 계정이 없으신가요?{" "}
+            {t("login.noAccount")}{" "}
             <Link to="/signup" className="text-blue-600 hover:underline font-medium">
-              회원가입
+              {t("login.signupLink")}
             </Link>
           </div>
         </CardContent>
