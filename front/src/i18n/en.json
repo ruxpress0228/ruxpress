@@ -63,7 +63,6 @@
   "inquiry.empty.title": "No inquiries yet",
   "inquiry.empty.description": "Feel free to contact us if you have any questions",
   "inquiry.inquire": "Contact us",
-
   "inquiry.form.title": "Submit inquiry",
   "inquiry.form.subtitle": "We will reply quickly if you describe your question in detail",
   "inquiry.form.cardTitle": "Inquiry content",
@@ -86,7 +85,6 @@
   "inquiry.form.toastMaxFiles": "You can attach up to 5 files",
   "inquiry.form.toastSuccess": "Inquiry submitted",
   "inquiry.form.toastError": "Failed to submit inquiry",
-
   "inquiry.detail.backToList": "Back to list",
   "inquiry.detail.loading": "Loading...",
   "inquiry.detail.notFound": "Inquiry not found",
@@ -225,7 +223,6 @@
   "purchase.status.SHIPPING": "Shipping",
   "purchase.status.COMPLETED": "Completed",
   "purchase.status.CANCELLED": "Cancelled",
-
   "purchase.list.toastLoadError": "Could not load purchase requests.",
   "purchase.list.pageTitle": "Purchase requests",
   "purchase.list.pageSubtitle": "Review your requests at a glance",
@@ -262,7 +259,6 @@
   "purchase.list.inquiryBodyTpl": "Request #: {{number}}\nTitle: {{name}}\n\nPlease add your question below.\n\n",
   "purchase.list.cancelTitleTpl": "[{{number}}] Cancel request",
   "purchase.list.cancelBodyTpl": "I would like to cancel the following purchase request.\n\nRequest #: {{number}}\nTitle: {{name}}\n\nReason:\n",
-
   "wallet.title": "Wallet",
   "wallet.subtitle": "Top-ups, purchase debits, and refunds",
   "wallet.balanceCard.title": "Available balance",
@@ -283,7 +279,6 @@
   "wallet.entry.CREDIT_PURCHASE_ADJUSTMENT": "Purchase overpayment return",
   "wallet.entry.DEBIT_PURCHASE": "Purchase debit",
   "wallet.entry.DEBIT_BANK_REFUND": "Bank refund debit",
-
   "adminPurchase.walletDebitTitle": "Debit member wallet",
   "adminPurchase.walletDebitHint": "One debit per purchase request. Use for deposit / estimated total including shipping.",
   "adminPurchase.walletDebitAmount": "Debit amount (KRW)",
@@ -331,7 +326,6 @@
   "adminPurchase.list.progress.CANCELLED": "Cancelled",
   "adminPurchase.list.progress.refundPending": "Settled may be below debited — check partial refund",
   "adminPurchase.list.progress.trackingMissing": "Shipping but no tracking number — consider adding it",
-
   "admin.exchange.title": "Exchange rate",
   "admin.exchange.subtitle": "Manage exchange rate and fee",
   "admin.exchange.currentTitle": "Current rate",
@@ -377,7 +371,6 @@
   "admin.exchange.toast.manualSuccess": "Rate set manually",
   "admin.exchange.toast.manualError": "Failed to set rate",
   "admin.exchange.toast.feeSuccess": "Fee rate updated",
-
   "bankTransfer.title": "Bank transfer",
   "bankTransfer.subtitle": "Transfer to the listed account, then submit your report.",
   "bankTransfer.accountsTitle": "Deposit accounts",
@@ -389,7 +382,6 @@
   "bankTransfer.field.account": "Account",
   "bankTransfer.field.accountPlaceholder": "Select account",
   "bankTransfer.field.type": "Type",
-  
   "bankTransfer.type.deposit": "Deposit",
   "bankTransfer.field.amount": "Amount (KRW)",
   "bankTransfer.field.depositorName": "Depositor name",
@@ -426,7 +418,6 @@
   "bankTransfer.receipt.account": "Account",
   "bankTransfer.receipt.holder": "Holder",
   "bankTransfer.receiptFooter": "System-generated record; may differ from the bank statement.",
-
   "admin.bank.loading": "Loading...",
   "admin.bank.actions": "Actions",
   "admin.bank.apply": "Apply",
@@ -477,7 +468,6 @@
   "admin.bank.settlement.deleteConfirm": "Delete this account?",
   "admin.bank.settlement.deleted": "Deleted",
   "admin.bank.settlement.deleteError": "Delete failed",
-
   "nav.chat": "Chat",
   "nav.admin.chat": "Chat Support",
   "nav.admin.notifications": "Notification History",
@@ -497,7 +487,6 @@
   "chat.history.readonly": "Read only",
   "chat.history.noMessages": "No messages",
   "chat.status.closed": "Closed",
-
   "signup.title": "Sign up",
   "signup.description": "After email verification, enter your password, nickname, and shipping address",
   "signup.hint": "Verify your email with the code from your inbox, then complete the rest.",
@@ -532,9 +521,9 @@
   "signup.submitting": "Signing up...",
   "signup.haveAccount": "Already have an account?",
   "signup.loginLink": "Log in",
-  "signup.terms.dialogTitle": "Terms of Service",
-  "signup.terms.dialogDescription": "Terms of service for the Telegram purchasing-agent group. By signing up you are deemed to agree to these terms.",
-  "signup.terms.body": "1) Purpose of the group\n• This group is for buying and selling Korean products, including merch and cosmetics. Members must follow the rules and act in good faith.\n\n2) Registration and participation\n• If needed, it may be stated that the user must be of legal age.\n• It should be clarified that by joining the group, the user automatically agrees to these terms.\n\n3) Member obligations\n• Members may not post spam, prohibited products, or prohibited materials.\n• Members must follow safety rules (e.g. verify sellers and buyers themselves).\n\n4) Payment and delivery\n• The group administrator is not responsible for transactions between users.\n• Use of secure payment methods is recommended.\n\n5) Liability\n• The administrator is not responsible for product quality, delivery times, or the actions of group members.\n\n6) Changes to terms\n• The administrator has the right to change the rules without prior notice.",
+  "signup.terms.dialogTitle": "1. Terms of Service (Условия пользования)",
+  "signup.terms.dialogDescription": "",
+  "signup.terms.body": "Purpose: description of group operating rules and member obligations.\nMain points:\n\n1) Purpose of the group\n• This group is for buying and selling Korean products, including merch and cosmetics. Members must follow the rules and act in good faith.\n\n2) Registration and participation\n• If needed, it may be stated that the user must be of legal age.\n• It should be clarified that by joining the group, the user automatically agrees to these terms.\n\n3) Member obligations\n• Members may not post spam, prohibited products, or prohibited materials.\n• Members must follow safety rules.\nFor example: verify sellers and buyers themselves.\n\n4) Payment and delivery\n• If desired, it can be clearly stated that the group administrator is not responsible for transactions between users.\n• A recommendation to use secure payment methods may also be added.\n\n5) Liability\n• The administrator is not responsible for product quality, delivery times, or the actions of group members.\n\n6) Changes to terms\n• The administrator has the right to change the rules without prior notice.",
   "signup.terms.telegramLabel": "Join Telegram purchasing group",
   "signup.terms.telegramUrl": "https://t.me/+tTSOGcA21OFhNGZl",
   "signup.step.legalTitle": "Terms & privacy",
@@ -543,9 +532,9 @@
   "signup.step.back": "Back",
   "signup.step.emailTitle": "Email verification",
   "signup.step.profileTitle": "Account details",
-  "signup.privacy.dialogTitle": "Privacy Policy",
-  "signup.privacy.dialogDescription": "The personal data we collect and how it is processed.",
-  "signup.privacy.body": "1) Data collection\n• Data collected: name, contact details, chat messages, payment information.\n\n2) Use of data\n• Collected data is used only to process sales and contact users.\n\n3) Sharing with third parties\n• Buyers' personal data is not shared with external services.\n\n4) Data security\n• We take necessary measures to protect personal data, but cannot guarantee absolute security within Telegram.\n\n5) User rights\n• Users have the right to request deletion of their data or to leave the group.\n\n6) Contact\n• For all questions regarding personal data:\n  +10 5164 9833\n  @danidani_y\n  (group administrator)",
+  "signup.privacy.dialogTitle": "2. Privacy Policy (Политика конфиденциальности)",
+  "signup.privacy.dialogDescription": "",
+  "signup.privacy.body": "Purpose: informing users about how their personal data is collected and used.\nMain points:\n\n1) Data collection\n• It is necessary to specify exactly what data is collected.\nFor example: name, contact details, chat messages, payment information.\n\n2) Use of data\n• Collected data is used only to process sales and contact users.\n\n3) Sharing with third parties\n• It is necessary to indicate whether personal data is shared with external services.\nAnswer: buyers' personal data is not shared with external services.\n\n4) Data security\n• We take necessary measures to protect personal data, but cannot guarantee absolute security within Telegram.\n\n5) User rights\n• Users have the right to request deletion of their data or to leave the group.\n\n6) Contact\n• For all questions regarding personal data:\n+10 5164 9833\n@danidani_y\n(group administrator)",
   "signup.toast.confirmViewBoth": "Please review the Terms of Service and Privacy Policy first",
   "signup.toast.confirmViewTerms": "Please review the Terms of Service first",
   "signup.toast.confirmViewPrivacy": "Please review the Privacy Policy first",
@@ -560,7 +549,6 @@
   "signup.toast.addressRequired": "Enter an address",
   "signup.toast.success": "Sign-up complete",
   "signup.toast.failed": "Sign-up failed",
-
   "home.exchange.currencies.JPY": "Japanese yen (JPY)",
   "home.exchange.currencies.EUR": "Euro (EUR)",
   "home.exchange.rubPairsTitle": "Rates from RUB",

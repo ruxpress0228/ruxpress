@@ -50,11 +50,13 @@ export function LegalConsentSection({
       <div className="space-y-3">
         <div>
           <h3 className="text-sm font-semibold text-gray-900">{t("signup.terms.dialogTitle")}</h3>
-          <p className="text-xs text-gray-500 mt-0.5">{t("signup.terms.dialogDescription")}</p>
+          {t("signup.terms.dialogDescription") ? (
+            <p className="text-xs text-gray-500 mt-0.5">{t("signup.terms.dialogDescription")}</p>
+          ) : null}
           {inline ? (
             <div
               ref={termsRef}
-              className="mt-2 max-h-40 overflow-y-auto rounded-md border bg-gray-50 p-3 whitespace-pre-wrap text-xs text-gray-700"
+              className="mt-2 max-h-56 overflow-y-auto rounded-md border bg-gray-50 p-3 whitespace-pre-wrap text-xs text-gray-700"
               onScroll={(e) => {
                 const el = e.currentTarget;
                 if (el.scrollTop + el.clientHeight >= el.scrollHeight - 8) onTermsViewed();
@@ -81,11 +83,13 @@ export function LegalConsentSection({
 
         <div>
           <h3 className="text-sm font-semibold text-gray-900">{t("signup.privacy.dialogTitle")}</h3>
-          <p className="text-xs text-gray-500 mt-0.5">{t("signup.privacy.dialogDescription")}</p>
+          {t("signup.privacy.dialogDescription") ? (
+            <p className="text-xs text-gray-500 mt-0.5">{t("signup.privacy.dialogDescription")}</p>
+          ) : null}
           {inline ? (
             <div
               ref={privacyRef}
-              className="mt-2 max-h-40 overflow-y-auto rounded-md border bg-gray-50 p-3 whitespace-pre-wrap text-xs text-gray-700"
+              className="mt-2 max-h-56 overflow-y-auto rounded-md border bg-gray-50 p-3 whitespace-pre-wrap text-xs text-gray-700"
               onScroll={(e) => {
                 const el = e.currentTarget;
                 if (el.scrollTop + el.clientHeight >= el.scrollHeight - 8) onPrivacyViewed();
