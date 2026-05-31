@@ -46,6 +46,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/admin/purchases/**").hasRole("SUPER_ADMIN")
                         .requestMatchers("/api/v1/admin/admins/**").hasRole("SUPER_ADMIN")
                         .requestMatchers("/api/v1/admin/users/**").hasRole("SUPER_ADMIN")
+                        .requestMatchers("/api/v1/admin/wallets/**").hasRole("SUPER_ADMIN")
                         .requestMatchers("/api/v1/admin/notices/**").hasRole("SUPER_ADMIN")
                         .requestMatchers("/api/v1/admin/settings/**").hasRole("SUPER_ADMIN")
                         .requestMatchers("/api/v1/admin/inquiries/**").hasAnyRole("SUPER_ADMIN", "COUNSELOR")

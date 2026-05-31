@@ -17,6 +17,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -184,6 +185,45 @@ public class BalanceService {
             throw new BusinessException(ErrorCode.CONCURRENT_UPDATE);
         }
         return wallet.getBalance();
+    }
+
+    @Transactional
+    public WalletLedgerEntryResponse adminCredit(Long userId, BigDecimal amount, Long adminId, String memo) {
+        if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new BusinessException(ErrorCode.INVALID_INPUT, "금액은 0보다 커야 합니다.");
+        }
+        String key = "admin_credit:" + adminId + ":" + UUID.randomUUID();
+        UserWallet wallet = getOrCreateWallet(userId);
+        wallet.credit(amount);
+        walletRepository.save(wallet);
+        try {
+            WalletLedgerEntry saved = ledgerRepository.save(
+                    WalletLedgerEntry.creditAdminAdjustment(userId, amount, key, memo));
+            return WalletLedgerEntryResponse.from(saved);
+        } catch (DataIntegrityViolationException e) {
+            throw new BusinessException(ErrorCode.CONCURRENT_UPDATE);
+        }
+    }
+
+    /**
+     * 관리자 수동 회수. 잔액 부족 시 마이너스 허용.
+     */
+    @Transactional
+    public WalletLedgerEntryResponse adminDebit(Long userId, BigDecimal amount, Long adminId, String memo) {
+        if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new BusinessException(ErrorCode.INVALID_INPUT, "금액은 0보다 커야 합니다.");
+        }
+        String key = "admin_debit:" + adminId + ":" + UUID.randomUUID();
+        UserWallet wallet = getOrCreateWallet(userId);
+        wallet.debitAllowNegative(amount);
+        walletRepository.save(wallet);
+        try {
+            WalletLedgerEntry saved = ledgerRepository.save(
+                    WalletLedgerEntry.debitAdminAdjustment(userId, amount, key, memo));
+            return WalletLedgerEntryResponse.from(saved);
+        } catch (DataIntegrityViolationException e) {
+            throw new BusinessException(ErrorCode.CONCURRENT_UPDATE);
+        }
     }
 
     private UserWallet getOrCreateWallet(Long userId) {
