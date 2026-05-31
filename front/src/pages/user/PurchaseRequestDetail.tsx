@@ -31,23 +31,35 @@ function optionRecordEntries(opt: unknown): [string, string][] {
     .map(([k, v]) => [k, String(v)]);
 }
 
-function ProductUrlBlock({ shop, url }: { shop?: string | null; url: string }) {
+function itemUrls(it: { url: string; urls?: string[] }): string[] {
+  if (it.urls && it.urls.length > 0) return it.urls;
+  return it.url ? [it.url] : [];
+}
+
+function ProductUrlBlock({ shop, urls }: { shop?: string | null; urls: string[] }) {
   return (
     <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
-      <div className="min-w-0 flex-1 space-y-1">
+      <div className="min-w-0 flex-1 space-y-2">
         {shop ? (
           <p className="text-xs font-medium text-gray-500">
             쇼핑몰 <span className="text-gray-800">{shop}</span>
           </p>
         ) : null}
-        <p className="text-sm text-gray-900 break-all font-mono leading-relaxed">{url}</p>
+        <ul className="space-y-1">
+          {urls.map((url, i) => (
+            <li key={`${url}-${i}`} className="text-sm text-gray-900 break-all font-mono leading-relaxed">
+              {urls.length > 1 ? `${i + 1}. ` : ""}
+              {url}
+            </li>
+          ))}
+        </ul>
       </div>
       <Button
         type="button"
         variant="outline"
         size="sm"
         className="shrink-0 self-start gap-1.5"
-        onClick={() => window.open(url, "_blank", "noopener,noreferrer")}
+        onClick={() => window.open(urls[0], "_blank", "noopener,noreferrer")}
       >
         <ExternalLink className="h-4 w-4" aria-hidden />
         새 창에서 열기
@@ -291,7 +303,7 @@ export default function PurchaseRequestDetail() {
                   const itemOptions = optionRecordEntries(it.options);
                   return (
                     <li key={`${it.url}-${idx}`} className="border rounded-lg p-3 sm:p-4 space-y-2">
-                      <ProductUrlBlock shop={it.shop} url={it.url} />
+                      <ProductUrlBlock shop={it.shop} urls={itemUrls(it)} />
                       <div className="text-sm text-gray-700 pt-1 border-t border-gray-100">
                         단가 ₩{(it.priceKrw ?? 0).toLocaleString()} × {it.quantity ?? 0}개 =
                         <span className="font-semibold ml-1">
@@ -312,7 +324,7 @@ export default function PurchaseRequestDetail() {
               <ul className="space-y-3">
                 {data.urls.map((u, idx) => (
                   <li key={`${u}-${idx}`} className="border rounded-lg p-3">
-                    <ProductUrlBlock url={u} />
+                    <ProductUrlBlock urls={[u]} />
                   </li>
                 ))}
               </ul>

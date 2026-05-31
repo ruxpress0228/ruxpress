@@ -24,6 +24,7 @@ export interface PurchaseShipping {
 
 export interface PurchaseItem {
   url: string;
+  urls?: string[];
   shop?: string;
   priceKrw: number;
   quantity: number;

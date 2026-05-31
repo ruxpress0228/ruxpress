@@ -44,7 +44,9 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -128,6 +130,7 @@ public class PurchaseService {
             BigDecimal sumPrice = BigDecimal.ZERO;
             int sumQty = 0;
             for (PurchaseItemRequest item : request.getItems()) {
+                item.validateUrlsPresent();
                 BigDecimal unit = item.getPriceKrw() != null ? item.getPriceKrw() : BigDecimal.ZERO;
                 int q = item.getQuantity() != null ? item.getQuantity() : 0;
                 sumPrice = sumPrice.add(unit.multiply(BigDecimal.valueOf(q)));
@@ -135,7 +138,7 @@ public class PurchaseService {
             }
             priceKrw = sumPrice;
             quantity = sumQty > 0 ? sumQty : 1;
-            urlsJson = jsonUtils.toJson(request.getItems());
+            urlsJson = jsonUtils.toJson(normalizeItemsForStorage(request.getItems()));
         } else {
             priceKrw = request.getPriceKrw() != null ? request.getPriceKrw() : BigDecimal.ZERO;
             quantity = request.getQuantity();
@@ -476,14 +479,15 @@ public class PurchaseService {
                         a.isUploadedByAdmin()))
                 .collect(Collectors.toList());
 
-        // urls JSON 컬럼은 (1) 신규 [{url, shop?, priceKrw, quantity}, ...] 또는 (2) 레거시 ["string", ...] 두 형식 모두 지원.
-        List<String> urlsList = new java.util.ArrayList<>();
-        List<PurchaseItemResponse> itemsList = new java.util.ArrayList<>();
+        // urls JSON 컬럼은 (1) 신규 [{url, urls?, shop?, priceKrw, quantity}, ...] 또는 (2) 레거시 ["string", ...] 두 형식 모두 지원.
+        List<String> urlsList = new ArrayList<>();
+        List<PurchaseItemResponse> itemsList = new ArrayList<>();
         var node = jsonUtils.parseJsonNode(entity.getUrls());
         if (node != null && node.isArray()) {
             for (var element : node) {
                 if (element.isObject()) {
-                    String url = element.path("url").asText(null);
+                    List<String> itemUrls = parseItemUrlsFromJson(element);
+                    String primaryUrl = itemUrls.isEmpty() ? null : itemUrls.get(0);
                     String shop = element.path("shop").asText(null);
                     java.math.BigDecimal priceKrw = element.has("priceKrw") && !element.get("priceKrw").isNull()
                             ? new java.math.BigDecimal(element.get("priceKrw").asText())
@@ -491,24 +495,10 @@ public class PurchaseService {
                     Integer qty = element.has("quantity") && !element.get("quantity").isNull()
                             ? element.get("quantity").asInt()
                             : null;
-                    Map<String, String> itemOptions = null;
-                    if (element.has("options") && element.get("options").isObject()) {
-                        var optNode = element.get("options");
-                        Map<String, String> parsed = new HashMap<>();
-                        optNode.fields().forEachRemaining(e -> {
-                            var v = e.getValue();
-                            if (v != null && !v.isNull()) {
-                                parsed.put(e.getKey(), v.isValueNode() ? v.asText() : v.toString());
-                            }
-                        });
-                        if (!parsed.isEmpty()) {
-                            itemOptions = parsed;
-                        }
-                    }
-                    itemsList.add(new PurchaseItemResponse(url, shop, priceKrw, qty, itemOptions));
-                    if (url != null && !url.isBlank()) {
-                        urlsList.add(url);
-                    }
+                    Map<String, String> itemOptions = parseItemOptionsFromJson(element);
+                    itemsList.add(new PurchaseItemResponse(
+                            primaryUrl, itemUrls, shop, priceKrw, qty, itemOptions));
+                    urlsList.addAll(itemUrls);
                 } else if (element.isTextual()) {
                     urlsList.add(element.asText());
                 }
@@ -579,5 +569,61 @@ public class PurchaseService {
                 entity.getShippingPostalCode(),
                 entity.getShippingAddressLine1(),
                 entity.getShippingAddressLine2());
+    }
+
+    private List<Map<String, Object>> normalizeItemsForStorage(List<PurchaseItemRequest> items) {
+        List<Map<String, Object>> out = new ArrayList<>();
+        for (PurchaseItemRequest item : items) {
+            List<String> resolved = item.resolvedUrls();
+            Map<String, Object> map = new LinkedHashMap<>();
+            map.put("url", resolved.get(0));
+            map.put("urls", resolved);
+            if (item.getShop() != null && !item.getShop().isBlank()) {
+                map.put("shop", item.getShop().trim());
+            }
+            map.put("priceKrw", item.getPriceKrw());
+            map.put("quantity", item.getQuantity());
+            if (item.getOptions() != null && !item.getOptions().isEmpty()) {
+                map.put("options", item.getOptions());
+            }
+            out.add(map);
+        }
+        return out;
+    }
+
+    private List<String> parseItemUrlsFromJson(com.fasterxml.jackson.databind.JsonNode element) {
+        List<String> itemUrls = new ArrayList<>();
+        if (element.has("urls") && element.get("urls").isArray()) {
+            for (var u : element.get("urls")) {
+                if (u.isTextual()) {
+                    String s = u.asText(null);
+                    if (s != null && !s.isBlank()) {
+                        itemUrls.add(s);
+                    }
+                }
+            }
+        }
+        if (itemUrls.isEmpty()) {
+            String url = element.path("url").asText(null);
+            if (url != null && !url.isBlank()) {
+                itemUrls.add(url);
+            }
+        }
+        return itemUrls;
+    }
+
+    private Map<String, String> parseItemOptionsFromJson(com.fasterxml.jackson.databind.JsonNode element) {
+        if (!element.has("options") || !element.get("options").isObject()) {
+            return null;
+        }
+        var optNode = element.get("options");
+        Map<String, String> parsed = new HashMap<>();
+        optNode.fields().forEachRemaining(e -> {
+            var v = e.getValue();
+            if (v != null && !v.isNull()) {
+                parsed.put(e.getKey(), v.isValueNode() ? v.asText() : v.toString());
+            }
+        });
+        return parsed.isEmpty() ? null : parsed;
     }
 }

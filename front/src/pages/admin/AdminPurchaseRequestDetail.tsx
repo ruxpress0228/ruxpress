@@ -252,11 +252,22 @@ export default function AdminPurchaseRequestDetail() {
               <ul className="space-y-2">
                 {data.items.map((it, idx) => {
                   const itemOptions = optionRecordEntries(it.options);
+                  const urls = it.urls && it.urls.length > 0 ? it.urls : it.url ? [it.url] : [];
                   return (
                     <li key={`${it.url}-${idx}`} className="border rounded-lg p-3 sm:p-4 space-y-2">
-                      <a className="text-blue-600 underline break-all" href={it.url} target="_blank" rel="noreferrer">
-                        {it.shop ? `[${it.shop}] ` : ""}{it.url}
-                      </a>
+                      {urls.length > 0 ? (
+                        <ul className="space-y-1">
+                          {urls.map((u, uIdx) => (
+                            <li key={`${u}-${uIdx}`}>
+                              <a className="text-blue-600 underline break-all" href={u} target="_blank" rel="noreferrer">
+                                {it.shop ? `[${it.shop}] ` : ""}
+                                {urls.length > 1 ? `${uIdx + 1}. ` : ""}
+                                {u}
+                              </a>
+                            </li>
+                          ))}
+                        </ul>
+                      ) : null}
                       <div className="text-sm text-gray-700 pt-1 border-t border-gray-100">
                         단가 ₩{(it.priceKrw ?? 0).toLocaleString()} × {it.quantity ?? 0}개 =
                         <span className="font-semibold ml-1">

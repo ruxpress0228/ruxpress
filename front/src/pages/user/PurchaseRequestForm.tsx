@@ -40,7 +40,15 @@ const OPTION_FIELD_CLASS =
   "placeholder:text-gray-400 text-sm text-gray-900";
 
 type LineOption = { name: string; value: string };
-type PurchaseLineItem = { url: string; shop: string; priceKrw: number; quantity: number; options: LineOption[] };
+type PurchaseLineItem = { urls: string[]; shop: string; priceKrw: number; quantity: number; options: LineOption[] };
+
+const emptyLineItem = (): PurchaseLineItem => ({
+  urls: [""],
+  shop: "",
+  priceKrw: 0,
+  quantity: 1,
+  options: [],
+});
 
 function optionsToRecord(rows: LineOption[]): Record<string, string> | undefined {
   const acc: Record<string, string> = {};
@@ -61,9 +69,7 @@ export default function PurchaseRequestForm() {
   const [ratesData, setRatesData] = useState<CurrentExchangeRates | null>(null);
   const [quoteCurrency, setQuoteCurrency] = useState<QuoteCurrency>("RUB");
   const [feeRatePercent, setFeeRatePercent] = useState<number>(DEFAULT_FEE_PERCENT);
-  const [items, setItems] = useState<PurchaseLineItem[]>([
-    { url: "", shop: "", priceKrw: 0, quantity: 1, options: [] },
-  ]);
+  const [items, setItems] = useState<PurchaseLineItem[]>([emptyLineItem()]);
   const [requestName, setRequestName] = useState("");
   const [memo, setMemo] = useState("");
   const [images, setImages] = useState<File[]>([]);
@@ -141,16 +147,37 @@ export default function PurchaseRequestForm() {
   }, [imagePreviews]);
 
   const addItem = () => {
-    setItems([...items, { url: "", shop: "", priceKrw: 0, quantity: 1, options: [] }]);
+    setItems([...items, emptyLineItem()]);
   };
 
   const removeItem = (index: number) => {
     setItems(items.filter((_, i) => i !== index));
   };
 
+  const addUrl = (itemIndex: number) => {
+    const next = [...items];
+    next[itemIndex] = { ...next[itemIndex], urls: [...next[itemIndex].urls, ""] };
+    setItems(next);
+  };
+
+  const removeUrl = (itemIndex: number, urlIndex: number) => {
+    const next = [...items];
+    const urls = next[itemIndex].urls.filter((_, i) => i !== urlIndex);
+    next[itemIndex] = { ...next[itemIndex], urls: urls.length > 0 ? urls : [""] };
+    setItems(next);
+  };
+
+  const updateUrl = (itemIndex: number, urlIndex: number, value: string) => {
+    const next = [...items];
+    const urls = [...next[itemIndex].urls];
+    urls[urlIndex] = value;
+    next[itemIndex] = { ...next[itemIndex], urls };
+    setItems(next);
+  };
+
   const updateItem = (
     index: number,
-    field: "url" | "shop" | "priceKrw" | "quantity",
+    field: "shop" | "priceKrw" | "quantity",
     value: string | number
   ) => {
     const next = [...items];
@@ -271,14 +298,17 @@ export default function PurchaseRequestForm() {
     try {
       setSubmitting(true);
       const cleanedItems = items
-        .map((it) => ({
-          url: it.url.trim(),
-          shop: it.shop.trim(),
-          priceKrw: Number(it.priceKrw) || 0,
-          quantity: Math.max(1, Number(it.quantity) || 1),
-          options: it.options,
-        }))
-        .filter((it) => it.url !== "" && it.priceKrw > 0);
+        .map((it) => {
+          const urls = it.urls.map((u) => u.trim()).filter((u) => u !== "");
+          return {
+            urls,
+            shop: it.shop.trim(),
+            priceKrw: Number(it.priceKrw) || 0,
+            quantity: Math.max(1, Number(it.quantity) || 1),
+            options: it.options,
+          };
+        })
+        .filter((it) => it.urls.length > 0 && it.priceKrw > 0);
 
       if (cleanedItems.length === 0) {
         toast.error("최소 1개 이상의 상품(URL/단가/수량)을 입력해주세요.");
@@ -306,7 +336,8 @@ export default function PurchaseRequestForm() {
         items: cleanedItems.map((it) => {
           const opt = optionsToRecord(it.options);
           return {
-            url: it.url,
+            url: it.urls[0],
+            urls: it.urls,
             shop: it.shop || undefined,
             priceKrw: it.priceKrw,
             quantity: it.quantity,
@@ -389,18 +420,36 @@ export default function PurchaseRequestForm() {
                       onChange={(e) => updateItem(index, "shop", e.target.value)}
                       className="w-1/3"
                     />
-                    <Input
-                      placeholder="https://..."
-                      value={item.url}
-                      onChange={(e) => updateItem(index, "url", e.target.value)}
-                      className="flex-1"
-                      required={index === 0}
-                    />
                     {items.length > 1 && (
                       <Button type="button" variant="ghost" size="icon" onClick={() => removeItem(index)}>
                         <X className="w-4 h-4" />
                       </Button>
                     )}
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Label className="text-xs text-gray-500">{t("purchase.itemUrlsLabel")}</Label>
+                      <Button type="button" variant="outline" size="sm" onClick={() => addUrl(index)}>
+                        <Plus className="w-3 h-3 mr-1" />
+                        {t("purchase.addUrl")}
+                      </Button>
+                    </div>
+                    {item.urls.map((url, urlIndex) => (
+                      <div key={urlIndex} className="flex items-center gap-2">
+                        <Input
+                          placeholder="https://..."
+                          value={url}
+                          onChange={(e) => updateUrl(index, urlIndex, e.target.value)}
+                          className="flex-1"
+                          required={index === 0 && urlIndex === 0}
+                        />
+                        {item.urls.length > 1 && (
+                          <Button type="button" variant="ghost" size="icon" onClick={() => removeUrl(index, urlIndex)}>
+                            <X className="w-4 h-4" />
+                          </Button>
+                        )}
+                      </div>
+                    ))}
                   </div>
                   <div className="grid grid-cols-2 gap-2">
                     <div>
