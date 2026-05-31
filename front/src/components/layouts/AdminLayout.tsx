@@ -1,4 +1,5 @@
 import { Outlet, Link, useLocation, Navigate, useNavigate } from "react-router";
+import { useState, useRef, useEffect } from "react";
 import {
   LayoutDashboard,
   ShoppingCart,
@@ -13,11 +14,12 @@ import {
   Wallet,
   Coins,
   Bell,
+  Globe,
 } from "lucide-react";
 import { Button } from "../ui/button";
 import { Sidebar, SidebarContent, SidebarHeader, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarProvider, SidebarTrigger } from "../ui/sidebar";
 import { useTranslation } from "../../hooks/useTranslation";
-import { STORAGE_KEYS } from "../../utils/constants";
+import { LOCALES, STORAGE_KEYS } from "../../utils/constants";
 import { notifyUserAuthChange, readAuthValue } from "../../utils/api";
 import AdminNotificationBell from "./AdminNotificationBell";
 
@@ -35,8 +37,21 @@ function getAdmin(): { id: number; email: string; name: string; role: string } |
 export default function AdminLayout() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { t } = useTranslation();
+  const { t, locale, setLocale } = useTranslation();
+  const [langOpen, setLangOpen] = useState(false);
+  const langRef = useRef<HTMLDivElement>(null);
   const isActive = (path: string) => location.pathname === path;
+
+  useEffect(() => {
+    if (!langOpen) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (langRef.current && !langRef.current.contains(e.target as Node)) {
+        setLangOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [langOpen]);
 
   if (location.pathname === "/admin/login") {
     return <Outlet />;
@@ -59,6 +74,7 @@ export default function AdminLayout() {
   };
 
   const isSuperAdmin = admin.role === "SUPER_ADMIN";
+  const roleLabel = isSuperAdmin ? t("nav.admin.roleSuper") : t("nav.admin.roleCounselor");
 
   const navigation = [
     { nameKey: "nav.admin.dashboard", path: "/admin", icon: LayoutDashboard, roles: ["SUPER_ADMIN", "COUNSELOR"] },
@@ -127,10 +143,45 @@ export default function AdminLayout() {
               </Button>
             </SidebarTrigger>
             <div className="ml-auto flex items-center space-x-4">
+              <div className="relative" ref={langRef}>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  title={t("common.language")}
+                  onClick={() => setLangOpen((v) => !v)}
+                  aria-expanded={langOpen}
+                  aria-haspopup="listbox"
+                >
+                  <Globe className="w-5 h-5" />
+                </Button>
+                {langOpen && (
+                  <div
+                    className="absolute right-0 top-full mt-1 min-w-[10rem] rounded-md border border-gray-200 bg-white py-1 shadow-lg z-[100]"
+                    role="listbox"
+                  >
+                    {LOCALES.map((loc) => (
+                      <button
+                        key={loc}
+                        type="button"
+                        role="option"
+                        aria-selected={locale === loc}
+                        className={`block w-full px-3 py-2 text-left text-sm hover:bg-gray-100 ${locale === loc ? "bg-blue-50 text-blue-700 font-medium" : "text-gray-900"}`}
+                        onClick={() => {
+                          setLocale(loc);
+                          setLangOpen(false);
+                        }}
+                      >
+                        {t(`locale.${loc}`)}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
               <AdminNotificationBell />
               <div className="text-right">
                 <p className="text-sm font-medium text-gray-900">{admin.name}</p>
-                <p className="text-xs text-gray-500">{admin.email}{isSuperAdmin ? " (슈퍼 관리자)" : " (상담사)"}</p>
+                <p className="text-xs text-gray-500">{admin.email} ({roleLabel})</p>
               </div>
             </div>
           </header>
