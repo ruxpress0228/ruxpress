@@ -132,7 +132,7 @@ export default function InquiryDetail() {
   const [loading, setLoading] = useState(true);
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
 
-  const dateLocale = LOCALE_MAP[locale] || "ko-KR";
+  const dateLocale = LOCALE_MAP[locale] || "ru-RU";
   const statusLabels = getStatusLabels(t);
   const categoryLabels = getCategoryLabels(t);
 

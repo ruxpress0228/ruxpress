@@ -6,7 +6,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { STORAGE_KEYS } from "../utils/constants";
+import { STORAGE_KEYS, DEFAULT_LOCALE } from "../utils/constants";
 import type { Locale } from "../utils/constants";
 import { setLocale as setModuleLocale, translate } from "./index";
 
@@ -21,7 +21,7 @@ const I18nContext = createContext<I18nContextValue | null>(null);
 function readStoredLocale(): Locale {
   const raw = localStorage.getItem(STORAGE_KEYS.LOCALE);
   if (raw === "ko" || raw === "ru" || raw === "en") return raw;
-  return "ru";
+  return DEFAULT_LOCALE;
 }
 
 export function I18nProvider({ children }: { children: ReactNode }) {

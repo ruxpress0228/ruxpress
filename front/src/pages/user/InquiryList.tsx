@@ -61,7 +61,7 @@ export default function InquiryList() {
     setPage(0);
   };
 
-  const dateLocale = LOCALE_MAP[locale] || "ko-KR";
+  const dateLocale = LOCALE_MAP[locale] || "ru-RU";
   const statusLabels = getStatusLabels(t);
   const categoryLabels = getCategoryLabels(t);
 
