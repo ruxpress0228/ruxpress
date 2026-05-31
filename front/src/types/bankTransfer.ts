@@ -40,6 +40,7 @@ export interface TransferLedgerEntry {
   createdAt: string;
   settlementAccount: SettlementAccount;
   attachments?: BankTransferAttachment[];
+  remainingSettleOrRefundAmount?: number | null;
 }
 
 export interface LedgerReceipt {

@@ -182,10 +182,7 @@ class BankTransferServiceTest {
         parent.applyConfirm(1L, "입금확정");
 
         when(entryRepository.findById(100L)).thenReturn(Optional.of(parent));
-        when(entryRepository.existsByParentEntryIdAndEntryTypeAndStatus(
-                100L, TransferLedgerEntryType.SETTLEMENT, TransferLedgerStatus.CONFIRMED)).thenReturn(false);
-        when(entryRepository.existsByParentEntryIdAndEntryTypeAndStatus(
-                100L, TransferLedgerEntryType.REFUND, TransferLedgerStatus.CONFIRMED)).thenReturn(false);
+        when(entryRepository.findByParentEntryId(100L)).thenReturn(List.of());
         when(entryRepository.save(any(TransferLedgerEntry.class))).thenAnswer(inv -> {
             TransferLedgerEntry saved = inv.getArgument(0);
             ReflectionTestUtils.setField(saved, "id", 201L);
@@ -222,10 +219,7 @@ class BankTransferServiceTest {
         parent.applyConfirm(1L, "입금확정");
 
         when(entryRepository.findById(88L)).thenReturn(Optional.of(parent));
-        when(entryRepository.existsByParentEntryIdAndEntryTypeAndStatus(
-                88L, TransferLedgerEntryType.SETTLEMENT, TransferLedgerStatus.CONFIRMED)).thenReturn(false);
-        when(entryRepository.existsByParentEntryIdAndEntryTypeAndStatus(
-                88L, TransferLedgerEntryType.REFUND, TransferLedgerStatus.CONFIRMED)).thenReturn(false);
+        when(entryRepository.findByParentEntryId(88L)).thenReturn(List.of());
         when(entryRepository.save(any(TransferLedgerEntry.class))).thenAnswer(inv -> {
             TransferLedgerEntry saved = inv.getArgument(0);
             ReflectionTestUtils.setField(saved, "id", 89L);
@@ -267,10 +261,7 @@ class BankTransferServiceTest {
         parent.applyConfirm(1L, "입금확정");
 
         when(entryRepository.findById(88L)).thenReturn(Optional.of(parent));
-        when(entryRepository.existsByParentEntryIdAndEntryTypeAndStatus(
-                88L, TransferLedgerEntryType.SETTLEMENT, TransferLedgerStatus.CONFIRMED)).thenReturn(false);
-        when(entryRepository.existsByParentEntryIdAndEntryTypeAndStatus(
-                88L, TransferLedgerEntryType.REFUND, TransferLedgerStatus.CONFIRMED)).thenReturn(false);
+        when(entryRepository.findByParentEntryId(88L)).thenReturn(List.of());
         when(entryRepository.save(any(TransferLedgerEntry.class))).thenAnswer(inv -> {
             TransferLedgerEntry saved = inv.getArgument(0);
             ReflectionTestUtils.setField(saved, "id", 89L);
@@ -312,12 +303,7 @@ class BankTransferServiceTest {
         parent.applyConfirm(1L, null);
 
         when(entryRepository.findById(1L)).thenReturn(Optional.of(parent));
-        when(entryRepository.existsByParentEntryIdAndEntryTypeAndStatus(
-                eq(1L), eq(TransferLedgerEntryType.SETTLEMENT), eq(TransferLedgerStatus.CONFIRMED)))
-                .thenReturn(false);
-        when(entryRepository.existsByParentEntryIdAndEntryTypeAndStatus(
-                eq(1L), eq(TransferLedgerEntryType.REFUND), eq(TransferLedgerStatus.CONFIRMED)))
-                .thenReturn(false);
+        when(entryRepository.findByParentEntryId(1L)).thenReturn(List.of());
 
         SettlementOrRefundRequest req = new SettlementOrRefundRequest();
         req.setAmount(new BigDecimal("101"));
@@ -330,7 +316,7 @@ class BankTransferServiceTest {
     }
 
     @Test
-    void settle_rejectsWhenRefundAlreadyConfirmed() {
+    void settle_rejectsWhenFullyRefunded() {
         TransferLedgerEntry parent = TransferLedgerEntry.createRootEntry(
                 1L,
                 10L,
@@ -345,11 +331,18 @@ class BankTransferServiceTest {
         ReflectionTestUtils.setField(parent, "id", 50L);
         parent.applyConfirm(1L, null);
 
+        TransferLedgerEntry refundChild = TransferLedgerEntry.createChildEntry(
+                1L,
+                10L,
+                TransferLedgerEntryType.REFUND,
+                new BigDecimal("1000"),
+                "KRW",
+                50L,
+                null,
+                1L);
+
         when(entryRepository.findById(50L)).thenReturn(Optional.of(parent));
-        when(entryRepository.existsByParentEntryIdAndEntryTypeAndStatus(
-                50L, TransferLedgerEntryType.SETTLEMENT, TransferLedgerStatus.CONFIRMED)).thenReturn(false);
-        when(entryRepository.existsByParentEntryIdAndEntryTypeAndStatus(
-                50L, TransferLedgerEntryType.REFUND, TransferLedgerStatus.CONFIRMED)).thenReturn(true);
+        when(entryRepository.findByParentEntryId(50L)).thenReturn(List.of(refundChild));
 
         SettlementOrRefundRequest req = new SettlementOrRefundRequest();
         req.setAmount(new BigDecimal("500"));
@@ -357,5 +350,7 @@ class BankTransferServiceTest {
         assertThatThrownBy(() -> bankTransferService.settle(1L, 50L, req))
                 .isInstanceOf(BusinessException.class)
                 .hasFieldOrPropertyWithValue("errorCode", ErrorCode.INVALID_LEDGER_STATE);
+
+        verify(entryRepository, never()).save(any());
     }
 }

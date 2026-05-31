@@ -41,6 +41,7 @@ import java.math.BigDecimal;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @Slf4j
@@ -203,9 +204,18 @@ public class BankTransferService {
         if (!userIds.isEmpty()) {
             userRepository.findAllById(userIds).forEach(u -> emailByUserId.put(u.getId(), u.getEmail()));
         }
+        Map<Long, BigDecimal> childSumByParentId = sumSettleOrRefundByParentIds(
+                page.getContent().stream()
+                        .filter(e -> e.isRootDeposit() && e.getStatus() == TransferLedgerStatus.CONFIRMED)
+                        .map(TransferLedgerEntry::getId)
+                        .toList());
         return new PageResponse<>(
                 page.getContent().stream()
-                        .map(e -> toResponse(e, false, emailByUserId.get(e.getUserId())))
+                        .map(e -> toResponse(
+                                e,
+                                false,
+                                emailByUserId.get(e.getUserId()),
+                                remainingSettleOrRefund(e, childSumByParentId.get(e.getId()))))
                         .toList(),
                 page.getTotalElements(),
                 page.getTotalPages(),
@@ -216,7 +226,10 @@ public class BankTransferService {
     public TransferLedgerEntryResponse getForAdmin(Long entryId) {
         TransferLedgerEntry entry = entryRepository.findById(entryId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.BANK_LEDGER_NOT_FOUND));
-        return toResponse(entry, false, resolveUserEmail(entry.getUserId()));
+        BigDecimal childSum = entry.isRootDeposit() && entry.getStatus() == TransferLedgerStatus.CONFIRMED
+                ? sumSettleOrRefundForParent(entry.getId())
+                : null;
+        return toResponse(entry, false, resolveUserEmail(entry.getUserId()), remainingSettleOrRefund(entry, childSum));
     }
 
     @Transactional
@@ -232,18 +245,8 @@ public class BankTransferService {
 
     @Transactional
     public TransferLedgerEntryResponse settle(Long adminId, Long parentEntryId, SettlementOrRefundRequest request) {
-        TransferLedgerEntry parent = entryRepository.findById(parentEntryId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.BANK_LEDGER_NOT_FOUND));
-        parent.assertConfirmedRootForChildLedger();
-        if (entryRepository.existsByParentEntryIdAndEntryTypeAndStatus(
-                parent.getId(), TransferLedgerEntryType.SETTLEMENT, TransferLedgerStatus.CONFIRMED)) {
-            throw new BusinessException(ErrorCode.INVALID_LEDGER_STATE);
-        }
-        if (entryRepository.existsByParentEntryIdAndEntryTypeAndStatus(
-                parent.getId(), TransferLedgerEntryType.REFUND, TransferLedgerStatus.CONFIRMED)) {
-            throw new BusinessException(ErrorCode.INVALID_LEDGER_STATE);
-        }
-        parent.assertChildAmountAllowed(request.getAmount());
+        TransferLedgerEntry parent = loadConfirmedRootForChild(parentEntryId);
+        assertRemainingSettleOrRefundCapacity(parent, request.getAmount());
 
         TransferLedgerEntry child = TransferLedgerEntry.createChildEntry(
                 parent.getUserId(),
@@ -261,18 +264,8 @@ public class BankTransferService {
 
     @Transactional
     public TransferLedgerEntryResponse refund(Long adminId, Long parentEntryId, SettlementOrRefundRequest request) {
-        TransferLedgerEntry parent = entryRepository.findById(parentEntryId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.BANK_LEDGER_NOT_FOUND));
-        parent.assertConfirmedRootForChildLedger();
-        if (entryRepository.existsByParentEntryIdAndEntryTypeAndStatus(
-                parent.getId(), TransferLedgerEntryType.SETTLEMENT, TransferLedgerStatus.CONFIRMED)) {
-            throw new BusinessException(ErrorCode.INVALID_LEDGER_STATE);
-        }
-        if (entryRepository.existsByParentEntryIdAndEntryTypeAndStatus(
-                parent.getId(), TransferLedgerEntryType.REFUND, TransferLedgerStatus.CONFIRMED)) {
-            throw new BusinessException(ErrorCode.INVALID_LEDGER_STATE);
-        }
-        parent.assertChildAmountAllowed(request.getAmount());
+        TransferLedgerEntry parent = loadConfirmedRootForChild(parentEntryId);
+        assertRemainingSettleOrRefundCapacity(parent, request.getAmount());
 
         TransferLedgerEntry child = TransferLedgerEntry.createChildEntry(
                 parent.getUserId(),
@@ -313,7 +306,60 @@ public class BankTransferService {
         return userRepository.findById(userId).map(User::getEmail).orElse(null);
     }
 
-    private TransferLedgerEntryResponse toResponse(TransferLedgerEntry entry, boolean maskAccount, String userEmail) {
+    private TransferLedgerEntry loadConfirmedRootForChild(Long parentEntryId) {
+        TransferLedgerEntry parent = entryRepository.findById(parentEntryId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.BANK_LEDGER_NOT_FOUND));
+        if (!parent.isRootDeposit()) {
+            throw new BusinessException(ErrorCode.INVALID_LEDGER_STATE, "루트 입금 건에만 정산·환불할 수 있습니다.");
+        }
+        if (parent.getStatus() != TransferLedgerStatus.CONFIRMED) {
+            throw new BusinessException(ErrorCode.INVALID_LEDGER_STATE, "입금 확정(CONFIRMED) 후에만 정산·환불할 수 있습니다.");
+        }
+        return parent;
+    }
+
+    private void assertRemainingSettleOrRefundCapacity(TransferLedgerEntry parent, BigDecimal requestedAmount) {
+        if (requestedAmount == null || requestedAmount.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new BusinessException(ErrorCode.LEDGER_AMOUNT_INVALID, "금액은 0보다 커야 합니다.");
+        }
+        BigDecimal remaining = remainingSettleOrRefund(parent, sumSettleOrRefundForParent(parent.getId()));
+        if (remaining.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new BusinessException(ErrorCode.INVALID_LEDGER_STATE, "이미 정산·환불 처리가 완료된 입금입니다.");
+        }
+        if (requestedAmount.compareTo(remaining) > 0) {
+            throw new BusinessException(
+                    ErrorCode.LEDGER_AMOUNT_INVALID,
+                    "요청 금액이 잔여 가능 금액(" + remaining.toPlainString() + "원)을 초과합니다.");
+        }
+    }
+
+    private BigDecimal sumSettleOrRefundForParent(Long parentId) {
+        return entryRepository.findByParentEntryId(parentId).stream()
+                .filter(c -> c.getStatus() == TransferLedgerStatus.CONFIRMED)
+                .filter(c -> c.getEntryType() == TransferLedgerEntryType.SETTLEMENT
+                        || c.getEntryType() == TransferLedgerEntryType.REFUND)
+                .map(TransferLedgerEntry::getAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
+    private Map<Long, BigDecimal> sumSettleOrRefundByParentIds(List<Long> parentIds) {
+        if (parentIds == null || parentIds.isEmpty()) {
+            return Map.of();
+        }
+        return entryRepository.sumConfirmedSettleOrRefundByParentIds(parentIds).stream()
+                .collect(Collectors.toMap(row -> (Long) row[0], row -> (BigDecimal) row[1]));
+    }
+
+    private BigDecimal remainingSettleOrRefund(TransferLedgerEntry parent, BigDecimal childSum) {
+        if (!parent.isRootDeposit() || parent.getStatus() != TransferLedgerStatus.CONFIRMED) {
+            return null;
+        }
+        BigDecimal used = childSum != null ? childSum : BigDecimal.ZERO;
+        return parent.getAmount().subtract(used);
+    }
+
+    private TransferLedgerEntryResponse toResponse(
+            TransferLedgerEntry entry, boolean maskAccount, String userEmail, BigDecimal remaining) {
         SettlementAccount account = settlementAccountRepository.findById(entry.getSettlementAccountId())
                 .orElseThrow(() -> new BusinessException(ErrorCode.SETTLEMENT_ACCOUNT_NOT_FOUND));
         SettlementAccountResponse acc = SettlementAccountResponse.from(account, maskAccount);
@@ -330,6 +376,13 @@ public class BankTransferService {
                         a.getMimeType(),
                         a.isUploadedByAdmin()))
                 .toList();
-        return TransferLedgerEntryResponse.of(entry, acc, userEmail, attachments);
+        return TransferLedgerEntryResponse.of(entry, acc, userEmail, attachments, remaining);
+    }
+
+    private TransferLedgerEntryResponse toResponse(TransferLedgerEntry entry, boolean maskAccount, String userEmail) {
+        BigDecimal childSum = entry.isRootDeposit() && entry.getStatus() == TransferLedgerStatus.CONFIRMED
+                ? sumSettleOrRefundForParent(entry.getId())
+                : null;
+        return toResponse(entry, maskAccount, userEmail, remainingSettleOrRefund(entry, childSum));
     }
 }

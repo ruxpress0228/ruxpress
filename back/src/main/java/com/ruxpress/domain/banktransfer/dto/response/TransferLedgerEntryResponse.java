@@ -35,12 +35,23 @@ public class TransferLedgerEntryResponse {
     private final LocalDateTime createdAt;
     private final SettlementAccountResponse settlementAccount;
     private final List<AttachmentResponse> attachments;
+    /** CONFIRMED 루트 입금 — 정산·환불 가능 잔여 (null이면 해당 없음) */
+    private final BigDecimal remainingSettleOrRefundAmount;
 
     public static TransferLedgerEntryResponse of(
             TransferLedgerEntry e,
             SettlementAccountResponse settlementAccount,
             String userEmail,
             List<AttachmentResponse> attachments) {
+        return of(e, settlementAccount, userEmail, attachments, null);
+    }
+
+    public static TransferLedgerEntryResponse of(
+            TransferLedgerEntry e,
+            SettlementAccountResponse settlementAccount,
+            String userEmail,
+            List<AttachmentResponse> attachments,
+            BigDecimal remainingSettleOrRefundAmount) {
         return new TransferLedgerEntryResponse(
                 e.getId(),
                 e.getUserId(),
@@ -60,6 +71,7 @@ public class TransferLedgerEntryResponse {
                 e.getConfirmedByAdminId(),
                 e.getCreatedAt(),
                 settlementAccount,
-                attachments);
+                attachments,
+                remainingSettleOrRefundAmount);
     }
 }

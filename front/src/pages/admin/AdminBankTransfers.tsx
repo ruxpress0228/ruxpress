@@ -57,10 +57,19 @@ function getAdminRole(): string | null {
 }
 
 function isRootDeposit(e: TransferLedgerEntry) {
-  return (
-    e.parentEntryId == null &&
-    e.entryType === "DEPOSIT"
-  );
+  return e.parentEntryId == null && e.entryType === "DEPOSIT";
+}
+
+function remainingForAction(e: TransferLedgerEntry): number {
+  if (!isRootDeposit(e) || e.status !== "CONFIRMED") return 0;
+  if (e.remainingSettleOrRefundAmount != null) {
+    return Math.max(0, e.remainingSettleOrRefundAmount);
+  }
+  return 0;
+}
+
+function isFullyProcessedRoot(e: TransferLedgerEntry): boolean {
+  return isRootDeposit(e) && e.status === "CONFIRMED" && remainingForAction(e) <= 0;
 }
 
 export default function AdminBankTransfers() {
@@ -69,6 +78,7 @@ export default function AdminBankTransfers() {
   const [rows, setRows] = useState<TransferLedgerEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState<string>("");
+  const [entryType, setEntryType] = useState<string>("DEPOSIT");
   const [userEmailFilter, setUserEmailFilter] = useState("");
   const [page, setPage] = useState(0);
   const [size, setSize] = useState(20);
@@ -110,6 +120,7 @@ export default function AdminBankTransfers() {
         page: p,
         size: s,
         status: status || undefined,
+        entryType: entryType || undefined,
         userEmail: userEmailFilter.trim() || undefined,
       });
       setRows(res.content ?? []);
@@ -176,6 +187,7 @@ export default function AdminBankTransfers() {
           page: 0,
           size,
           status: value || undefined,
+          entryType: entryType || undefined,
           userEmail: userEmailFilter.trim() || undefined,
         });
         setRows(res.content ?? []);
@@ -301,6 +313,47 @@ export default function AdminBankTransfers() {
         </CardHeader>
         <CardContent className="flex flex-wrap gap-4 items-end">
           <div className="space-y-1">
+            <Label>{t("admin.bank.ledger.entryType")}</Label>
+            <Select
+              value={entryType || "ALL"}
+              onValueChange={(v) => {
+                const next = v === "ALL" ? "" : v;
+                setEntryType(next);
+                setPage(0);
+                void (async () => {
+                  try {
+                    setLoading(true);
+                    const res = await adminListLedgerEntries({
+                      page: 0,
+                      size,
+                      status: status || undefined,
+                      entryType: next || undefined,
+                      userEmail: userEmailFilter.trim() || undefined,
+                    });
+                    setRows(res.content ?? []);
+                    setTotalPages(res.totalPages ?? 0);
+                    setTotalElements(res.totalElements ?? 0);
+                    setPage(res.page ?? 0);
+                  } catch (e) {
+                    toast.error(e instanceof Error ? e.message : t("admin.bank.ledger.loadError"));
+                  } finally {
+                    setLoading(false);
+                  }
+                })();
+              }}
+            >
+              <SelectTrigger className="w-40">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="DEPOSIT">{t("admin.bank.ledger.entryTypeDeposit")}</SelectItem>
+                <SelectItem value="SETTLEMENT">{t("admin.bank.ledger.entryTypeSettlement")}</SelectItem>
+                <SelectItem value="REFUND">{t("admin.bank.ledger.entryTypeRefund")}</SelectItem>
+                <SelectItem value="ALL">{t("admin.bank.all")}</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1">
             <Label>{t("admin.bank.ledger.userEmail")}</Label>
             <Input
               className="w-64"
@@ -360,10 +413,29 @@ export default function AdminBankTransfers() {
                     </TableCell>
                     <TableCell>{r.entryType}</TableCell>
                     <TableCell>
-                      {r.amount.toLocaleString(locale === "en" ? "en-US" : "ko-KR")} {r.currency}
+                      <div className="flex flex-col gap-0.5">
+                        <span>
+                          {r.amount.toLocaleString(locale === "en" ? "en-US" : "ko-KR")} {r.currency}
+                        </span>
+                        {isRootDeposit(r) && r.status === "CONFIRMED" && r.remainingSettleOrRefundAmount != null ? (
+                          <span className="text-xs text-gray-500">
+                            {t("admin.bank.ledger.remaining")}:{" "}
+                            {Math.max(0, r.remainingSettleOrRefundAmount).toLocaleString(
+                              locale === "en" ? "en-US" : "ko-KR",
+                            )}
+                          </span>
+                        ) : null}
+                      </div>
                     </TableCell>
                     <TableCell>
-                      <Badge variant={r.status === "CONFIRMED" ? "default" : "secondary"}>{r.status}</Badge>
+                      <div className="flex flex-wrap items-center gap-1">
+                        <Badge variant={r.status === "CONFIRMED" ? "default" : "secondary"}>{r.status}</Badge>
+                        {isFullyProcessedRoot(r) ? (
+                          <Badge variant="outline" className="text-gray-600">
+                            {t("admin.bank.ledger.processed")}
+                          </Badge>
+                        ) : null}
+                      </div>
                     </TableCell>
                     <TableCell>{r.parentEntryId ?? "—"}</TableCell>
                     <TableCell>{formatDate(r.createdAt, locale)}</TableCell>
@@ -387,13 +459,13 @@ export default function AdminBankTransfers() {
                           </Button>
                         </>
                       ) : null}
-                      {isRootDeposit(r) && r.status === "CONFIRMED" && isSuper ? (
+                      {isRootDeposit(r) && r.status === "CONFIRMED" && isSuper && remainingForAction(r) > 0 ? (
                         <>
                           <Button
                             size="sm"
                             variant="secondary"
                             className="justify-start w-full"
-                            onClick={() => openSettleRefund("settle", r.id, r.amount)}
+                            onClick={() => openSettleRefund("settle", r.id, remainingForAction(r))}
                           >
                             <CheckCircle className="w-4 h-4 mr-1" />
                             {t("admin.bank.settle")}
@@ -402,12 +474,16 @@ export default function AdminBankTransfers() {
                             size="sm"
                             variant="outline"
                             className="justify-start w-full"
-                            onClick={() => openSettleRefund("refund", r.id, r.amount)}
+                            onClick={() => openSettleRefund("refund", r.id, remainingForAction(r))}
                           >
                             <Undo2 className="w-4 h-4 mr-1" />
                             {t("admin.bank.refund")}
                           </Button>
                         </>
+                      ) : isFullyProcessedRoot(r) ? (
+                        <span className="text-xs text-gray-500 px-1 py-2">{t("admin.bank.ledger.processed")}</span>
+                      ) : !isRootDeposit(r) ? (
+                        <span className="text-xs text-gray-400 px-1 py-2">{t("admin.bank.ledger.childRecord")}</span>
                       ) : null}
                       </div>
                     </TableCell>
@@ -463,6 +539,15 @@ export default function AdminBankTransfers() {
                   <p className="font-medium">
                     {detail.amount.toLocaleString(locale === "en" ? "en-US" : "ko-KR")} {detail.currency}
                   </p>
+                  {detail.remainingSettleOrRefundAmount != null ? (
+                    <p className="text-xs text-amber-700 mt-0.5">
+                      {t("admin.bank.ledger.remaining")}:{" "}
+                      {Math.max(0, detail.remainingSettleOrRefundAmount).toLocaleString(
+                        locale === "en" ? "en-US" : "ko-KR",
+                      )}{" "}
+                      {detail.currency}
+                    </p>
+                  ) : null}
                 </div>
                 <div>
                   <p className="text-gray-500">상태</p>
