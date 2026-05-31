@@ -961,5 +961,15 @@
   "resetPassword.error.tooShort": "Password must be at least 8 characters",
   "resetPassword.error.mismatch": "Passwords do not match",
   "resetPassword.toast.success": "Password changed",
-  "resetPassword.toast.failed": "Reset failed"
+  "resetPassword.toast.failed": "Reset failed",
+  "notice.important": "Important",
+  "notice.loading": "Loading...",
+  "notice.list.loadError": "Failed to load notices. Please try again later.",
+  "notice.list.title": "Notices",
+  "notice.list.subtitle": "Check out the latest news from Ruxpress",
+  "notice.list.emptyTitle": "No notices",
+  "notice.list.emptyDesc": "We'll let you know when new notices are posted",
+  "notice.detail.notFound": "Notice not found",
+  "notice.detail.backToList": "Back to list",
+  "notice.detail.viewCount": "Views {{n}}"
 }

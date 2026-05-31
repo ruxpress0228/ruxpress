@@ -961,5 +961,15 @@
   "resetPassword.error.tooShort": "Пароль должен содержать не менее 8 символов",
   "resetPassword.error.mismatch": "Пароли не совпадают",
   "resetPassword.toast.success": "Пароль изменён",
-  "resetPassword.toast.failed": "Не удалось сбросить пароль"
+  "resetPassword.toast.failed": "Не удалось сбросить пароль",
+  "notice.important": "Важно",
+  "notice.loading": "Загрузка...",
+  "notice.list.loadError": "Не удалось загрузить объявления. Повторите попытку позже.",
+  "notice.list.title": "Новости",
+  "notice.list.subtitle": "Узнавайте последние новости Ruxpress",
+  "notice.list.emptyTitle": "Объявлений нет",
+  "notice.list.emptyDesc": "Мы сообщим, когда появятся новые объявления",
+  "notice.detail.notFound": "Объявление не найдено",
+  "notice.detail.backToList": "К списку",
+  "notice.detail.viewCount": "Просмотры: {{n}}"
 }

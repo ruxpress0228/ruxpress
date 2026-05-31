@@ -7,9 +7,12 @@ import { Card, CardContent } from "../../components/ui/card";
 import { Separator } from "../../components/ui/separator";
 import { api } from "../../utils/api";
 import { unwrap } from "../../utils/exception";
+import { useTranslation } from "../../hooks/useTranslation";
 import type { Notice } from "../../types";
 
 export default function NoticeDetail() {
+  const { t, locale } = useTranslation();
+  const dateLocale = locale === "ko" ? "ko-KR" : locale === "ru" ? "ru-RU" : "en-US";
   const { id } = useParams();
   const navigate = useNavigate();
   const [notice, setNotice] = useState<Notice | null>(null);
@@ -35,16 +38,16 @@ export default function NoticeDetail() {
 
   if (loading) {
     return (
-      <div className="text-center py-12 text-gray-500">불러오는 중...</div>
+      <div className="text-center py-12 text-gray-500">{t("notice.loading")}</div>
     );
   }
 
   if (!notice) {
     return (
       <div className="text-center py-12">
-        <p className="text-gray-500">공지사항을 찾을 수 없습니다</p>
+        <p className="text-gray-500">{t("notice.detail.notFound")}</p>
         <Button variant="outline" className="mt-4" onClick={() => navigate("/notice")}>
-          목록으로
+          {t("notice.detail.backToList")}
         </Button>
       </div>
     );
@@ -60,7 +63,7 @@ export default function NoticeDetail() {
         onClick={() => navigate(-1)}
       >
         <ArrowLeft className="w-4 h-4 mr-2" />
-        목록으로
+        {t("notice.detail.backToList")}
       </Button>
 
       <Card>
@@ -70,7 +73,7 @@ export default function NoticeDetail() {
               {notice.isPinned && (
                 <>
                   <Pin className="w-4 h-4 text-yellow-600" />
-                  <Badge variant="destructive">중요</Badge>
+                  <Badge variant="destructive">{t("notice.important")}</Badge>
                 </>
               )}
             </div>
@@ -81,7 +84,7 @@ export default function NoticeDetail() {
 
             <div className="flex items-center space-x-4 text-sm text-gray-500">
               <span>
-                {new Date(dateRaw).toLocaleDateString("ko-KR", {
+                {new Date(dateRaw).toLocaleDateString(dateLocale, {
                   year: "numeric",
                   month: "long",
                   day: "numeric",
@@ -91,7 +94,7 @@ export default function NoticeDetail() {
               </span>
               <div className="flex items-center">
                 <Eye className="w-4 h-4 mr-1" />
-                조회 {notice.viewCount.toLocaleString()}
+                {t("notice.detail.viewCount", { n: notice.viewCount.toLocaleString() })}
               </div>
             </div>
           </div>
@@ -106,7 +109,7 @@ export default function NoticeDetail() {
 
       <div className="mt-6 flex justify-between">
         <Button variant="outline" onClick={() => navigate("/notice")}>
-          목록으로
+          {t("notice.detail.backToList")}
         </Button>
       </div>
     </div>
