@@ -165,11 +165,11 @@ export function krwToForeignEquivalents(
   currencies: Exclude<QuoteCurrency, "KRW">[],
   rateMap: Map<string, number>
 ): { currency: Exclude<QuoteCurrency, "KRW">; amount: number }[] {
-  if (!Number.isFinite(krwBalance) || krwBalance <= 0) return [];
+  if (!Number.isFinite(krwBalance) || krwBalance < 0) return [];
   const result: { currency: Exclude<QuoteCurrency, "KRW">; amount: number }[] = [];
   for (const c of currencies) {
     const converted = krwToQuote(krwBalance, c, rateMap);
-    if (converted != null && converted > 0) {
+    if (converted != null) {
       result.push({ currency: c, amount: converted });
     }
   }

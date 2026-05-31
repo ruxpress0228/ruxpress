@@ -569,5 +569,10 @@
   "home.exchange.rubPairsTitle": "Курс от рубля",
   "myPage.balanceEquivalentsHint": "Примерный эквивалент (справочный курс)",
   "wallet.balanceEquivalentsHint": "Примерный эквивалент (справочный курс)",
+  "balanceEquivalents.loading": "Загрузка справочного курса…",
+  "balanceEquivalents.unavailable": "Не удалось загрузить справочный курс",
+  "balanceEquivalents.noRates": "Курсы не настроены — эквивалент недоступен",
+  "home.walletBalance.label": "Баланс кошелька",
+  "home.walletBalance.link": "Кошелёк и история",
   "purchase.multiUrlHint": "Можно добавить несколько URL для одного товара (альтернативные ссылки, варианты цвета и т.д.)."
 }

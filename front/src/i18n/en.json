@@ -569,5 +569,10 @@
   "home.exchange.rubPairsTitle": "Rates from RUB",
   "myPage.balanceEquivalentsHint": "Approximate equivalents (reference rates)",
   "wallet.balanceEquivalentsHint": "Approximate equivalents (reference rates)",
+  "balanceEquivalents.loading": "Loading reference rates…",
+  "balanceEquivalents.unavailable": "Could not load reference exchange rates",
+  "balanceEquivalents.noRates": "No exchange rates configured — equivalents unavailable",
+  "home.walletBalance.label": "Wallet balance",
+  "home.walletBalance.link": "View wallet & history",
   "purchase.multiUrlHint": "You can add multiple URLs for the same product (alternatives, color variants, etc.)."
 }

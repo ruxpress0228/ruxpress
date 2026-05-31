@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { Link } from "react-router";
-import { ShoppingCart, TrendingUp, ArrowRight, Package, Truck, CheckCircle2, Ban } from "lucide-react";
+import { ShoppingCart, TrendingUp, ArrowRight, Package, Truck, CheckCircle2, Ban, Wallet } from "lucide-react";
 import { Button } from "../../components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../components/ui/card";
 import { Badge } from "../../components/ui/badge";
@@ -14,7 +14,9 @@ import { unwrap } from "../../utils/exception";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useExchangeRate } from "../../hooks/exchange/useExchangeRate";
 import { usePurchase } from "../../hooks/purchase/usePurchase";
-import { formatDate } from "../../utils/format";
+import { formatDate, formatNumber } from "../../utils/format";
+import { useBalance } from "../../hooks/balance/useBalance";
+import { BalanceEquivalents } from "../../components/balance/BalanceEquivalents";
 import { STORAGE_KEYS, USER_AUTH_CHANGE_EVENT } from "../../utils/constants";
 import type { Notice, PageResponse } from "../../types";
 import type { PurchaseRequestListItem } from "../../types/purchase";
@@ -75,6 +77,8 @@ export default function Home() {
     null,
   );
   const [nickname, setNickname] = useState<string>(() => readAuthValue(STORAGE_KEYS.USER_NICKNAME) ?? "");
+  const isLoggedIn = Boolean(readAuthValue(STORAGE_KEYS.TOKEN));
+  const { balance } = useBalance();
 
   const rateMap = useMemo(
     () => buildRateMap(Array.isArray(ratesData?.quotes) ? ratesData.quotes : undefined),
@@ -264,6 +268,35 @@ export default function Home() {
           </div>
         </div>
       </div>
+
+      {isLoggedIn ? (
+        <Link
+          to="/wallet"
+          className="block overflow-hidden rounded-xl border border-blue-100 bg-gradient-to-r from-blue-50/90 to-white px-4 py-4 shadow-sm transition-colors hover:border-blue-200 md:px-6"
+        >
+          <div className="flex items-start gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-blue-600 text-white">
+              <Wallet className="h-5 w-5" aria-hidden />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-xs font-semibold uppercase tracking-wide text-blue-800/80">
+                {t("home.walletBalance.label")}
+              </p>
+              <p className="mt-0.5 text-2xl font-bold text-blue-900">
+                {balance == null
+                  ? "—"
+                  : `₩${formatNumber(balance, locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+              </p>
+              <BalanceEquivalents
+                balance={balance}
+                hintKey="wallet.balanceEquivalentsHint"
+                className="text-sm font-medium text-blue-800/90 mt-1"
+              />
+              <p className="mt-2 text-xs text-blue-700/80">{t("home.walletBalance.link")} →</p>
+            </div>
+          </div>
+        </Link>
+      ) : null}
 
       <section aria-labelledby="home-dashboard-heading">
         <div className="mb-2 space-y-1">
