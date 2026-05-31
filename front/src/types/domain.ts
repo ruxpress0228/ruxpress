@@ -202,7 +202,8 @@ export type AdminNotificationType =
   | 'NEW_PURCHASE_REQUEST'
   | 'NEW_DEPOSIT_REPORT'
   | 'NEW_INQUIRY'
-  | 'NEW_CHAT_MESSAGE';
+  | 'NEW_CHAT_MESSAGE'
+  | 'NEGATIVE_WALLET_AFTER_REFUND';
 
 export interface AdminNotification {
   id: number;

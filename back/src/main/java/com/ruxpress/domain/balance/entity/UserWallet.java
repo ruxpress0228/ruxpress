@@ -59,4 +59,9 @@ public class UserWallet {
         }
         this.balance = this.balance.subtract(amount);
     }
+
+    /** 입금 환불 등 — 잔액이 부족해도 차감(마이너스 허용) */
+    public void debitAllowNegative(BigDecimal amount) {
+        this.balance = this.balance.subtract(amount);
+    }
 }

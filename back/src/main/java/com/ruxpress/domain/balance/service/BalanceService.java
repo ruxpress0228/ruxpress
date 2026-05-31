@@ -164,20 +164,26 @@ public class BalanceService {
         }
     }
 
+    /**
+     * 입금 환불에 따른 포인트 차감. 잔액 부족 시 마이너스 허용.
+     *
+     * @return 차감 후 잔액. 멱등 재처리면 {@code null}
+     */
     @Transactional
-    public void debitForBankRefund(Long userId, BigDecimal amount, Long transferRefundEntryId) {
+    public BigDecimal debitForBankRefund(Long userId, BigDecimal amount, Long transferRefundEntryId) {
         String key = "bank_refund_debit:" + transferRefundEntryId;
         if (ledgerRepository.existsByIdempotencyKey(key)) {
-            return;
+            return null;
         }
         UserWallet wallet = getOrCreateWallet(userId);
-        wallet.debit(amount);
+        wallet.debitAllowNegative(amount);
         walletRepository.save(wallet);
         try {
             ledgerRepository.save(WalletLedgerEntry.debitBankRefund(userId, amount, transferRefundEntryId));
         } catch (DataIntegrityViolationException e) {
             throw new BusinessException(ErrorCode.CONCURRENT_UPDATE);
         }
+        return wallet.getBalance();
     }
 
     private UserWallet getOrCreateWallet(Long userId) {

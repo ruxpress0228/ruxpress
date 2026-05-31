@@ -105,6 +105,31 @@ public class AdminNotificationService {
         fanOutAndSave(adminIds, AdminNotificationType.NEW_INQUIRY, title, body, dataJson, linkUrl);
     }
 
+    public void notifyNegativeWalletAfterRefund(
+            Long userId,
+            String userEmail,
+            BigDecimal refundAmount,
+            Long refundEntryId,
+            Long parentEntryId,
+            BigDecimal balanceAfter) {
+        List<Long> adminIds = findActiveAdminIds(Set.of(AdminRole.SUPER_ADMIN));
+        if (adminIds.isEmpty()) {
+            return;
+        }
+        String email = (userEmail == null || userEmail.isBlank()) ? ("회원 #" + userId) : userEmail;
+        String refundStr = refundAmount != null ? refundAmount.toPlainString() : "0";
+        String balanceStr = balanceAfter != null ? balanceAfter.toPlainString() : "0";
+        String title = "환불 후 마이너스 잔액";
+        String body = String.format(
+                "%s — 환불 %s원 처리 후 잔액 %s원 (입금 #%d, 환불 #%d)",
+                email, refundStr, balanceStr, parentEntryId, refundEntryId);
+        String dataJson = String.format(
+                "{\"userId\":%d,\"refundEntryId\":%d,\"parentEntryId\":%d,\"balanceAfter\":%s}",
+                userId, refundEntryId, parentEntryId, balanceStr);
+        String linkUrl = "/admin/bank-transfers";
+        fanOutAndSave(adminIds, AdminNotificationType.NEGATIVE_WALLET_AFTER_REFUND, title, body, dataJson, linkUrl);
+    }
+
     // ─── Queries ─────────────────────────────────────────────────────────
 
     @Transactional(readOnly = true)

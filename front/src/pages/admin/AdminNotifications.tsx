@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router";
-import { Bell, Banknote, MessageCircle, MessageSquare, ShoppingCart, Check } from "lucide-react";
+import { Bell, Banknote, MessageCircle, MessageSquare, ShoppingCart, Check, AlertTriangle } from "lucide-react";
 import { Button } from "../../components/ui/button";
 import { Card, CardContent } from "../../components/ui/card";
 import { Badge } from "../../components/ui/badge";
@@ -36,6 +36,8 @@ function typeIcon(type: AdminNotificationType) {
       return <MessageCircle className="w-4 h-4 text-purple-600" />;
     case "NEW_CHAT_MESSAGE":
       return <MessageSquare className="w-4 h-4 text-orange-500" />;
+    case "NEGATIVE_WALLET_AFTER_REFUND":
+      return <AlertTriangle className="w-4 h-4 text-red-600" />;
     default:
       return <Bell className="w-4 h-4 text-gray-500" />;
   }
@@ -47,6 +49,7 @@ function typeBgClass(type: AdminNotificationType): string {
     case "NEW_DEPOSIT_REPORT": return "bg-green-50";
     case "NEW_INQUIRY": return "bg-purple-50";
     case "NEW_CHAT_MESSAGE": return "bg-orange-50";
+    case "NEGATIVE_WALLET_AFTER_REFUND": return "bg-red-50";
     default: return "bg-gray-50";
   }
 }

@@ -284,6 +284,17 @@ public class BankTransferService {
                 request.getAdminMemo(),
                 adminId);
         TransferLedgerEntry saved = entryRepository.save(child);
+        BigDecimal balanceAfter = balanceService.debitForBankRefund(
+                saved.getUserId(), saved.getAmount(), saved.getId());
+        if (balanceAfter != null && balanceAfter.compareTo(BigDecimal.ZERO) < 0) {
+            adminNotificationService.notifyNegativeWalletAfterRefund(
+                    saved.getUserId(),
+                    resolveUserEmail(saved.getUserId()),
+                    saved.getAmount(),
+                    saved.getId(),
+                    parent.getId(),
+                    balanceAfter);
+        }
         notificationService.notifyRefunded(saved.getUserId(), saved.getId(), parent.getId(), saved.getAmount());
         return toResponse(saved, false, resolveUserEmail(saved.getUserId()));
     }

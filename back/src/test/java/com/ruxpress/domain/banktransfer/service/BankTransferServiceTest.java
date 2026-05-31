@@ -206,6 +206,96 @@ class BankTransferServiceTest {
     }
 
     @Test
+    void refund_createsRefundChild_debitsWallet_andNotifies() {
+        TransferLedgerEntry parent = TransferLedgerEntry.createRootEntry(
+                1L,
+                10L,
+                TransferLedgerEntryType.DEPOSIT,
+                new BigDecimal("5000"),
+                "KRW",
+                null,
+                null,
+                null,
+                null,
+                null);
+        ReflectionTestUtils.setField(parent, "id", 88L);
+        parent.applyConfirm(1L, "입금확정");
+
+        when(entryRepository.findById(88L)).thenReturn(Optional.of(parent));
+        when(entryRepository.existsByParentEntryIdAndEntryTypeAndStatus(
+                88L, TransferLedgerEntryType.SETTLEMENT, TransferLedgerStatus.CONFIRMED)).thenReturn(false);
+        when(entryRepository.existsByParentEntryIdAndEntryTypeAndStatus(
+                88L, TransferLedgerEntryType.REFUND, TransferLedgerStatus.CONFIRMED)).thenReturn(false);
+        when(entryRepository.save(any(TransferLedgerEntry.class))).thenAnswer(inv -> {
+            TransferLedgerEntry saved = inv.getArgument(0);
+            ReflectionTestUtils.setField(saved, "id", 89L);
+            return saved;
+        });
+        when(settlementAccountRepository.findById(10L)).thenReturn(Optional.of(settlementAccount));
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user1));
+        when(balanceService.debitForBankRefund(eq(1L), eq(new BigDecimal("5000")), eq(89L)))
+                .thenReturn(BigDecimal.ZERO);
+
+        SettlementOrRefundRequest req = new SettlementOrRefundRequest();
+        req.setAmount(new BigDecimal("5000"));
+        req.setAdminMemo("환불");
+
+        TransferLedgerEntryResponse response = bankTransferService.refund(5L, 88L, req);
+
+        assertThat(response.getEntryType()).isEqualTo(TransferLedgerEntryType.REFUND);
+        assertThat(response.getUserEmail()).isEqualTo("user1@test.com");
+        verify(balanceService).debitForBankRefund(eq(1L), eq(new BigDecimal("5000")), eq(89L));
+        verify(notificationService).notifyRefunded(eq(1L), eq(89L), eq(88L), eq(new BigDecimal("5000")));
+        verify(adminNotificationService, never()).notifyNegativeWalletAfterRefund(
+                anyLong(), any(), any(), anyLong(), anyLong(), any());
+    }
+
+    @Test
+    void refund_notifiesAdminWhenBalanceGoesNegative() {
+        TransferLedgerEntry parent = TransferLedgerEntry.createRootEntry(
+                1L,
+                10L,
+                TransferLedgerEntryType.DEPOSIT,
+                new BigDecimal("5000"),
+                "KRW",
+                null,
+                null,
+                null,
+                null,
+                null);
+        ReflectionTestUtils.setField(parent, "id", 88L);
+        parent.applyConfirm(1L, "입금확정");
+
+        when(entryRepository.findById(88L)).thenReturn(Optional.of(parent));
+        when(entryRepository.existsByParentEntryIdAndEntryTypeAndStatus(
+                88L, TransferLedgerEntryType.SETTLEMENT, TransferLedgerStatus.CONFIRMED)).thenReturn(false);
+        when(entryRepository.existsByParentEntryIdAndEntryTypeAndStatus(
+                88L, TransferLedgerEntryType.REFUND, TransferLedgerStatus.CONFIRMED)).thenReturn(false);
+        when(entryRepository.save(any(TransferLedgerEntry.class))).thenAnswer(inv -> {
+            TransferLedgerEntry saved = inv.getArgument(0);
+            ReflectionTestUtils.setField(saved, "id", 89L);
+            return saved;
+        });
+        when(settlementAccountRepository.findById(10L)).thenReturn(Optional.of(settlementAccount));
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user1));
+        when(balanceService.debitForBankRefund(eq(1L), eq(new BigDecimal("5000")), eq(89L)))
+                .thenReturn(new BigDecimal("-2000"));
+
+        SettlementOrRefundRequest req = new SettlementOrRefundRequest();
+        req.setAmount(new BigDecimal("5000"));
+
+        bankTransferService.refund(5L, 88L, req);
+
+        verify(adminNotificationService).notifyNegativeWalletAfterRefund(
+                eq(1L),
+                eq("user1@test.com"),
+                eq(new BigDecimal("5000")),
+                eq(89L),
+                eq(88L),
+                eq(new BigDecimal("-2000")));
+    }
+
+    @Test
     void refund_rejectsWhenAmountExceedsParent() {
         TransferLedgerEntry parent = TransferLedgerEntry.createRootEntry(
                 1L,
