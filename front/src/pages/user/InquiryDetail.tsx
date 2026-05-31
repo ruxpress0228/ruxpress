@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router";
-import { ArrowLeft, MessageSquare, Paperclip } from "lucide-react";
+import { ArrowLeft, MessageSquare, Paperclip, X, ChevronLeft, ChevronRight, Download } from "lucide-react";
 import { Button } from "../../components/ui/button";
 import { Badge } from "../../components/ui/badge";
 import { Card, CardContent } from "../../components/ui/card";
@@ -8,9 +8,104 @@ import { Separator } from "../../components/ui/separator";
 import { api } from "../../utils/api";
 import { unwrap } from "../../utils/exception";
 import { useTranslation } from "../../hooks/useTranslation";
-import type { InquiryStatus, InquiryCategory, Inquiry } from "../../types";
+import type { InquiryStatus, InquiryCategory, Inquiry, Attachment } from "../../types";
 
 const LOCALE_MAP: Record<string, string> = { ko: "ko-KR", ru: "ru-RU", en: "en-US" };
+
+function isImageAttachment(att: Attachment): boolean {
+  return att.mimeType.startsWith("image/");
+}
+
+function ImageLightbox({
+  images,
+  initialIndex,
+  onClose,
+}: {
+  images: Attachment[];
+  initialIndex: number;
+  onClose: () => void;
+}) {
+  const [current, setCurrent] = useState(initialIndex);
+  const img = images[current];
+  const hasPrev = current > 0;
+  const hasNext = current < images.length - 1;
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+      if (e.key === "ArrowLeft" && hasPrev) setCurrent((c) => c - 1);
+      if (e.key === "ArrowRight" && hasNext) setCurrent((c) => c + 1);
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [hasPrev, hasNext, onClose]);
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80"
+      onClick={onClose}
+    >
+      <div
+        className="relative flex flex-col items-center max-w-5xl w-full max-h-screen p-4"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between w-full mb-2">
+          <span className="text-white text-sm truncate max-w-xs">{img.originalFilename}</span>
+          <div className="flex items-center gap-2">
+            <a
+              href={img.viewUrl ?? img.storedUrl}
+              download={img.originalFilename}
+              className="inline-flex items-center justify-center w-9 h-9 rounded-md text-white hover:bg-white/20"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <Download className="w-5 h-5" />
+            </a>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="text-white hover:bg-white/20"
+              onClick={onClose}
+            >
+              <X className="w-5 h-5" />
+            </Button>
+          </div>
+        </div>
+        <div className="relative flex items-center justify-center w-full">
+          {hasPrev && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="absolute left-0 text-white hover:bg-white/20 z-10"
+              onClick={() => setCurrent((c) => c - 1)}
+            >
+              <ChevronLeft className="w-6 h-6" />
+            </Button>
+          )}
+          <img
+            src={img.viewUrl ?? img.thumbnailUrl ?? img.storedUrl}
+            alt={img.originalFilename}
+            className="max-h-[75vh] max-w-full object-contain rounded"
+          />
+          {hasNext && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="absolute right-0 text-white hover:bg-white/20 z-10"
+              onClick={() => setCurrent((c) => c + 1)}
+            >
+              <ChevronRight className="w-6 h-6" />
+            </Button>
+          )}
+        </div>
+        {images.length > 1 && (
+          <p className="text-white/60 text-xs mt-2">
+            {current + 1} / {images.length}
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
 
 function getStatusLabels(t: (key: string) => string): Record<InquiryStatus, { label: string; variant: 'default' | 'secondary' | 'outline' }> {
   return {
@@ -35,6 +130,7 @@ export default function InquiryDetail() {
   const navigate = useNavigate();
   const [inquiry, setInquiry] = useState<Inquiry | null>(null);
   const [loading, setLoading] = useState(true);
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
 
   const dateLocale = LOCALE_MAP[locale] || "ko-KR";
   const statusLabels = getStatusLabels(t);
@@ -82,6 +178,9 @@ export default function InquiryDetail() {
   }
 
   const statusInfo = statusLabels[inquiry.status];
+  const attachments = inquiry.attachments ?? [];
+  const imageAttachments = attachments.filter(isImageAttachment);
+  const otherAttachments = attachments.filter((a) => !isImageAttachment(a));
 
   return (
     <div className="max-w-4xl mx-auto">
@@ -126,25 +225,48 @@ export default function InquiryDetail() {
             </p>
           </div>
 
-          {inquiry.attachments && inquiry.attachments.length > 0 && (
+          {attachments.length > 0 && (
             <div className="mt-4 pt-4 border-t border-gray-200">
-              <div className="flex items-center space-x-2 mb-2">
+              <div className="flex items-center space-x-2 mb-3">
                 <Paperclip className="w-4 h-4 text-gray-500" />
                 <span className="text-sm font-medium text-gray-700">{t("inquiry.detail.attachments")}</span>
               </div>
-              <ul className="space-y-1">
-                {inquiry.attachments.map((att) => (
-                  <li key={att.id}>
-                    <Button
-                      variant="link"
-                      className="h-auto p-0 text-blue-600"
-                      onClick={() => handleDownload(att.id, att.originalFilename)}
-                    >
-                      {att.originalFilename} ({(att.fileSize / 1024).toFixed(1)} KB)
-                    </Button>
-                  </li>
-                ))}
-              </ul>
+              {imageAttachments.length > 0 && (
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 mb-3">
+                  {imageAttachments.map((att) => {
+                    const idx = imageAttachments.findIndex((a) => a.id === att.id);
+                    return (
+                      <div
+                        key={att.id}
+                        className="relative group cursor-pointer rounded overflow-hidden border"
+                        onClick={() => setLightboxIndex(idx)}
+                      >
+                        <img
+                          src={att.thumbnailUrl ?? att.viewUrl ?? att.storedUrl}
+                          alt={att.originalFilename}
+                          className="h-28 w-full object-cover group-hover:opacity-90 transition-opacity"
+                        />
+                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors" />
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+              {otherAttachments.length > 0 && (
+                <ul className="space-y-1">
+                  {otherAttachments.map((att) => (
+                    <li key={att.id}>
+                      <Button
+                        variant="link"
+                        className="h-auto p-0 text-blue-600"
+                        onClick={() => handleDownload(att.id, att.originalFilename)}
+                      >
+                        {att.originalFilename} ({(att.fileSize / 1024).toFixed(1)} KB)
+                      </Button>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
           )}
         </CardContent>
@@ -208,6 +330,14 @@ export default function InquiryDetail() {
             </p>
           </CardContent>
         </Card>
+      )}
+
+      {lightboxIndex !== null && imageAttachments.length > 0 && (
+        <ImageLightbox
+          images={imageAttachments}
+          initialIndex={lightboxIndex}
+          onClose={() => setLightboxIndex(null)}
+        />
       )}
     </div>
   );

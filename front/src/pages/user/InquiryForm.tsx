@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { useLocation, useNavigate } from "react-router";
 import { Upload, X } from "lucide-react";
 import { Button } from "../../components/ui/button";
@@ -15,6 +15,10 @@ import type { InquiryCategory } from "../../types";
 
 const MAX_FILES = 5;
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+
+function isImageFile(file: File): boolean {
+  return file.type.startsWith("image/");
+}
 
 function getCategoryOptions(t: (key: string) => string): { value: InquiryCategory; label: string }[] {
   return [
@@ -42,6 +46,21 @@ export default function InquiryForm() {
   const [content, setContent] = useState("");
   const [files, setFiles] = useState<File[]>([]);
   const [submitting, setSubmitting] = useState(false);
+
+  const imagePreviews = useMemo(
+    () =>
+      files
+        .map((file, index) => ({ file, index }))
+        .filter(({ file }) => isImageFile(file))
+        .map(({ file, index }) => ({ file, index, url: URL.createObjectURL(file) })),
+    [files]
+  );
+
+  useEffect(() => {
+    return () => {
+      imagePreviews.forEach((p) => URL.revokeObjectURL(p.url));
+    };
+  }, [imagePreviews]);
 
   const categoryOptions = getCategoryOptions(t);
 
@@ -189,28 +208,53 @@ export default function InquiryForm() {
                 {t("inquiry.form.uploadHintDetail")}
               </p>
             </div>
-            {files.length > 0 && (
-              <ul className="space-y-2">
-                {files.map((file, index) => (
-                  <li
-                    key={`${file.name}-${index}`}
-                    className="flex items-center justify-between text-sm bg-gray-50 rounded px-3 py-2"
-                  >
-                    <span className="truncate flex-1">{file.name}</span>
-                    <span className="text-gray-500 ml-2">
-                      {(file.size / 1024).toFixed(1)} KB
-                    </span>
+            {imagePreviews.length > 0 && (
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                {imagePreviews.map((p) => (
+                  <div key={`${p.file.name}-${p.index}`} className="relative group">
+                    <img
+                      src={p.url}
+                      alt={p.file.name}
+                      className="h-28 w-full object-cover rounded border"
+                    />
                     <Button
                       type="button"
                       variant="ghost"
                       size="icon"
-                      className="ml-2 h-8 w-8"
-                      onClick={() => removeFile(index)}
+                      className="absolute top-1 right-1 h-8 w-8 bg-white/80 hover:bg-white"
+                      onClick={() => removeFile(p.index)}
                     >
                       <X className="h-4 w-4" />
                     </Button>
-                  </li>
+                    <div className="mt-1 text-xs text-gray-600 truncate">{p.file.name}</div>
+                  </div>
                 ))}
+              </div>
+            )}
+            {files.some((f) => !isImageFile(f)) && (
+              <ul className="space-y-2">
+                {files.map((file, index) =>
+                  isImageFile(file) ? null : (
+                    <li
+                      key={`${file.name}-${index}`}
+                      className="flex items-center justify-between text-sm bg-gray-50 rounded px-3 py-2"
+                    >
+                      <span className="truncate flex-1">{file.name}</span>
+                      <span className="text-gray-500 ml-2">
+                        {(file.size / 1024).toFixed(1)} KB
+                      </span>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="ml-2 h-8 w-8"
+                        onClick={() => removeFile(index)}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </li>
+                  )
+                )}
               </ul>
             )}
           </CardContent>

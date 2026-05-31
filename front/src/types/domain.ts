@@ -95,6 +95,7 @@ export interface Attachment {
   originalFilename: string;
   storedUrl: string;
   thumbnailUrl?: string;
+  viewUrl?: string;
   fileSize: number;
   mimeType: string;
   sortOrder: number;
