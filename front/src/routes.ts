@@ -30,6 +30,7 @@ import AdminInquiries from "./pages/admin/AdminInquiries";
 import AdminNotices from "./pages/admin/AdminNotices";
 import AdminExchangeRate from "./pages/admin/AdminExchangeRate";
 import AdminUsers from "./pages/admin/AdminUsers";
+import AdminUserWallets from "./pages/admin/AdminUserWallets";
 import AdminAdmins from "./pages/admin/AdminAdmins";
 import AdminBankTransfers from "./pages/admin/AdminBankTransfers";
 import AdminSettlementAccounts from "./pages/admin/AdminSettlementAccounts";
@@ -151,6 +152,7 @@ export const router = createBrowserRouter([
           { path: "notices", Component: AdminNotices, loader: requireAdminAuth },
           { path: "exchange-rate", Component: AdminExchangeRate, loader: requireAdminAuth },
           { path: "users", Component: AdminUsers, loader: requireAdminAuth },
+          { path: "user-wallets", Component: AdminUserWallets, loader: requireAdminAuth },
           { path: "admins", Component: AdminAdmins, loader: requireAdminAuth },
           { path: "bank-transfers", Component: AdminBankTransfers, loader: requireAdminAuth },
           { path: "settlement-accounts", Component: AdminSettlementAccounts, loader: requireAdminAuth },

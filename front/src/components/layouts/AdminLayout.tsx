@@ -11,6 +11,7 @@ import {
   Shield,
   Landmark,
   Wallet,
+  Coins,
   Bell,
 } from "lucide-react";
 import { Button } from "../ui/button";
@@ -66,6 +67,7 @@ export default function AdminLayout() {
     { nameKey: "nav.admin.notices", path: "/admin/notices", icon: FileText, roles: ["SUPER_ADMIN"] },
     { nameKey: "nav.admin.exchangeRate", path: "/admin/exchange-rate", icon: TrendingUp, roles: ["SUPER_ADMIN"] },
     { nameKey: "nav.admin.users", path: "/admin/users", icon: Users, roles: ["SUPER_ADMIN"] },
+    { nameKey: "nav.admin.userWallets", path: "/admin/user-wallets", icon: Coins, roles: ["SUPER_ADMIN"] },
     { nameKey: "nav.admin.admins", path: "/admin/admins", icon: Shield, roles: ["SUPER_ADMIN"] },
     { nameKey: "nav.admin.bankTransfers", path: "/admin/bank-transfers", icon: Landmark, roles: ["SUPER_ADMIN", "COUNSELOR"] },
     { nameKey: "nav.admin.settlementAccounts", path: "/admin/settlement-accounts", icon: Wallet, roles: ["SUPER_ADMIN"] },

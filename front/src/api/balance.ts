@@ -9,7 +9,9 @@ export type WalletLedgerEntryType =
   | "CREDIT_PURCHASE_REFUND"
   | "CREDIT_PURCHASE_ADJUSTMENT"
   | "DEBIT_PURCHASE"
-  | "DEBIT_BANK_REFUND";
+  | "DEBIT_BANK_REFUND"
+  | "CREDIT_ADMIN_ADJUSTMENT"
+  | "DEBIT_ADMIN_ADJUSTMENT";
 
 export interface WalletLedgerEntry {
   id: number;
