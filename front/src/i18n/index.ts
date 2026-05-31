@@ -8,7 +8,7 @@ type Messages = Record<string, string>;
 
 const messages: Record<Locale, Messages> = { ko, ru, en };
 
-let currentLocale: Locale = (localStorage.getItem(STORAGE_KEYS.LOCALE) as Locale) || 'ko';
+let currentLocale: Locale = (localStorage.getItem(STORAGE_KEYS.LOCALE) as Locale) || 'ru';
 
 export function getLocale(): Locale {
   return currentLocale;

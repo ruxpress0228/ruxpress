@@ -7,9 +7,9 @@ describe('i18n', () => {
   });
 
   describe('getLocale / setLocale', () => {
-    it('defaults to ko when no storage', () => {
-      setLocale('ko');
-      expect(getLocale()).toBe('ko');
+    it('defaults to ru when no storage', () => {
+      setLocale('ru');
+      expect(getLocale()).toBe('ru');
     });
     it('returns set locale', () => {
       setLocale('en');
