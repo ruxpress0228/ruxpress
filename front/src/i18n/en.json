@@ -1068,5 +1068,11 @@
   "purchaseDetail.trackingNumber": "Tracking number",
   "purchaseDetail.memo": "Memo",
   "purchaseDetail.myPhotos": "My photos",
-  "purchaseDetail.adminPhotos": "Admin photos (delivery/receipt, etc.)"
+  "purchaseDetail.adminPhotos": "Admin photos (delivery/receipt, etc.)",
+  "nav.myPage": "My page",
+  "nav.memberFallback": "Member",
+  "bankTransfer.attachInvalid": "Only jpg/png/webp images up to 5MB, max 10 files can be attached",
+  "bankTransfer.guideImages": "Guide images",
+  "bankTransfer.proofPhotoOptional": "Proof photo (optional)",
+  "bankTransfer.proofPhotoHint": "Proof images such as seller chat history (jpg/png/webp, 5MB, max 10)"
 }

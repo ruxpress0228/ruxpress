@@ -129,10 +129,10 @@ export default function UserLayout() {
               {userToken ? (
                 <div className="flex items-center gap-1 max-w-[14rem]">
                   <span className="hidden sm:inline text-sm text-gray-700 truncate" title={userNickname ?? ""}>
-                    {userNickname ?? "회원"}
+                    {userNickname ?? t("nav.memberFallback")}
                   </span>
                   <Link to="/mypage">
-                    <Button variant="ghost" size="icon" title="마이페이지">
+                    <Button variant="ghost" size="icon" title={t("nav.myPage")}>
                       <User className="w-5 h-5" />
                     </Button>
                   </Link>

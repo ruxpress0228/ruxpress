@@ -1068,5 +1068,11 @@
   "purchaseDetail.trackingNumber": "Трек-номер",
   "purchaseDetail.memo": "Заметка",
   "purchaseDetail.myPhotos": "Мои фотографии",
-  "purchaseDetail.adminPhotos": "Фото от администратора (доставка/получение и т.д.)"
+  "purchaseDetail.adminPhotos": "Фото от администратора (доставка/получение и т.д.)",
+  "nav.myPage": "Моя страница",
+  "nav.memberFallback": "Пользователь",
+  "bankTransfer.attachInvalid": "Можно прикрепить только изображения jpg/png/webp до 5 МБ, не более 10 шт.",
+  "bankTransfer.guideImages": "Справочные изображения",
+  "bankTransfer.proofPhotoOptional": "Подтверждающее фото (необязательно)",
+  "bankTransfer.proofPhotoHint": "Подтверждающие изображения, напр. переписка с продавцом (jpg/png/webp, 5 МБ, до 10 шт.)"
 }

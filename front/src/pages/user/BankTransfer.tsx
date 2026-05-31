@@ -83,7 +83,7 @@ export default function BankTransfer() {
     }
     const combined = [...images, ...next].slice(0, MAX_IMAGES);
     if (next.length < selected.length || images.length + next.length > MAX_IMAGES) {
-      toast.error("이미지 5MB 이하 jpg/png/webp, 최대 10장까지만 첨부할 수 있습니다");
+      toast.error(t("bankTransfer.attachInvalid"));
     }
     setImages(combined);
   };
@@ -204,7 +204,7 @@ export default function BankTransfer() {
 
             {noticeImages.length > 0 && (
               <div className="pt-2 border-t space-y-2">
-                <p className="text-sm font-semibold text-gray-800">안내 이미지</p>
+                <p className="text-sm font-semibold text-gray-800">{t("bankTransfer.guideImages")}</p>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                   {noticeImages.map((img) => {
                     const src = img.viewUrl || img.storedUrl;
@@ -280,7 +280,7 @@ export default function BankTransfer() {
                 />
               </div>
               <div className="space-y-2">
-                <Label>증빙 사진 (선택)</Label>
+                <Label>{t("bankTransfer.proofPhotoOptional")}</Label>
                 <div
                   className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center cursor-pointer hover:border-blue-500"
                   onClick={() => imageInputRef.current?.click()}
@@ -300,7 +300,7 @@ export default function BankTransfer() {
                   />
                   <Upload className="w-8 h-8 mx-auto text-gray-400 mb-1" />
                   <p className="text-xs text-gray-600">
-                    판매자 대화내역 등 증빙 이미지 (jpg/png/webp, 5MB, 최대 10장)
+                    {t("bankTransfer.proofPhotoHint")}
                   </p>
                 </div>
                 {imagePreviews.length > 0 && (
@@ -390,7 +390,7 @@ export default function BankTransfer() {
           </Table>
           <div className="flex items-center justify-between p-4 border-t flex-wrap gap-2">
             <div className="flex items-center gap-2 text-sm text-gray-500">
-              <span>페이지당</span>
+              <span>{t("purchase.list.perPage")}</span>
               <Select
                 value={String(entriesSize)}
                 onValueChange={(v) => { setEntriesSize(Number(v)); setEntriesPage(0); }}
@@ -398,15 +398,15 @@ export default function BankTransfer() {
                 <SelectTrigger className="w-[80px] h-8 text-xs"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {PAGE_SIZE_OPTIONS.map((s) => (
-                    <SelectItem key={s} value={String(s)}>{s}건</SelectItem>
+                    <SelectItem key={s} value={String(s)}>{t("purchase.list.perPageOption", { n: s })}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
             <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm" disabled={entriesPage <= 0} onClick={() => setEntriesPage((p) => p - 1)}>이전</Button>
+              <Button variant="outline" size="sm" disabled={entriesPage <= 0} onClick={() => setEntriesPage((p) => p - 1)}>{t("purchase.list.prev")}</Button>
               <span className="text-sm text-gray-500">{entriesPage + 1} / {Math.max(1, entriesTotalPages)}</span>
-              <Button variant="outline" size="sm" disabled={entriesPage >= entriesTotalPages - 1} onClick={() => setEntriesPage((p) => p + 1)}>다음</Button>
+              <Button variant="outline" size="sm" disabled={entriesPage >= entriesTotalPages - 1} onClick={() => setEntriesPage((p) => p + 1)}>{t("purchase.list.next")}</Button>
             </div>
           </div>
         </CardContent>

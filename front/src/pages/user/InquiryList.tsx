@@ -164,20 +164,20 @@ export default function InquiryList() {
           {totalPages > 0 && (
             <div className="flex items-center justify-between mt-4 flex-wrap gap-2">
               <div className="flex items-center gap-2 text-sm text-gray-500">
-                <span>페이지당</span>
+                <span>{t("purchase.list.perPage")}</span>
                 <Select value={String(size)} onValueChange={(v) => handleSizeChange(Number(v))}>
                   <SelectTrigger className="w-[80px] h-8 text-xs"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     {PAGE_SIZE_OPTIONS.map((s) => (
-                      <SelectItem key={s} value={String(s)}>{s}건</SelectItem>
+                      <SelectItem key={s} value={String(s)}>{t("purchase.list.perPageOption", { n: s })}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
               <div className="flex items-center gap-2">
-                <Button variant="outline" size="sm" disabled={page <= 0} onClick={() => setPage((p) => p - 1)}>이전</Button>
+                <Button variant="outline" size="sm" disabled={page <= 0} onClick={() => setPage((p) => p - 1)}>{t("purchase.list.prev")}</Button>
                 <span className="text-sm text-gray-500">{page + 1} / {Math.max(1, totalPages)}</span>
-                <Button variant="outline" size="sm" disabled={page >= totalPages - 1} onClick={() => setPage((p) => p + 1)}>다음</Button>
+                <Button variant="outline" size="sm" disabled={page >= totalPages - 1} onClick={() => setPage((p) => p + 1)}>{t("purchase.list.next")}</Button>
               </div>
             </div>
           )}

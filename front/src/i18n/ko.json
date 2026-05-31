@@ -1068,5 +1068,11 @@
   "purchaseDetail.trackingNumber": "운송장번호",
   "purchaseDetail.memo": "메모",
   "purchaseDetail.myPhotos": "내가 등록한 사진",
-  "purchaseDetail.adminPhotos": "관리자가 등록한 사진 (배송/수령 등)"
+  "purchaseDetail.adminPhotos": "관리자가 등록한 사진 (배송/수령 등)",
+  "nav.myPage": "마이페이지",
+  "nav.memberFallback": "회원",
+  "bankTransfer.attachInvalid": "이미지 5MB 이하 jpg/png/webp, 최대 10장까지만 첨부할 수 있습니다",
+  "bankTransfer.guideImages": "안내 이미지",
+  "bankTransfer.proofPhotoOptional": "증빙 사진 (선택)",
+  "bankTransfer.proofPhotoHint": "판매자 대화내역 등 증빙 이미지 (jpg/png/webp, 5MB, 최대 10장)"
 }
