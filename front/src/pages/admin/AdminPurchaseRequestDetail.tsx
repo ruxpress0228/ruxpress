@@ -8,6 +8,7 @@ import { purchaseStatusBadgeClass } from "../../utils/purchaseStatusStyle";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card";
 import { Separator } from "../../components/ui/separator";
 import { usePurchase } from "../../hooks/purchase/usePurchase";
+import { useTranslation } from "../../hooks/useTranslation";
 import type { PurchaseRequestStatus } from "../../types";
 import type { PurchaseAttachment, PurchaseRequestDetail, PurchaseShipping } from "../../types/purchase";
 
@@ -34,14 +35,6 @@ function isAttachmentUploadedByAdmin(att: PurchaseAttachment): boolean {
   }
   return false;
 }
-
-const statusLabels: Record<PurchaseRequestStatus, { label: string }> = {
-  REQUESTED: { label: "요청접수" },
-  PURCHASING: { label: "구매진행중" },
-  SHIPPING: { label: "배송중" },
-  COMPLETED: { label: "완료" },
-  CANCELLED: { label: "취소" },
-};
 
 function optionRecordEntries(opt: unknown): [string, string][] {
   if (opt == null || typeof opt !== "object" || Array.isArray(opt)) return [];
@@ -133,6 +126,8 @@ function ImageLightbox({
 }
 
 export default function AdminPurchaseRequestDetail() {
+  const { t, locale } = useTranslation();
+  const dateLocale = locale === "ko" ? "ko-KR" : locale === "ru" ? "ru-RU" : "en-US";
   const { id } = useParams();
   const navigate = useNavigate();
   const { getAdminPurchaseRequest } = usePurchase();
@@ -163,7 +158,7 @@ export default function AdminPurchaseRequestDetail() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <p className="text-gray-500">로딩 중...</p>
+        <p className="text-gray-500">{t("adminPurchase.detail.loading")}</p>
       </div>
     );
   }
@@ -171,15 +166,15 @@ export default function AdminPurchaseRequestDetail() {
   if (!data) {
     return (
       <div className="text-center py-12">
-        <p className="text-gray-500">구매요청을 찾을 수 없습니다.</p>
+        <p className="text-gray-500">{t("adminPurchase.detail.notFound")}</p>
         <Button variant="link" className="mt-2" onClick={() => navigate("/admin/purchase-requests")}>
-          목록으로
+          {t("adminPurchase.detail.backToList")}
         </Button>
       </div>
     );
   }
 
-  const statusInfo = statusLabels[data.status];
+  const statusLabel = t(`purchase.status.${data.status}` as `purchase.status.${PurchaseRequestStatus}`);
   const legacyOptionsEntries = optionRecordEntries(data.options);
   const allAttachments = data.attachments ?? [];
   const imageAttachments = allAttachments.filter((a) => isImageMime(a.mimeType));
@@ -194,11 +189,11 @@ export default function AdminPurchaseRequestDetail() {
       <div className="flex items-center justify-between mb-6">
         <Button variant="ghost" onClick={() => navigate("/admin/purchase-requests")}>
           <ArrowLeft className="w-4 h-4 mr-2" />
-          목록으로
+          {t("adminPurchase.detail.backToList")}
         </Button>
         <Button variant="outline" onClick={() => navigate("/admin/chat")}>
           <MessageSquare className="w-4 h-4 mr-2" />
-          채팅으로 이동
+          {t("adminPurchase.detail.goToChat")}
         </Button>
       </div>
 
@@ -207,10 +202,10 @@ export default function AdminPurchaseRequestDetail() {
           <div className="flex items-start justify-between gap-4">
             <div className="min-w-0">
               <CardTitle className="text-2xl">{data.requestName}</CardTitle>
-              <p className="text-sm text-gray-500 mt-1">요청번호: {data.requestNumber}</p>
+              <p className="text-sm text-gray-500 mt-1">{t("adminPurchase.detail.requestNumber", { n: data.requestNumber })}</p>
               {(data.userNickname || data.userEmail) && (
                 <p className="text-sm text-gray-600 mt-2">
-                  <span className="text-gray-500">회원</span>{" "}
+                  <span className="text-gray-500">{t("adminPurchase.detail.member")}</span>{" "}
                   <span className="font-medium text-gray-900">{data.userNickname ?? "—"}</span>
                   {data.userEmail ? (
                     <span className="text-gray-600"> · {data.userEmail}</span>
@@ -219,7 +214,7 @@ export default function AdminPurchaseRequestDetail() {
               )}
             </div>
             <Badge variant="outline" className={cn("border-transparent font-semibold", purchaseStatusBadgeClass(data.status))}>
-              {statusInfo.label}
+              {statusLabel}
             </Badge>
           </div>
         </CardHeader>
@@ -227,27 +222,27 @@ export default function AdminPurchaseRequestDetail() {
         <CardContent className="space-y-5">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <p className="text-sm text-gray-500">수량</p>
-              <p className="font-semibold">{data.quantity}개</p>
+              <p className="text-sm text-gray-500">{t("adminPurchase.detail.quantity")}</p>
+              <p className="font-semibold">{t("adminPurchase.detail.quantityUnit", { n: data.quantity })}</p>
             </div>
             <div>
-              <p className="text-sm text-gray-500">총 금액(원)</p>
+              <p className="text-sm text-gray-500">{t("adminPurchase.detail.totalKrw")}</p>
               <p className="font-semibold">₩{(data.totalAmountKrw ?? 0).toLocaleString()}</p>
             </div>
             <div>
-              <p className="text-sm text-gray-500">작성일</p>
-              <p className="font-semibold">{new Date(data.createdAt).toLocaleString("ko-KR")}</p>
+              <p className="text-sm text-gray-500">{t("adminPurchase.detail.createdAt")}</p>
+              <p className="font-semibold">{new Date(data.createdAt).toLocaleString(dateLocale)}</p>
             </div>
             <div>
-              <p className="text-sm text-gray-500">수정일</p>
-              <p className="font-semibold">{new Date(data.updatedAt).toLocaleString("ko-KR")}</p>
+              <p className="text-sm text-gray-500">{t("adminPurchase.detail.updatedAt")}</p>
+              <p className="font-semibold">{new Date(data.updatedAt).toLocaleString(dateLocale)}</p>
             </div>
           </div>
 
           <Separator />
 
           <div className="space-y-2">
-            <p className="font-semibold">상품 항목</p>
+            <p className="font-semibold">{t("adminPurchase.detail.items")}</p>
             {data.items && data.items.length > 0 ? (
               <ul className="space-y-2">
                 {data.items.map((it, idx) => {
@@ -269,14 +264,14 @@ export default function AdminPurchaseRequestDetail() {
                         </ul>
                       ) : null}
                       <div className="text-sm text-gray-700 pt-1 border-t border-gray-100">
-                        단가 ₩{(it.priceKrw ?? 0).toLocaleString()} × {it.quantity ?? 0}개 =
+                        {t("adminPurchase.detail.unitPrice", { price: (it.priceKrw ?? 0).toLocaleString(dateLocale), qty: it.quantity ?? 0 })}
                         <span className="font-semibold ml-1">
                           ₩{((it.priceKrw ?? 0) * (it.quantity ?? 0)).toLocaleString()}
                         </span>
                       </div>
                       {itemOptions.length > 0 ? (
                         <div className="pt-2 border-t border-gray-50">
-                          <p className="text-sm font-medium text-gray-600 mb-1">옵션</p>
+                          <p className="text-sm font-medium text-gray-600 mb-1">{t("adminPurchase.detail.options")}</p>
                           <OptionAttributesReadonlyList entries={itemOptions} />
                         </div>
                       ) : null}
@@ -293,13 +288,13 @@ export default function AdminPurchaseRequestDetail() {
                 ))}
               </ul>
             ) : (
-              <p className="text-sm text-gray-500">등록된 상품 항목이 없습니다.</p>
+              <p className="text-sm text-gray-500">{t("adminPurchase.detail.noItems")}</p>
             )}
           </div>
 
           {legacyOptionsEntries.length > 0 && (
             <div className="space-y-1">
-              <p className="text-sm font-medium text-gray-600">공통 옵션</p>
+              <p className="text-sm font-medium text-gray-600">{t("adminPurchase.detail.commonOptions")}</p>
               <OptionAttributesReadonlyList entries={legacyOptionsEntries} />
             </div>
           )}
@@ -307,27 +302,27 @@ export default function AdminPurchaseRequestDetail() {
           <div className="rounded-lg border border-slate-200 bg-gradient-to-b from-slate-50/90 to-white p-4 space-y-4 shadow-sm">
             <div className="flex items-center gap-2 text-base font-semibold text-gray-900">
               <MapPin className="h-5 w-5 text-blue-600 shrink-0" aria-hidden />
-              배송 정보
+              {t("adminPurchase.detail.shippingInfo")}
             </div>
 
             {hasShippingSnapshot(data.shipping) && data.shipping ? (
               <dl className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
                 {data.shipping.label ? (
                   <div className="sm:col-span-2">
-                    <dt className="text-xs font-medium uppercase tracking-wide text-gray-500">배송지 라벨</dt>
+                    <dt className="text-xs font-medium uppercase tracking-wide text-gray-500">{t("adminPurchase.detail.shippingLabel")}</dt>
                     <dd className="mt-0.5 font-medium text-gray-900">{data.shipping.label}</dd>
                   </div>
                 ) : null}
                 <div>
-                  <dt className="text-xs font-medium uppercase tracking-wide text-gray-500">수령인</dt>
+                  <dt className="text-xs font-medium uppercase tracking-wide text-gray-500">{t("adminPurchase.detail.recipient")}</dt>
                   <dd className="mt-0.5 text-gray-900">{data.shipping.recipientName ?? "—"}</dd>
                 </div>
                 <div>
-                  <dt className="text-xs font-medium uppercase tracking-wide text-gray-500">연락처</dt>
+                  <dt className="text-xs font-medium uppercase tracking-wide text-gray-500">{t("adminPurchase.detail.phone")}</dt>
                   <dd className="mt-0.5 text-gray-900">{data.shipping.recipientPhone ?? "—"}</dd>
                 </div>
                 <div className="sm:col-span-2">
-                  <dt className="text-xs font-medium uppercase tracking-wide text-gray-500">주소</dt>
+                  <dt className="text-xs font-medium uppercase tracking-wide text-gray-500">{t("adminPurchase.detail.address")}</dt>
                   <dd className="mt-0.5 break-words leading-relaxed text-gray-900">
                     {data.shipping.postalCode ? <span className="text-gray-600">({data.shipping.postalCode}) </span> : null}
                     {data.shipping.addressLine1}
@@ -341,33 +336,33 @@ export default function AdminPurchaseRequestDetail() {
                 </div>
                 {data.shipping.userAddressId != null && (
                   <div className="sm:col-span-2">
-                    <dt className="text-xs font-medium uppercase tracking-wide text-gray-500">회원 배송지 ID</dt>
+                    <dt className="text-xs font-medium uppercase tracking-wide text-gray-500">{t("adminPurchase.detail.userAddressId")}</dt>
                     <dd className="mt-0.5 font-mono text-xs text-gray-600">{data.shipping.userAddressId}</dd>
                   </div>
                 )}
               </dl>
             ) : (
               <p className="rounded-md border border-amber-200 bg-amber-50/90 px-3 py-2 text-sm text-amber-900">
-                배송지 스냅샷이 없습니다. 구버전 요청이거나 DB 마이그레이션 전 데이터일 수 있습니다.
+                {t("adminPurchase.detail.noShippingSnapshot")}
               </p>
             )}
 
             <div className="border-t border-slate-200 pt-3">
               <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-gray-500">
                 <Truck className="h-3.5 w-3.5" aria-hidden />
-                운송장번호
+                {t("adminPurchase.detail.tracking")}
               </div>
               {data.trackingNumber ? (
                 <p className="mt-1 font-mono text-sm font-semibold text-gray-900">{data.trackingNumber}</p>
               ) : (
-                <p className="mt-1 text-sm text-gray-500">등록된 운송장번호가 없습니다. 목록의 빠른 관리에서 입력할 수 있습니다.</p>
+                <p className="mt-1 text-sm text-gray-500">{t("adminPurchase.detail.noTracking")}</p>
               )}
             </div>
           </div>
 
           {data.memo && (
             <div className="space-y-2">
-              <p className="font-semibold">고객 요청 메모</p>
+              <p className="font-semibold">{t("adminPurchase.detail.customerMemo")}</p>
               <p className="text-sm text-gray-700 whitespace-pre-wrap">{data.memo}</p>
             </div>
           )}
@@ -376,13 +371,13 @@ export default function AdminPurchaseRequestDetail() {
             <div className="rounded-lg border border-slate-200 bg-slate-50/80 p-4 space-y-4">
               {data.adminMemo?.trim() ? (
                 <div className="space-y-1">
-                  <p className="text-sm font-semibold text-gray-900">내부 메모</p>
+                  <p className="text-sm font-semibold text-gray-900">{t("adminPurchase.detail.internalMemo")}</p>
                   <p className="text-sm text-gray-800 whitespace-pre-wrap leading-relaxed">{data.adminMemo}</p>
                 </div>
               ) : null}
               {adminImageAttachments.length > 0 ? (
                 <div className={data.adminMemo?.trim() ? "space-y-2 border-t border-slate-200 pt-4" : "space-y-2"}>
-                  <p className="text-sm font-semibold text-gray-900">관리자 사진 첨부 · 피드백</p>
+                  <p className="text-sm font-semibold text-gray-900">{t("adminPurchase.detail.adminPhotos")}</p>
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
                     {adminImageAttachments.map((att) => {
                       const idx = imageAttachments.findIndex((a) => a.id === att.id);
@@ -409,7 +404,7 @@ export default function AdminPurchaseRequestDetail() {
 
           {(userImageAttachments.length > 0 || userOtherAttachments.length > 0) && (
             <div className="pt-4 border-t border-gray-200 space-y-3">
-              <p className="text-sm font-medium text-gray-700">고객 등록 첨부</p>
+              <p className="text-sm font-medium text-gray-700">{t("adminPurchase.detail.customerAttachments")}</p>
               {userImageAttachments.length > 0 ? (
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
                   {userImageAttachments.map((att) => {

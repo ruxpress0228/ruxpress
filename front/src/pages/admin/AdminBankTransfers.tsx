@@ -38,12 +38,6 @@ const ADMIN_STORAGE_KEY = "ruxpress_admin";
 const PAGE_SIZE_OPTIONS = [20, 30, 50, 100] as const;
 
 type StatusChipValue = "all" | TransferLedgerStatus;
-const FILTER_CHIPS: { value: StatusChipValue; label: string }[] = [
-  { value: "all", label: "전체" },
-  { value: "PENDING", label: "PENDING" },
-  { value: "CONFIRMED", label: "CONFIRMED" },
-  { value: "CANCELLED", label: "CANCELLED" },
-];
 const COUNTABLE_STATUSES: TransferLedgerStatus[] = ["PENDING", "CONFIRMED", "CANCELLED"];
 
 function getAdminRole(): string | null {
@@ -75,6 +69,12 @@ function isFullyProcessedRoot(e: TransferLedgerEntry): boolean {
 export default function AdminBankTransfers() {
   const { t, locale } = useTranslation();
   const isSuper = getAdminRole() === "SUPER_ADMIN";
+  const filterChips: { value: StatusChipValue; label: string }[] = [
+    { value: "all", label: t("admin.bank.filterAll") },
+    { value: "PENDING", label: "PENDING" },
+    { value: "CONFIRMED", label: "CONFIRMED" },
+    { value: "CANCELLED", label: "CANCELLED" },
+  ];
   const [rows, setRows] = useState<TransferLedgerEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState<string>("");
@@ -265,16 +265,16 @@ export default function AdminBankTransfers() {
       <div>
         <h1 className="text-2xl font-bold text-gray-900">{t("admin.bank.ledger.title")}</h1>
         <p className="text-gray-600 text-sm">{t("admin.bank.ledger.subtitle")}</p>
-        <p className="mt-1 text-xs text-gray-500">전체 {totalElements.toLocaleString(locale === "en" ? "en-US" : "ko-KR")}건</p>
+        <p className="mt-1 text-xs text-gray-500">{t("admin.bank.ledger.totalLine", { n: totalElements.toLocaleString(locale === "en" ? "en-US" : locale === "ru" ? "ru-RU" : "ko-KR") })}</p>
       </div>
 
       <div className="rounded-xl border border-gray-100 bg-white p-3 shadow-sm md:p-3.5">
         <div className="mb-2 flex items-center justify-between gap-2">
-          <p className="text-xs font-semibold text-gray-700 md:text-sm">상태별 건수</p>
+          <p className="text-xs font-semibold text-gray-700 md:text-sm">{t("admin.bank.ledger.summaryTitle")}</p>
           <Landmark className="h-4 w-4 text-gray-400" aria-hidden />
         </div>
         <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-4 sm:gap-2">
-          {FILTER_CHIPS.map((chip) => {
+          {filterChips.map((chip) => {
             const key = chip.value === "all" ? "ALL" : chip.value;
             const count = summaryCounts?.[key];
             const active = (status === "" && chip.value === "all") || status === chip.value;
@@ -400,7 +400,7 @@ export default function AdminBankTransfers() {
                   <TableHead>Status</TableHead>
                   <TableHead>Parent</TableHead>
                   <TableHead>{t("admin.bank.table.created")}</TableHead>
-                  <TableHead className="text-center w-[80px]">상세</TableHead>
+                  <TableHead className="text-center w-[80px]">{t("admin.common.detail")}</TableHead>
                   <TableHead className="text-right">{t("admin.bank.actions")}</TableHead>
                 </TableRow>
               </TableHeader>
@@ -442,7 +442,7 @@ export default function AdminBankTransfers() {
                     <TableCell className="text-center">
                       <Button size="sm" variant="ghost" onClick={() => void openDetail(r.id)}>
                         <Eye className="w-4 h-4 mr-1" />
-                        상세
+                        {t("admin.common.detail")}
                       </Button>
                     </TableCell>
                     <TableCell className="text-right">
@@ -494,7 +494,7 @@ export default function AdminBankTransfers() {
           )}
           <div className="flex items-center justify-between p-4 border-t flex-wrap gap-2">
             <div className="flex items-center gap-2 text-sm text-gray-500">
-              <span>페이지당</span>
+              <span>{t("admin.common.pageSize")}</span>
               <Select
                 value={String(size)}
                 onValueChange={(v) => { const s = Number(v); setSize(s); setPage(0); load(0, s); }}
@@ -502,15 +502,15 @@ export default function AdminBankTransfers() {
                 <SelectTrigger className="w-[80px] h-8 text-xs"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {PAGE_SIZE_OPTIONS.map((s) => (
-                    <SelectItem key={s} value={String(s)}>{s}건</SelectItem>
+                    <SelectItem key={s} value={String(s)}>{t("admin.common.pageSizeSuffix", { n: s })}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
             <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm" disabled={page <= 0} onClick={() => load(page - 1, size)}>이전</Button>
-              <span className="text-sm text-gray-500">{page + 1} / {Math.max(1, totalPages)}</span>
-              <Button variant="outline" size="sm" disabled={page >= totalPages - 1} onClick={() => load(page + 1, size)}>다음</Button>
+              <Button variant="outline" size="sm" disabled={page <= 0} onClick={() => load(page - 1, size)}>{t("admin.common.prev")}</Button>
+              <span className="text-sm text-gray-500">{t("admin.common.pageOf", { page: page + 1, total: Math.max(1, totalPages) })}</span>
+              <Button variant="outline" size="sm" disabled={page >= totalPages - 1} onClick={() => load(page + 1, size)}>{t("admin.common.next")}</Button>
             </div>
           </div>
         </CardContent>
@@ -519,23 +519,23 @@ export default function AdminBankTransfers() {
       <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
         <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>입금내역 상세 {detail ? `#${detail.id}` : ""}</DialogTitle>
+            <DialogTitle>{t("admin.bank.ledger.detailTitle", { id: detail ? `#${detail.id}` : "" })}</DialogTitle>
           </DialogHeader>
           {detailLoading || !detail ? (
-            <p className="text-sm text-gray-500 py-4">불러오는 중…</p>
+            <p className="text-sm text-gray-500 py-4">{t("admin.common.loading")}</p>
           ) : (
             <div className="space-y-4 text-sm">
               <div className="grid grid-cols-2 gap-x-4 gap-y-2">
                 <div>
-                  <p className="text-gray-500">사용자</p>
+                  <p className="text-gray-500">{t("admin.bank.ledger.detail.user")}</p>
                   <p className="font-medium">{detail.userEmail ?? `#${detail.userId}`}</p>
                 </div>
                 <div>
-                  <p className="text-gray-500">유형</p>
+                  <p className="text-gray-500">{t("admin.bank.ledger.detail.type")}</p>
                   <p className="font-medium">{detail.entryType}</p>
                 </div>
                 <div>
-                  <p className="text-gray-500">금액</p>
+                  <p className="text-gray-500">{t("admin.bank.ledger.detail.amount")}</p>
                   <p className="font-medium">
                     {detail.amount.toLocaleString(locale === "en" ? "en-US" : "ko-KR")} {detail.currency}
                   </p>
@@ -550,51 +550,51 @@ export default function AdminBankTransfers() {
                   ) : null}
                 </div>
                 <div>
-                  <p className="text-gray-500">상태</p>
+                  <p className="text-gray-500">{t("admin.bank.ledger.detail.status")}</p>
                   <Badge variant={detail.status === "CONFIRMED" ? "default" : "secondary"}>{detail.status}</Badge>
                 </div>
                 <div>
-                  <p className="text-gray-500">정산계좌</p>
+                  <p className="text-gray-500">{t("admin.bank.ledger.detail.settlementAccount")}</p>
                   <p className="font-medium">
                     {detail.settlementAccount?.bankName} · {detail.settlementAccount?.accountNumber}
                   </p>
                 </div>
                 <div>
-                  <p className="text-gray-500">부모 ID</p>
+                  <p className="text-gray-500">{t("admin.bank.ledger.detail.parentId")}</p>
                   <p className="font-medium">{detail.parentEntryId ?? "—"}</p>
                 </div>
                 <div>
-                  <p className="text-gray-500">입금자명</p>
+                  <p className="text-gray-500">{t("admin.bank.ledger.detail.depositorName")}</p>
                   <p className="font-medium">{detail.depositorName ?? "—"}</p>
                 </div>
                 <div>
-                  <p className="text-gray-500">입금 메모</p>
+                  <p className="text-gray-500">{t("admin.bank.ledger.detail.depositMemo")}</p>
                   <p className="font-medium break-words">{detail.depositorMemo ?? "—"}</p>
                 </div>
                 <div>
-                  <p className="text-gray-500">관리자 메모</p>
+                  <p className="text-gray-500">{t("admin.bank.ledger.detail.adminMemo")}</p>
                   <p className="font-medium break-words">{detail.adminMemo ?? "—"}</p>
                 </div>
                 <div>
-                  <p className="text-gray-500">생성일</p>
+                  <p className="text-gray-500">{t("admin.bank.ledger.detail.createdAt")}</p>
                   <p className="font-medium">{formatDate(detail.createdAt, locale)}</p>
                 </div>
                 <div>
-                  <p className="text-gray-500">확정일</p>
+                  <p className="text-gray-500">{t("admin.bank.ledger.detail.confirmedAt")}</p>
                   <p className="font-medium">{detail.confirmedAt ? formatDate(detail.confirmedAt, locale) : "—"}</p>
                 </div>
                 <div>
-                  <p className="text-gray-500">확정 관리자 ID</p>
+                  <p className="text-gray-500">{t("admin.bank.ledger.detail.confirmedAdminId")}</p>
                   <p className="font-medium">{detail.confirmedByAdminId ?? "—"}</p>
                 </div>
               </div>
 
               <div className="pt-2 border-t">
-                <p className="font-semibold mb-2">증빙 이미지</p>
+                <p className="font-semibold mb-2">{t("admin.bank.ledger.detail.evidence")}</p>
                 {!detail.attachments || detail.attachments.length === 0 ? (
                   <div className="flex items-center gap-2 text-gray-500 py-3">
                     <ImageOff className="w-4 h-4" />
-                    <span>첨부된 이미지가 없습니다</span>
+                    <span>{t("admin.bank.ledger.detail.noEvidence")}</span>
                   </div>
                 ) : (
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">

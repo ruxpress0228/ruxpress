@@ -76,7 +76,7 @@ export default function AdminNotifications() {
           setTotalElements(res.data.totalElements);
         }
       })
-      .catch(() => toast.error("알림을 불러오지 못했습니다"))
+      .catch(() => toast.error(t("admin.notification.loadError")))
       .finally(() => setLoading(false));
   }, []);
 
@@ -106,7 +106,7 @@ export default function AdminNotifications() {
     try {
       await api.patch("/v1/admin/notifications/read-all");
     } catch {
-      toast.error("처리에 실패했습니다");
+      toast.error(t("admin.common.processError"));
     }
   };
 
@@ -131,7 +131,7 @@ export default function AdminNotifications() {
       <Card>
         <CardContent className="p-0">
           {loading ? (
-            <div className="py-16 text-center text-gray-500 text-sm">불러오는 중...</div>
+            <div className="py-16 text-center text-gray-500 text-sm">{t("admin.common.loading")}</div>
           ) : items.length === 0 ? (
             <div className="py-16 flex flex-col items-center gap-3 text-gray-400">
               <Bell className="w-10 h-10" />
@@ -174,7 +174,7 @@ export default function AdminNotifications() {
               </ul>
 
               <div className="flex items-center justify-between p-4 border-t">
-                <p className="text-xs text-gray-400">총 {totalElements}건</p>
+                <p className="text-xs text-gray-400">{t("admin.notification.totalCount", { n: totalElements })}</p>
                 <div className="flex items-center gap-2">
                   <Button
                     variant="outline"
@@ -182,10 +182,10 @@ export default function AdminNotifications() {
                     disabled={page <= 0}
                     onClick={() => setPage((p) => p - 1)}
                   >
-                    이전
+                    {t("admin.common.prev")}
                   </Button>
                   <span className="text-sm text-gray-500 tabular-nums">
-                    {page + 1} / {totalPages}
+                    {t("admin.common.pageOf", { page: page + 1, total: totalPages })}
                   </span>
                   <Button
                     variant="outline"
@@ -193,7 +193,7 @@ export default function AdminNotifications() {
                     disabled={page >= totalPages - 1}
                     onClick={() => setPage((p) => p + 1)}
                   >
-                    다음
+                    {t("admin.common.next")}
                   </Button>
                 </div>
               </div>

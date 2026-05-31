@@ -46,7 +46,7 @@ export default function AdminSettlementAccounts() {
       const list = await adminListNoticeImages();
       setNoticeImages(list);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "안내 이미지 조회 실패");
+      toast.error(e instanceof Error ? e.message : t("admin.settlement.noticeImages.loadError"));
     } finally {
       setNoticeLoading(false);
     }
@@ -63,11 +63,11 @@ export default function AdminSettlementAccounts() {
       valid.push(f);
     }
     if (valid.length < picked.length) {
-      toast.error("이미지 5MB 이하 jpg/png/webp만 업로드 가능합니다");
+      toast.error(t("admin.settlement.noticeImages.invalidType"));
     }
     if (valid.length === 0) return;
     if (noticeImages.length + valid.length > MAX_NOTICE_IMAGES) {
-      toast.error(`최대 ${MAX_NOTICE_IMAGES}개까지 등록 가능합니다`);
+      toast.error(t("admin.settlement.noticeImages.maxCount", { max: MAX_NOTICE_IMAGES }));
       return;
     }
     void (async () => {
@@ -75,9 +75,9 @@ export default function AdminSettlementAccounts() {
         setNoticeUploading(true);
         const next = await adminUploadNoticeImages(valid);
         setNoticeImages(next);
-        toast.success("안내 이미지가 업로드되었습니다");
+        toast.success(t("admin.settlement.noticeImages.uploaded"));
       } catch (err) {
-        toast.error(err instanceof Error ? err.message : "업로드 실패");
+        toast.error(err instanceof Error ? err.message : t("admin.common.uploadError"));
       } finally {
         setNoticeUploading(false);
       }
@@ -85,13 +85,13 @@ export default function AdminSettlementAccounts() {
   };
 
   const onDeleteNoticeImage = async (attachmentId: number) => {
-    if (!confirm("이 이미지를 삭제하시겠습니까?")) return;
+    if (!confirm(t("admin.settlement.noticeImages.deleteConfirm"))) return;
     try {
       await adminDeleteNoticeImage(attachmentId);
       setNoticeImages((prev) => prev.filter((x) => x.id !== attachmentId));
-      toast.success("이미지가 삭제되었습니다");
+      toast.success(t("admin.settlement.noticeImages.deleted"));
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "삭제 실패");
+      toast.error(e instanceof Error ? e.message : t("admin.common.deleteError"));
     }
   };
 
@@ -290,10 +290,10 @@ export default function AdminSettlementAccounts() {
             <div>
               <CardTitle className="flex items-center gap-2">
                 <ImageIcon className="w-5 h-5 text-blue-600" />
-                안내 이미지
+                {t("admin.settlement.noticeImages.title")}
               </CardTitle>
               <CardDescription>
-                사용자 계좌이체 페이지에서 입금계좌 아래에 노출됩니다. (jpg/png/webp, 5MB, 최대 {MAX_NOTICE_IMAGES}장)
+                {t("admin.settlement.noticeImages.desc", { max: MAX_NOTICE_IMAGES })}
               </CardDescription>
             </div>
             <div>
@@ -311,16 +311,16 @@ export default function AdminSettlementAccounts() {
                 disabled={noticeUploading || noticeImages.length >= MAX_NOTICE_IMAGES}
               >
                 <Upload className="w-4 h-4 mr-2" />
-                {noticeUploading ? "업로드 중..." : "이미지 추가"}
+                {noticeUploading ? t("admin.common.uploading") : t("admin.settlement.noticeImages.add")}
               </Button>
             </div>
           </div>
         </CardHeader>
         <CardContent>
           {noticeLoading ? (
-            <p className="text-sm text-gray-500">불러오는 중...</p>
+            <p className="text-sm text-gray-500">{t("admin.common.loading")}</p>
           ) : noticeImages.length === 0 ? (
-            <p className="text-sm text-gray-500">등록된 안내 이미지가 없습니다.</p>
+            <p className="text-sm text-gray-500">{t("admin.settlement.noticeImages.empty")}</p>
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
               {noticeImages.map((img) => {
@@ -341,7 +341,7 @@ export default function AdminSettlementAccounts() {
                       size="icon"
                       className="absolute top-1 right-1 h-7 w-7 opacity-90"
                       onClick={() => void onDeleteNoticeImage(img.id)}
-                      title="삭제"
+                      title={t("admin.common.delete")}
                     >
                       <X className="w-4 h-4" />
                     </Button>

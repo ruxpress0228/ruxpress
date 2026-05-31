@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { api, notifyUserAuthChange } from "../../utils/api";
 import { unwrap } from "../../utils/exception";
 import { STORAGE_KEYS } from "../../utils/constants";
+import { useTranslation } from "../../hooks/useTranslation";
 
 interface LoginResponse {
   token: string;
@@ -19,6 +20,7 @@ interface LoginResponse {
 }
 
 export default function AdminLogin() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -31,7 +33,6 @@ export default function AdminLogin() {
     try {
       const res = await api.post<LoginResponse>("/v1/admin/auth/login", { email, password });
       const data = unwrap(res);
-      // 자동로그인 체크 시 localStorage, 미체크 시 sessionStorage.
       const storage: Storage = rememberMe ? localStorage : sessionStorage;
       localStorage.removeItem(STORAGE_KEYS.TOKEN);
       sessionStorage.removeItem(STORAGE_KEYS.TOKEN);
@@ -51,10 +52,10 @@ export default function AdminLogin() {
         localStorage.removeItem(STORAGE_KEYS.REMEMBER_ME);
       }
       notifyUserAuthChange();
-      toast.success(`${data.name}님, 환영합니다`);
+      toast.success(t("admin.login.welcome", { name: data.name }));
       navigate("/admin");
     } catch {
-      toast.error("이메일 또는 비밀번호가 올바르지 않습니다");
+      toast.error(t("admin.login.invalidCredentials"));
     } finally {
       setLoading(false);
     }
@@ -69,15 +70,15 @@ export default function AdminLogin() {
               <span className="text-white text-2xl font-bold">R</span>
             </div>
           </div>
-          <CardTitle className="text-2xl text-center">관리자 로그인</CardTitle>
+          <CardTitle className="text-2xl text-center">{t("admin.login.title")}</CardTitle>
           <CardDescription className="text-center">
-            Ruxpress 관리자 페이지
+            {t("admin.login.subtitle")}
           </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="admin-email">이메일</Label>
+              <Label htmlFor="admin-email">{t("admin.login.email")}</Label>
               <Input
                 id="admin-email"
                 type="email"
@@ -89,7 +90,7 @@ export default function AdminLogin() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="admin-password">비밀번호</Label>
+              <Label htmlFor="admin-password">{t("admin.login.password")}</Label>
               <Input
                 id="admin-password"
                 type="password"
@@ -107,11 +108,11 @@ export default function AdminLogin() {
                 onCheckedChange={(v) => setRememberMe(v === true)}
               />
               <Label htmlFor="admin-remember-me" className="text-sm font-normal cursor-pointer">
-                자동 로그인 (다음 접속 시 로그인 유지)
+                {t("admin.login.rememberMe")}
               </Label>
             </div>
             <Button type="submit" className="w-full" size="lg" disabled={loading}>
-              {loading ? "로그인 중..." : "로그인"}
+              {loading ? t("admin.login.submitting") : t("admin.login.submit")}
             </Button>
           </form>
         </CardContent>

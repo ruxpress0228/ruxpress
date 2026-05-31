@@ -103,13 +103,16 @@ function hasShippingSnapshot(s?: PurchaseShipping | null): boolean {
   return Boolean(s.addressLine1 || s.recipientName);
 }
 
-function shippingSummaryLines(s: PurchaseShipping): { title: string; subtitle: string } {
-  const name = s.recipientName?.trim() || "수령인 미입력";
+function shippingSummaryLines(
+  s: PurchaseShipping,
+  tr: (key: string) => string,
+): { title: string; subtitle: string } {
+  const name = s.recipientName?.trim() || tr("adminPurchase.shipping.noRecipient");
   const phone = s.recipientPhone?.trim();
   const line1 = [s.postalCode ? `(${s.postalCode})` : null, s.addressLine1].filter(Boolean).join(" ").trim();
   const line2 = s.addressLine2?.trim();
   const addrMain = [line1, line2].filter(Boolean).join(", ");
-  const subtitle = [phone, addrMain].filter(Boolean).join(" · ") || "주소 없음";
+  const subtitle = [phone, addrMain].filter(Boolean).join(" · ") || tr("adminPurchase.shipping.noAddress");
   const label = s.label?.trim();
   const title = label ? `${label} · ${name}` : name;
   return { title, subtitle };
@@ -303,13 +306,13 @@ export default function AdminPurchaseRequests() {
         adminMemo: statusMemo.trim() || undefined,
         trackingNumber: trackingNumber.trim() || undefined,
       });
-      toast.success("저장되었습니다");
+      toast.success(t("adminPurchase.toast.saved"));
       setSelected(updated);
       void loadSummary();
       void fetchPage(page, size, statusFilter, userKeyword);
       setDialogOpen(false);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "실패");
+      toast.error(e instanceof Error ? e.message : t("adminPurchase.toast.failed"));
     }
   };
 
@@ -318,13 +321,13 @@ export default function AdminPurchaseRequests() {
     try {
       setUploadingFiles(true);
       const updated = await adminUploadPurchaseAttachments(selected.id, adminFiles);
-      toast.success(`사진 ${adminFiles.length}장이 업로드되었습니다`);
+      toast.success(t("adminPurchase.toast.photosUploaded", { n: adminFiles.length }));
       setSelected(updated);
       setAdminFiles([]);
       void loadSummary();
       void fetchPage(page, size, statusFilter, userKeyword);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "업로드 실패");
+      toast.error(e instanceof Error ? e.message : t("adminPurchase.toast.uploadFailed"));
     } finally {
       setUploadingFiles(false);
     }
@@ -351,7 +354,7 @@ export default function AdminPurchaseRequests() {
       void loadSummary();
       void fetchPage(page, size, statusFilter, userKeyword);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "실패");
+      toast.error(e instanceof Error ? e.message : t("adminPurchase.toast.failed"));
     }
   };
 
@@ -501,7 +504,7 @@ export default function AdminPurchaseRequests() {
           filtered.map((request) => {
             const accent = purchaseStatusAccent(request.status);
             const sh = request.shipping;
-            const shipLines = hasShippingSnapshot(sh) && sh ? shippingSummaryLines(sh) : null;
+            const shipLines = hasShippingSnapshot(sh) && sh ? shippingSummaryLines(sh, t) : null;
             const shipTitle =
               hasShippingSnapshot(sh) && sh
                 ? [sh.label, sh.recipientName, sh.recipientPhone, sh.postalCode, sh.addressLine1, sh.addressLine2]
@@ -689,7 +692,7 @@ export default function AdminPurchaseRequests() {
                 </div>
                 <div className="flex flex-wrap items-center justify-between gap-2 text-sm text-gray-600">
                   <p className="min-w-0 truncate">
-                    <span className="text-gray-500">회원</span>{" "}
+                    <span className="text-gray-500">{t("adminPurchase.modal.member")}</span>{" "}
                     <span className="font-medium text-gray-900">{selected.userNickname ?? `#${selected.userId}`}</span>
                     {selected.userEmail ? (
                       <span className="hidden sm:inline"> · {selected.userEmail}</span>
@@ -702,7 +705,7 @@ export default function AdminPurchaseRequests() {
                     className="h-8 shrink-0 gap-1 text-xs text-gray-600 hover:text-gray-900"
                     onClick={() => navigate(`/admin/purchase-requests/${selected.id}`)}
                   >
-                    전체 상세
+                    {t("adminPurchase.modal.fullDetail")}
                     <ExternalLink className="h-3.5 w-3.5" aria-hidden />
                   </Button>
                 </div>
@@ -712,16 +715,16 @@ export default function AdminPurchaseRequests() {
                 <div className="mx-auto max-w-3xl space-y-4">
                   <Card className="border-gray-200 shadow-none">
                     <CardHeader className="space-y-1 pb-2">
-                      <CardTitle className="text-sm font-semibold text-gray-900">주문 요약</CardTitle>
-                      <CardDescription className="text-xs">선차감·금액을 한눈에 확인합니다</CardDescription>
+                      <CardTitle className="text-sm font-semibold text-gray-900">{t("adminPurchase.modal.orderSummary")}</CardTitle>
+                      <CardDescription className="text-xs">{t("adminPurchase.modal.orderSummaryDesc")}</CardDescription>
                     </CardHeader>
                     <CardContent className="grid gap-3 text-sm sm:grid-cols-2">
                       <div>
-                        <p className="text-xs font-medium uppercase tracking-wide text-gray-500">수량</p>
-                        <p className="mt-0.5 font-semibold text-gray-900">{selected.quantity}개</p>
+                        <p className="text-xs font-medium uppercase tracking-wide text-gray-500">{t("adminPurchase.modal.quantity")}</p>
+                        <p className="mt-0.5 font-semibold text-gray-900">{t("adminPurchase.modal.quantityUnit", { n: selected.quantity })}</p>
                       </div>
                       <div>
-                        <p className="text-xs font-medium uppercase tracking-wide text-gray-500">총 금액(원)</p>
+                        <p className="text-xs font-medium uppercase tracking-wide text-gray-500">{t("adminPurchase.modal.totalKrw")}</p>
                         <p className="mt-0.5 font-semibold text-gray-900">
                           {selected.totalAmountKrw != null
                             ? `₩${formatNumber(selected.totalAmountKrw, locale, num0)}`
@@ -729,7 +732,7 @@ export default function AdminPurchaseRequests() {
                         </p>
                       </div>
                       <div>
-                        <p className="text-xs font-medium uppercase tracking-wide text-gray-500">선차감</p>
+                        <p className="text-xs font-medium uppercase tracking-wide text-gray-500">{t("adminPurchase.modal.charged")}</p>
                         <p className="mt-0.5 font-semibold text-gray-900">
                           {selected.chargedAmountKrw != null
                             ? `₩${formatNumber(selected.chargedAmountKrw, locale, num0)}`
@@ -737,9 +740,9 @@ export default function AdminPurchaseRequests() {
                         </p>
                       </div>
                       <div>
-                        <p className="text-xs font-medium uppercase tracking-wide text-gray-500">등록일</p>
+                        <p className="text-xs font-medium uppercase tracking-wide text-gray-500">{t("adminPurchase.modal.createdAt")}</p>
                         <p className="mt-0.5 text-gray-800">
-                          {new Date(selected.createdAt).toLocaleString("ko-KR", {
+                          {new Date(selected.createdAt).toLocaleString(dateLocale, {
                             month: "short",
                             day: "numeric",
                             hour: "2-digit",
@@ -757,10 +760,10 @@ export default function AdminPurchaseRequests() {
                           <span className="flex min-w-0 flex-1 items-start gap-2 text-left">
                             <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-blue-600" aria-hidden />
                             <span className="min-w-0">
-                              <span className="block font-semibold text-gray-900">배송지</span>
+                              <span className="block font-semibold text-gray-900">{t("adminPurchase.modal.shipping")}</span>
                               <span className="mt-0.5 block truncate text-xs font-normal text-gray-600">
-                                {shippingSummaryLines(selected.shipping).title} ·{" "}
-                                {shippingSummaryLines(selected.shipping).subtitle}
+                                {shippingSummaryLines(selected.shipping, t).title} ·{" "}
+                                {shippingSummaryLines(selected.shipping, t).subtitle}
                               </span>
                             </span>
                           </span>
@@ -769,25 +772,25 @@ export default function AdminPurchaseRequests() {
                           <div className="space-y-2 rounded-md border border-blue-100 bg-blue-50/50 p-3 text-sm text-gray-800">
                             {selected.shipping.label ? (
                               <p>
-                                <span className="text-gray-500">라벨</span> {selected.shipping.label}
+                                <span className="text-gray-500">{t("adminPurchase.modal.label")}</span> {selected.shipping.label}
                               </p>
                             ) : null}
                             {(selected.shipping.recipientName || selected.shipping.recipientPhone) && (
                               <p>
-                                <span className="text-gray-500">수령</span>{" "}
+                                <span className="text-gray-500">{t("adminPurchase.modal.recipient")}</span>{" "}
                                 {[selected.shipping.recipientName, selected.shipping.recipientPhone]
                                   .filter(Boolean)
                                   .join(" · ")}
                               </p>
                             )}
                             <p className="break-words leading-relaxed">
-                              <span className="text-gray-500">주소</span>{" "}
+                              <span className="text-gray-500">{t("adminPurchase.modal.address")}</span>{" "}
                               {selected.shipping.postalCode ? `(${selected.shipping.postalCode}) ` : null}
                               {selected.shipping.addressLine1}
                               {selected.shipping.addressLine2 ? ` ${selected.shipping.addressLine2}` : ""}
                             </p>
                             {selected.shipping.userAddressId != null && (
-                              <p className="text-xs text-gray-500">회원 배송지 ID: {selected.shipping.userAddressId}</p>
+                              <p className="text-xs text-gray-500">{t("adminPurchase.modal.userAddressId", { id: selected.shipping.userAddressId })}</p>
                             )}
                           </div>
                         </AccordionContent>
@@ -795,18 +798,18 @@ export default function AdminPurchaseRequests() {
                     </Accordion>
                   ) : (
                     <p className="rounded-lg border border-amber-200 bg-amber-50/90 px-3 py-2.5 text-xs text-amber-900">
-                      배송지 스냅샷이 없습니다. 구버전 요청이거나 데이터 누락일 수 있습니다.
+                      {t("adminPurchase.modal.noShippingSnapshot")}
                     </p>
                   )}
 
                   <Card className="border-gray-900/10 shadow-sm ring-1 ring-gray-900/5">
                     <CardHeader className="pb-2">
-                      <CardTitle className="text-sm font-semibold text-gray-900">처리</CardTitle>
-                      <CardDescription className="text-xs">상태·운송장·메모 변경 후 하단에서 저장합니다</CardDescription>
+                      <CardTitle className="text-sm font-semibold text-gray-900">{t("adminPurchase.modal.process")}</CardTitle>
+                      <CardDescription className="text-xs">{t("adminPurchase.modal.processDesc")}</CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-4">
                       <div className="space-y-2">
-                        <Label htmlFor="purchase-admin-status">상태</Label>
+                        <Label htmlFor="purchase-admin-status">{t("adminPurchase.modal.status")}</Label>
                         <Select value={newStatus} onValueChange={(v) => setNewStatus(v as PurchaseRequestStatus)}>
                           <SelectTrigger id="purchase-admin-status" className="w-full">
                             <SelectValue />
@@ -821,24 +824,24 @@ export default function AdminPurchaseRequests() {
                         </Select>
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="purchase-admin-tracking">운송장번호</Label>
+                        <Label htmlFor="purchase-admin-tracking">{t("adminPurchase.modal.tracking")}</Label>
                         <Input
                           id="purchase-admin-tracking"
                           value={trackingNumber}
                           onChange={(e) => setTrackingNumber(e.target.value)}
-                          placeholder="예: 1234-5678-9012"
+                          placeholder={t("adminPurchase.modal.trackingPlaceholder")}
                           autoComplete="off"
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="purchase-admin-memo">관리자 메모</Label>
+                        <Label htmlFor="purchase-admin-memo">{t("adminPurchase.modal.adminMemo")}</Label>
                         <Textarea
                           id="purchase-admin-memo"
                           rows={2}
                           value={statusMemo}
                           onChange={(e) => setStatusMemo(e.target.value)}
                           className="min-h-[72px] resize-y"
-                          placeholder="내부 메모 (고객에게 노출되지 않음)"
+                          placeholder={t("adminPurchase.modal.adminMemoPlaceholder")}
                         />
                       </div>
                     </CardContent>
@@ -850,8 +853,8 @@ export default function AdminPurchaseRequests() {
                       className="rounded-lg border border-gray-200 bg-white px-3 data-[state=open]:shadow-sm"
                     >
                       <AccordionTrigger className="py-3 text-sm hover:no-underline">
-                        <span className="font-semibold text-gray-900">관리자 사진 첨부</span>
-                        <span className="ml-2 text-xs font-normal text-gray-500">배송/수령 등</span>
+                        <span className="font-semibold text-gray-900">{t("adminPurchase.modal.adminPhotos")}</span>
+                        <span className="ml-2 text-xs font-normal text-gray-500">{t("adminPurchase.modal.adminPhotosHint")}</span>
                       </AccordionTrigger>
                       <AccordionContent>
                         <div className="space-y-3 pb-1">
@@ -862,7 +865,7 @@ export default function AdminPurchaseRequests() {
                             onChange={(e) => setAdminFiles(Array.from(e.target.files || []))}
                           />
                           {adminFiles.length > 0 ? (
-                            <p className="text-xs text-gray-500">{adminFiles.length}개 선택됨</p>
+                            <p className="text-xs text-gray-500">{t("adminPurchase.modal.filesSelected", { n: adminFiles.length })}</p>
                           ) : null}
                           <Button
                             type="button"
@@ -871,7 +874,7 @@ export default function AdminPurchaseRequests() {
                             disabled={adminFiles.length === 0 || uploadingFiles}
                             onClick={() => void uploadAdminFiles()}
                           >
-                            {uploadingFiles ? "업로드 중..." : `사진 업로드 (${adminFiles.length})`}
+                            {uploadingFiles ? t("adminPurchase.modal.uploading") : t("adminPurchase.modal.uploadPhotos", { n: adminFiles.length })}
                           </Button>
                         </div>
                       </AccordionContent>
@@ -883,14 +886,14 @@ export default function AdminPurchaseRequests() {
                         className="rounded-lg border border-amber-200/80 bg-amber-50/40 px-3 data-[state=open]:shadow-sm"
                       >
                         <AccordionTrigger className="py-3 text-sm hover:no-underline">
-                          <span className="font-semibold text-amber-950">지갑 환급 · 차액 정산</span>
-                          <span className="ml-2 text-xs font-normal text-amber-900/80">SUPER · 신중히 입력</span>
+                          <span className="font-semibold text-amber-950">{t("adminPurchase.modal.walletRefund")}</span>
+                          <span className="ml-2 text-xs font-normal text-amber-900/80">{t("adminPurchase.modal.walletRefundHint")}</span>
                         </AccordionTrigger>
                         <AccordionContent>
                           <div className="space-y-3 pb-1">
                             <p className="text-sm font-semibold text-amber-950">{t("adminPurchase.walletCreditTitle")}</p>
                             <div className="rounded-md border border-amber-200/90 bg-white px-3 py-2 text-sm">
-                              <span className="text-gray-600">현재 선차감</span>{" "}
+                              <span className="text-gray-600">{t("adminPurchase.modal.currentCharged")}</span>{" "}
                               <span className="font-semibold text-gray-900">
                                 {selected.chargedAmountKrw != null
                                   ? `₩${formatNumber(selected.chargedAmountKrw, locale, num0)}`
@@ -901,7 +904,7 @@ export default function AdminPurchaseRequests() {
                             <div className="space-y-2">
                               <Label>{t("adminPurchase.walletAmount")}</Label>
                               <p className="text-xs text-gray-600">
-                                모달을 열면 선차감 금액(없으면 총액)이 기본 입력됩니다. 전액 환급 시 그대로 제출하면 됩니다.
+                                {t("adminPurchase.modal.walletRefundNote")}
                               </p>
                               <Input
                                 type="number"
@@ -954,16 +957,14 @@ export default function AdminPurchaseRequests() {
 
               <div className="flex shrink-0 flex-col gap-2 border-t bg-background/95 px-4 py-3 backdrop-blur-sm supports-[backdrop-filter]:bg-background/80 sm:flex-row sm:items-center sm:justify-between sm:px-6">
                 <p className="hidden text-[11px] text-gray-500 sm:block">
-                  <kbd className="rounded border bg-muted px-1 py-0.5 font-mono text-[10px]">⌘</kbd> 또는{" "}
-                  <kbd className="rounded border bg-muted px-1 py-0.5 font-mono text-[10px]">Ctrl</kbd> +{" "}
-                  <kbd className="rounded border bg-muted px-1 py-0.5 font-mono text-[10px]">Enter</kbd> 로 상태 저장
+                  {t("adminPurchase.modal.saveShortcut")}
                 </p>
                 <div className="flex w-full justify-end gap-2 sm:w-auto">
                   <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
-                    닫기
+                    {t("adminPurchase.modal.close")}
                   </Button>
                   <Button type="button" className="min-w-[8.5rem] font-semibold" onClick={() => void saveStatus()}>
-                    상태·운송장 저장
+                    {t("adminPurchase.modal.saveStatus")}
                   </Button>
                 </div>
               </div>

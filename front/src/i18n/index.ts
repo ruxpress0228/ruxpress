@@ -19,11 +19,20 @@ export function setLocale(locale: Locale): void {
   localStorage.setItem(STORAGE_KEYS.LOCALE, locale);
 }
 
-/** Look up message for a specific locale (used by I18nProvider and tests). */
-export function translate(key: string, locale: Locale): string {
-  return messages[locale]?.[key] ?? key;
+function applyVars(template: string, vars?: Record<string, string | number>): string {
+  if (!vars) return template;
+  let s = template;
+  for (const [k, v] of Object.entries(vars)) {
+    s = s.split(`{{${k}}}`).join(String(v));
+  }
+  return s;
 }
 
-export function t(key: string): string {
-  return translate(key, currentLocale);
+/** Look up message for a specific locale (used by I18nProvider and tests). */
+export function translate(key: string, locale: Locale, vars?: Record<string, string | number>): string {
+  return applyVars(messages[locale]?.[key] ?? key, vars);
+}
+
+export function t(key: string, vars?: Record<string, string | number>): string {
+  return translate(key, currentLocale, vars);
 }

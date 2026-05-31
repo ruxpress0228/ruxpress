@@ -163,7 +163,7 @@ export default function AdminExchangeRate() {
       await api.put<{ key: string; value: string }>("/v1/admin/settings/fee-rate", { value: feeRate });
       toast.success(t("admin.exchange.toast.feeSuccess"));
     } catch {
-      toast.error("수수료율 저장에 실패했습니다");
+      toast.error(t("admin.exchange.toast.feeError"));
     }
   };
 
@@ -365,7 +365,7 @@ export default function AdminExchangeRate() {
             </Table>
             <div className="flex items-center justify-between p-4 border-t flex-wrap gap-2">
               <div className="flex items-center gap-2 text-sm text-gray-500">
-                <span>페이지당</span>
+                <span>{t("admin.common.pageSize")}</span>
                 <Select
                   value={String(historySize)}
                   onValueChange={(v) => { const s = Number(v); setHistorySize(s); setHistoryPage(0); void refreshHistory(0, s); }}
@@ -373,15 +373,15 @@ export default function AdminExchangeRate() {
                   <SelectTrigger className="w-[80px] h-8 text-xs"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     {PAGE_SIZE_OPTIONS.map((s) => (
-                      <SelectItem key={s} value={String(s)}>{s}건</SelectItem>
+                      <SelectItem key={s} value={String(s)}>{t("admin.common.pageSizeSuffix", { n: s })}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
               <div className="flex items-center gap-2">
-                <Button variant="outline" size="sm" disabled={historyPage <= 0} onClick={() => { void refreshHistory(historyPage - 1, historySize); }}>이전</Button>
-                <span className="text-sm text-gray-500">{historyPage + 1} / {Math.max(1, historyTotalPages)}</span>
-                <Button variant="outline" size="sm" disabled={historyPage >= historyTotalPages - 1} onClick={() => { void refreshHistory(historyPage + 1, historySize); }}>다음</Button>
+                <Button variant="outline" size="sm" disabled={historyPage <= 0} onClick={() => { void refreshHistory(historyPage - 1, historySize); }}>{t("admin.common.prev")}</Button>
+                <span className="text-sm text-gray-500">{t("admin.common.pageOf", { page: historyPage + 1, total: Math.max(1, historyTotalPages) })}</span>
+                <Button variant="outline" size="sm" disabled={historyPage >= historyTotalPages - 1} onClick={() => { void refreshHistory(historyPage + 1, historySize); }}>{t("admin.common.next")}</Button>
               </div>
             </div>
           </>
