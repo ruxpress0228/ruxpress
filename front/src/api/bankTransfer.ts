@@ -1,4 +1,5 @@
 import { api } from "../utils/api";
+import { DEFAULT_PAGE_SIZE } from "../utils/constants";
 import type { PageResponse } from "../types";
 import type {
   BankTransferAttachment,
@@ -44,7 +45,7 @@ export async function reportDeposit(body: {
   return res.data;
 }
 
-export async function getMyLedgerEntries(page = 0, size = 20): Promise<PageResponse<TransferLedgerEntry>> {
+export async function getMyLedgerEntries(page = 0, size = DEFAULT_PAGE_SIZE): Promise<PageResponse<TransferLedgerEntry>> {
   const res = await api.get<PageResponse<TransferLedgerEntry>>(`${BANK_BASE}?page=${page}&size=${size}`);
   if (res.code !== 200 || res.data == null) throw new Error(res.message || "Failed to load entries");
   return res.data;

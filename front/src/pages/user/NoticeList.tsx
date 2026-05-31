@@ -8,9 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { api } from "../../utils/api";
 import { unwrap } from "../../utils/exception";
 import { useTranslation } from "../../hooks/useTranslation";
+import { DEFAULT_PAGE_SIZE, PAGE_SIZE_OPTIONS } from "../../utils/constants";
 import type { Notice, PageResponse } from "../../types";
-
-const PAGE_SIZE_OPTIONS = [20, 30, 50, 100] as const;
 
 export default function NoticeList() {
   const { t, locale } = useTranslation();
@@ -19,7 +18,7 @@ export default function NoticeList() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [page, setPage] = useState(0);
-  const [size, setSize] = useState(20);
+  const [size, setSize] = useState(DEFAULT_PAGE_SIZE);
   const [totalPages, setTotalPages] = useState(0);
 
   const load = useCallback((p: number, s: number) => {

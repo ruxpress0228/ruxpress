@@ -14,6 +14,7 @@ import { api } from "../../utils/api";
 import { unwrap } from "../../utils/exception";
 import type { Notice, NoticeStatus, PageResponse } from "../../types";
 import { useTranslation } from "../../hooks/useTranslation";
+import { DEFAULT_PAGE_SIZE, PAGE_SIZE_OPTIONS } from "../../utils/constants";
 
 const statusVariants: Record<NoticeStatus, "default" | "secondary" | "outline" | "destructive"> = {
   DRAFT: "outline",
@@ -21,8 +22,6 @@ const statusVariants: Record<NoticeStatus, "default" | "secondary" | "outline" |
   PUBLISHED: "default",
   HIDDEN: "destructive",
 };
-
-const PAGE_SIZE_OPTIONS = [20, 30, 50, 100] as const;
 
 function noticeStatusKey(status: NoticeStatus) {
   return `admin.notice.status.${status}` as "admin.notice.status.DRAFT" | "admin.notice.status.SCHEDULED" | "admin.notice.status.PUBLISHED" | "admin.notice.status.HIDDEN";
@@ -34,7 +33,7 @@ export default function AdminNotices() {
   const [notices, setNotices] = useState<Notice[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(0);
-  const [size, setSize] = useState(20);
+  const [size, setSize] = useState(DEFAULT_PAGE_SIZE);
   const [totalPages, setTotalPages] = useState(0);
   const [formOpen, setFormOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<Notice | null>(null);

@@ -12,6 +12,7 @@ import { api } from "../../utils/api";
 import { unwrap } from "../../utils/exception";
 import type { User, UserStatus, PageResponse } from "../../types";
 import { useTranslation } from "../../hooks/useTranslation";
+import { DEFAULT_PAGE_SIZE, PAGE_SIZE_OPTIONS } from "../../utils/constants";
 
 const userStatusVariants: Record<UserStatus, "default" | "secondary" | "outline" | "destructive"> = {
   ACTIVE: "default",
@@ -33,8 +34,6 @@ interface UserStats {
   newUsersToday: number;
 }
 
-const PAGE_SIZE_OPTIONS = [20, 30, 50, 100] as const;
-
 export default function AdminUsers() {
   const { t, locale } = useTranslation();
   const dateLocale = locale === "ko" ? "ko-KR" : locale === "ru" ? "ru-RU" : "en-US";
@@ -43,7 +42,7 @@ export default function AdminUsers() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
   const [page, setPage] = useState(0);
-  const [size, setSize] = useState(20);
+  const [size, setSize] = useState(DEFAULT_PAGE_SIZE);
   const [totalPages, setTotalPages] = useState(0);
   const [stats, setStats] = useState<UserStats | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);

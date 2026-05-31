@@ -9,8 +9,7 @@ import { useTranslation } from "../../hooks/useTranslation";
 import { resolveAdminNotificationText } from "../../utils/adminNotificationI18n";
 import { api } from "../../utils/api";
 import type { AdminNotification, AdminNotificationSummary, AdminNotificationType, ApiResponse } from "../../types";
-
-const PAGE_SIZE = 20;
+import { DEFAULT_PAGE_SIZE } from "../../utils/constants";
 
 function formatRelativeTime(iso: string, t: (key: string) => string): string {
   const now = Date.now();
@@ -65,11 +64,11 @@ export default function AdminNotifications() {
   const [page, setPage] = useState(0);
   const [loading, setLoading] = useState(true);
 
-  const totalPages = Math.max(1, Math.ceil(totalElements / PAGE_SIZE));
+  const totalPages = Math.max(1, Math.ceil(totalElements / DEFAULT_PAGE_SIZE));
 
   const load = useCallback((p: number) => {
     setLoading(true);
-    (api.get(`/v1/admin/notifications?limit=${PAGE_SIZE}&page=${p}`) as Promise<ApiResponse<AdminNotificationSummary>>)
+    (api.get(`/v1/admin/notifications?limit=${DEFAULT_PAGE_SIZE}&page=${p}`) as Promise<ApiResponse<AdminNotificationSummary>>)
       .then((res) => {
         if (res?.code === 200 && res.data) {
           setItems(res.data.items);

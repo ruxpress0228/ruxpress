@@ -1,4 +1,5 @@
 import { api } from "../utils/api";
+import { DEFAULT_PAGE_SIZE } from "../utils/constants";
 import type { PageResponse } from "../types";
 import type { WalletLedgerEntry } from "./balance";
 
@@ -41,7 +42,7 @@ export async function adminGetUserWallet(userId: number): Promise<AdminUserWalle
 export async function adminGetUserWalletLedger(
   userId: number,
   page = 0,
-  size = 20
+  size = DEFAULT_PAGE_SIZE
 ): Promise<PageResponse<WalletLedgerEntry>> {
   const res = await api.get<PageResponse<WalletLedgerEntry>>(
     `${ADMIN_WALLETS}/users/${userId}/ledger?page=${page}&size=${size}`

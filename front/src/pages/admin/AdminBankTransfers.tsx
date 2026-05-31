@@ -32,10 +32,10 @@ import {
 import { useTranslation } from "../../hooks/useTranslation";
 import { formatDate } from "../../utils/format";
 import { readAuthValue } from "../../utils/api";
+import { DEFAULT_PAGE_SIZE, PAGE_SIZE_OPTIONS } from "../../utils/constants";
 import type { TransferLedgerEntry, TransferLedgerStatus } from "../../types/bankTransfer";
 
 const ADMIN_STORAGE_KEY = "ruxpress_admin";
-const PAGE_SIZE_OPTIONS = [20, 30, 50, 100] as const;
 
 type StatusChipValue = "all" | TransferLedgerStatus;
 const COUNTABLE_STATUSES: TransferLedgerStatus[] = ["PENDING", "CONFIRMED", "CANCELLED"];
@@ -81,7 +81,7 @@ export default function AdminBankTransfers() {
   const [entryType, setEntryType] = useState<string>("DEPOSIT");
   const [userEmailFilter, setUserEmailFilter] = useState("");
   const [page, setPage] = useState(0);
-  const [size, setSize] = useState(20);
+  const [size, setSize] = useState(DEFAULT_PAGE_SIZE);
   const [totalPages, setTotalPages] = useState(0);
   const [totalElements, setTotalElements] = useState(0);
   const [summaryCounts, setSummaryCounts] = useState<

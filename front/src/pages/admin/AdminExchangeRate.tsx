@@ -24,6 +24,7 @@ import {
   formatRateToKrwLine,
   parseRateToKrwInput,
 } from "../../utils/exchange";
+import { DEFAULT_PAGE_SIZE, PAGE_SIZE_OPTIONS } from "../../utils/constants";
 
 const fetchedAtOptions: Intl.DateTimeFormatOptions = {
   year: "numeric",
@@ -34,7 +35,6 @@ const fetchedAtOptions: Intl.DateTimeFormatOptions = {
 };
 
 const EMPTY_INPUTS: Record<string, string> = { RUB: "", USD: "", CNY: "", JPY: "", EUR: "" };
-const PAGE_SIZE_OPTIONS = [20, 30, 50, 100] as const;
 
 function mergeInputsFromQuotes(
   prev: Record<string, string>,
@@ -66,7 +66,7 @@ export default function AdminExchangeRate() {
   const [currentRates, setCurrentRates] = useState<CurrentExchangeRates | null>(null);
   const [history, setHistory] = useState<ExchangeRate[]>([]);
   const [historyPage, setHistoryPage] = useState(0);
-  const [historySize, setHistorySize] = useState(20);
+  const [historySize, setHistorySize] = useState(DEFAULT_PAGE_SIZE);
   const [historyTotalPages, setHistoryTotalPages] = useState(0);
   const [loading, setLoading] = useState(true);
   const [fetching, setFetching] = useState(false);

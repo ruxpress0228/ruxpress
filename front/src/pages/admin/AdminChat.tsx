@@ -10,6 +10,7 @@ import {
 import { useChat } from '@/hooks/chat/useChat';
 import { useTranslation } from '@/hooks/useTranslation';
 import { readAuthValue } from '@/utils/api';
+import { DEFAULT_PAGE_SIZE, PAGE_SIZE_OPTIONS } from '@/utils/constants';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
@@ -21,7 +22,6 @@ import { ChatInputBar } from '@/components/chat/ChatInputBar';
 import { toast } from 'sonner';
 import type { ChatRoom, ChatRoomStatus, ChatCleanupSettings, ChatRetentionPeriod } from '@/types/chat';
 
-const PAGE_SIZE_OPTIONS = [20, 30, 50, 100] as const;
 const ROOM_LIST_POLL_MS = 15_000;
 const ADMIN_STORAGE_KEY = 'ruxpress_admin';
 
@@ -41,7 +41,7 @@ export default function AdminChat() {
   const [activeTab, setActiveTab] = useState<ChatRoomStatus>('OPEN');
   const [input, setInput] = useState('');
   const [roomsPage, setRoomsPage] = useState(0);
-  const [roomsSize, setRoomsSize] = useState(20);
+  const [roomsSize, setRoomsSize] = useState(DEFAULT_PAGE_SIZE);
   const [roomsTotalPages, setRoomsTotalPages] = useState(0);
   const [roomsRefreshing, setRoomsRefreshing] = useState(false);
   const [cleanupSettings, setCleanupSettings] = useState<ChatCleanupSettings | null>(null);

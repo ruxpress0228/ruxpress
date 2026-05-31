@@ -32,8 +32,7 @@ import {
   type AdminUserWallet,
 } from "../../api/adminWallet";
 import type { WalletLedgerEntry } from "../../api/balance";
-
-const PAGE_SIZE_OPTIONS = [20, 30, 50, 100] as const;
+import { DEFAULT_PAGE_SIZE, PAGE_SIZE_OPTIONS } from "../../utils/constants";
 
 function entryLabel(t: (k: string) => string, type: string): string {
   const key = `wallet.entry.${type}`;
@@ -47,7 +46,7 @@ export default function AdminUserWallets() {
   const [loading, setLoading] = useState(true);
   const [keyword, setKeyword] = useState("");
   const [page, setPage] = useState(0);
-  const [size, setSize] = useState(20);
+  const [size, setSize] = useState(DEFAULT_PAGE_SIZE);
   const [totalPages, setTotalPages] = useState(0);
 
   const [adjustOpen, setAdjustOpen] = useState(false);

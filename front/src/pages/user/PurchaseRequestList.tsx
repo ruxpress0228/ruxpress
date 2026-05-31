@@ -23,8 +23,7 @@ import type { PurchaseRequestStatus } from "../../types";
 import type { PurchaseRequestListItem } from "../../types/purchase";
 import type { InquiryFormPrefillState } from "./InquiryForm";
 import { toast } from "sonner";
-
-const PAGE_SIZE_OPTIONS = [20, 30, 50, 100] as const;
+import { DEFAULT_PAGE_SIZE, PAGE_SIZE_OPTIONS } from "../../utils/constants";
 
 const SUMMARY_STATUSES: PurchaseRequestStatus[] = [
   "REQUESTED",
@@ -209,7 +208,7 @@ export default function PurchaseRequestList() {
   const [sortValue, setSortValue] = useState<"latest" | "oldest">("latest");
   const [loading, setLoading] = useState(false);
   const [page, setPage] = useState(0);
-  const [size, setSize] = useState(20);
+  const [size, setSize] = useState(DEFAULT_PAGE_SIZE);
   const [totalPages, setTotalPages] = useState(0);
 
   const dateLocale = locale === "ko" ? "ko-KR" : locale === "ru" ? "ru-RU" : "en-US";

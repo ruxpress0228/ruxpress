@@ -15,8 +15,7 @@ import { api } from "../../utils/api";
 import { unwrap } from "../../utils/exception";
 import type { AdminInquiryListItem, Inquiry, InquiryStatus, InquiryCategory, PageResponse } from "../../types";
 import { useTranslation } from "../../hooks/useTranslation";
-
-interface TemplateItem { id: number; key: string; value: string; }
+import { DEFAULT_PAGE_SIZE, PAGE_SIZE_OPTIONS } from "../../utils/constants";
 
 const statusVariants: Record<InquiryStatus, "default" | "secondary" | "outline"> = {
   PENDING: "secondary",
@@ -25,7 +24,8 @@ const statusVariants: Record<InquiryStatus, "default" | "secondary" | "outline">
 };
 
 const INQUIRY_STATUSES: InquiryStatus[] = ["PENDING", "REPLIED", "CLOSED"];
-const PAGE_SIZE_OPTIONS = [20, 30, 50, 100] as const;
+
+interface TemplateItem { id: number; key: string; value: string; }
 
 function inquiryStatusKey(status: InquiryStatus) {
   return `inquiry.status.${status.toLowerCase()}` as "inquiry.status.pending" | "inquiry.status.replied" | "inquiry.status.closed";
@@ -42,7 +42,7 @@ export default function AdminInquiries() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(0);
-  const [size, setSize] = useState(20);
+  const [size, setSize] = useState(DEFAULT_PAGE_SIZE);
   const [totalPages, setTotalPages] = useState(0);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedId, setSelectedId] = useState<number | null>(null);

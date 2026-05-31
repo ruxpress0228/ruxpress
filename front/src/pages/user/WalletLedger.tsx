@@ -8,9 +8,8 @@ import { useBalance } from "../../hooks/balance/useBalance";
 import { BalanceEquivalents } from "../../components/balance/BalanceEquivalents";
 import { getMyWalletLedger, type WalletLedgerEntry } from "../../api/balance";
 import { formatDate, formatNumber } from "../../utils/format";
+import { DEFAULT_PAGE_SIZE, PAGE_SIZE_OPTIONS } from "../../utils/constants";
 import type { PageResponse } from "../../types";
-
-const PAGE_SIZE_OPTIONS = [20, 30, 50, 100] as const;
 
 function entryLabel(t: (k: string) => string, type: string): string {
   const key = `wallet.entry.${type}`;
@@ -23,7 +22,7 @@ export default function WalletLedger() {
   const { balance } = useBalance();
   const prevBalanceRef = useRef(balance);
   const [page, setPage] = useState(0);
-  const [size, setSize] = useState(20);
+  const [size, setSize] = useState(DEFAULT_PAGE_SIZE);
   const [data, setData] = useState<PageResponse<WalletLedgerEntry> | null>(null);
   const [loading, setLoading] = useState(true);
 

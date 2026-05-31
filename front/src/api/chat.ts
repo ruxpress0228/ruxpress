@@ -1,4 +1,5 @@
 import { api } from '@/utils/api';
+import { DEFAULT_PAGE_SIZE } from '@/utils/constants';
 import { unwrap } from '@/utils/exception';
 import type { ApiResponse, PageResponse } from '@/types/api';
 import type { ChatRoom, ChatMessage, ChatCleanupSettings, ChatRetentionPeriod } from '@/types/chat';
@@ -22,7 +23,7 @@ export function uploadChatAttachment(roomId: string, file: File, caption?: strin
   return api.upload<ChatMessage>(`/v1/chat/rooms/${roomId}/attachments`, formData).then(unwrap);
 }
 
-export function getAdminChatRooms(page = 0, size = 20): Promise<ApiResponse<PageResponse<ChatRoom>>> {
+export function getAdminChatRooms(page = 0, size = DEFAULT_PAGE_SIZE): Promise<ApiResponse<PageResponse<ChatRoom>>> {
   return api.get<PageResponse<ChatRoom>>(`/v1/admin/chat/rooms?page=${page}&size=${size}`);
 }
 

@@ -7,6 +7,7 @@ import type {
   PurchaseRequestListItem,
 } from "../../types/purchase";
 import { api } from "../../utils/api";
+import { DEFAULT_PAGE_SIZE } from "../../utils/constants";
 
 export function usePurchase() {
   const PURCHASE_BASE = "/v1/purchases";
@@ -28,7 +29,7 @@ export function usePurchase() {
     (params?: GetMyPurchaseRequestsParams): Promise<PageResponse<PurchaseRequestListItem>> => {
       const query = new URLSearchParams();
       query.set("page", String(params?.page ?? 0));
-      query.set("size", String(params?.size ?? 10));
+      query.set("size", String(params?.size ?? DEFAULT_PAGE_SIZE));
       query.set("sort", params?.sort ?? "createdAt,desc");
       if (params?.status) {
         query.set("status", params.status);
@@ -75,7 +76,7 @@ export function usePurchase() {
     (params?: GetMyPurchaseRequestsParams): Promise<PageResponse<PurchaseRequestListItem>> => {
       const query = new URLSearchParams();
       query.set("page", String(params?.page ?? 0));
-      query.set("size", String(params?.size ?? 20));
+      query.set("size", String(params?.size ?? DEFAULT_PAGE_SIZE));
       query.set("sort", params?.sort ?? "createdAt,desc");
       if (params?.status) {
         query.set("status", params.status);

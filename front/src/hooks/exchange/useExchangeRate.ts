@@ -2,6 +2,7 @@ import { useCallback } from "react";
 import type { CurrentExchangeRates } from "../../utils/exchange";
 import type { ExchangeRate } from "../../types";
 import { api } from "../../utils/api";
+import { DEFAULT_PAGE_SIZE } from "../../utils/constants";
 
 const EXCHANGE_BASE = "/v1/exchange-rates";
 
@@ -37,7 +38,7 @@ export function useExchangeRate() {
   const getExchangeRateHistory = useCallback(
     (
       page = 0,
-      size = 20,
+      size = DEFAULT_PAGE_SIZE,
       baseCurrency?: string,
     ): Promise<{
       content: ExchangeRate[];

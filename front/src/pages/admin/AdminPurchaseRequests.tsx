@@ -35,9 +35,9 @@ import {
 import { useTranslation } from "../../hooks/useTranslation";
 import { formatNumber } from "../../utils/format";
 import { readAuthValue } from "../../utils/api";
+import { DEFAULT_PAGE_SIZE, PAGE_SIZE_OPTIONS } from "../../utils/constants";
 
 const ADMIN_STORAGE_KEY = "ruxpress_admin";
-const PAGE_SIZE_OPTIONS = [20, 30, 50, 100] as const;
 
 function getAdminRole(): string | null {
   try {
@@ -186,7 +186,7 @@ export default function AdminPurchaseRequests() {
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<"all" | PurchaseRequestStatus>("all");
   const [page, setPage] = useState(0);
-  const [size, setSize] = useState(20);
+  const [size, setSize] = useState(DEFAULT_PAGE_SIZE);
   const [totalPages, setTotalPages] = useState(0);
   const [sort, setSort] = useState<"createdAt,desc" | "createdAt,asc">("createdAt,desc");
   const [userKeyword, setUserKeyword] = useState("");

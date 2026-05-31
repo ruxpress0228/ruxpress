@@ -25,8 +25,8 @@ import { useTranslation } from "../../hooks/useTranslation";
 import { formatDate } from "../../utils/format";
 import type { BankTransferAttachment, SettlementAccount, TransferLedgerEntry } from "../../types/bankTransfer";
 import type { PageResponse } from "../../types";
+import { DEFAULT_PAGE_SIZE, PAGE_SIZE_OPTIONS } from "../../utils/constants";
 
-const PAGE_SIZE_OPTIONS = [20, 30, 50, 100] as const;
 const MAX_IMAGES = 10;
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
 const ALLOWED_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
@@ -52,7 +52,7 @@ export default function BankTransfer() {
   const [entries, setEntries] = useState<TransferLedgerEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [entriesPage, setEntriesPage] = useState(0);
-  const [entriesSize, setEntriesSize] = useState(20);
+  const [entriesSize, setEntriesSize] = useState(DEFAULT_PAGE_SIZE);
   const [entriesTotalPages, setEntriesTotalPages] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const [accountId, setAccountId] = useState<string>("");
