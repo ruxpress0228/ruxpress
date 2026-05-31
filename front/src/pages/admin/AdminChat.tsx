@@ -4,21 +4,35 @@ import {
   getAdminChatRooms,
   adminJoinRoom,
   adminCloseRoom,
+  getChatCleanupSettings,
+  updateChatCleanupSettings,
 } from '@/api/chat';
 import { useChat } from '@/hooks/chat/useChat';
 import { useTranslation } from '@/hooks/useTranslation';
+import { readAuthValue } from '@/utils/api';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ChatMessageBubble } from '@/components/chat/ChatMessageBubble';
 import { ChatInputBar } from '@/components/chat/ChatInputBar';
 import { toast } from 'sonner';
-import type { ChatRoom, ChatRoomStatus } from '@/types/chat';
+import type { ChatRoom, ChatRoomStatus, ChatCleanupSettings, ChatRetentionPeriod } from '@/types/chat';
 
 const PAGE_SIZE_OPTIONS = [20, 30, 50, 100] as const;
 const ROOM_LIST_POLL_MS = 15_000;
+const ADMIN_STORAGE_KEY = 'ruxpress_admin';
+
+function readAdminRole(): string | null {
+  try {
+    const raw = readAuthValue(ADMIN_STORAGE_KEY);
+    return raw ? (JSON.parse(raw) as { role?: string }).role ?? null : null;
+  } catch {
+    return null;
+  }
+}
 
 export default function AdminChat() {
   const { t } = useTranslation();
@@ -30,7 +44,10 @@ export default function AdminChat() {
   const [roomsSize, setRoomsSize] = useState(20);
   const [roomsTotalPages, setRoomsTotalPages] = useState(0);
   const [roomsRefreshing, setRoomsRefreshing] = useState(false);
+  const [cleanupSettings, setCleanupSettings] = useState<ChatCleanupSettings | null>(null);
+  const [retentionSaving, setRetentionSaving] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const isSuperAdmin = readAdminRole() === 'SUPER_ADMIN';
 
   const selectedRoom = rooms.find((r) => r.id === selectedRoomId) ?? null;
   const isLive = selectedRoom?.status === 'OPEN';
@@ -61,6 +78,12 @@ export default function AdminChat() {
     }, ROOM_LIST_POLL_MS);
     return () => clearInterval(timer);
   }, [activeTab, roomsPage, roomsSize, loadRooms]);
+
+  useEffect(() => {
+    getChatCleanupSettings().then((res) => {
+      if (res.code === 200 && res.data) setCleanupSettings(res.data);
+    });
+  }, []);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -120,6 +143,24 @@ export default function AdminChat() {
     }
   };
 
+  const handleRetentionChange = async (value: ChatRetentionPeriod) => {
+    if (!isSuperAdmin) return;
+    setRetentionSaving(true);
+    try {
+      const res = await updateChatCleanupSettings(value);
+      if (res.code === 200 && res.data) {
+        setCleanupSettings(res.data);
+        toast.success(t('admin.chat.retention.saved'));
+      } else {
+        toast.error(t('admin.chat.retention.saveError'));
+      }
+    } catch {
+      toast.error(t('admin.chat.retention.saveError'));
+    } finally {
+      setRetentionSaving(false);
+    }
+  };
+
   const filteredRooms = rooms.filter((r) => r.status === activeTab);
 
   return (
@@ -142,6 +183,33 @@ export default function AdminChat() {
             {t('admin.chat.refresh')}
           </Button>
         </div>
+        <Card>
+          <CardHeader className="py-3 px-4">
+            <CardTitle className="text-sm">{t('admin.chat.retention.title')}</CardTitle>
+            <CardDescription className="text-xs">{t('admin.chat.retention.desc')}</CardDescription>
+          </CardHeader>
+          <CardContent className="px-4 pb-4 pt-0">
+            <Select
+              value={cleanupSettings?.retentionPeriod ?? 'PERMANENT'}
+              onValueChange={(v) => void handleRetentionChange(v as ChatRetentionPeriod)}
+              disabled={!isSuperAdmin || retentionSaving || !cleanupSettings}
+            >
+              <SelectTrigger className="h-9 text-sm">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {(cleanupSettings?.options ?? [{ value: 'PERMANENT', months: 0 }]).map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value}>
+                    {t(`admin.chat.retention.${opt.value}`)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {!isSuperAdmin && (
+              <p className="text-xs text-muted-foreground mt-2">{t('admin.chat.retention.superOnly')}</p>
+            )}
+          </CardContent>
+        </Card>
         <Tabs
           value={activeTab}
           onValueChange={(v) => setActiveTab(v as ChatRoomStatus)}

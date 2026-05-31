@@ -1,7 +1,7 @@
 import { api } from '@/utils/api';
 import { unwrap } from '@/utils/exception';
 import type { ApiResponse, PageResponse } from '@/types/api';
-import type { ChatRoom, ChatMessage } from '@/types/chat';
+import type { ChatRoom, ChatMessage, ChatCleanupSettings, ChatRetentionPeriod } from '@/types/chat';
 
 export function getOrCreateRoom(): Promise<ApiResponse<ChatRoom>> {
   return api.post<ChatRoom>('/v1/chat/rooms');
@@ -43,4 +43,14 @@ export function uploadAdminChatAttachment(roomId: string, file: File, caption?: 
   formData.append('file', file);
   if (caption?.trim()) formData.append('caption', caption.trim());
   return api.upload<ChatMessage>(`/v1/admin/chat/rooms/${roomId}/attachments`, formData).then(unwrap);
+}
+
+export function getChatCleanupSettings(): Promise<ApiResponse<ChatCleanupSettings>> {
+  return api.get<ChatCleanupSettings>('/v1/admin/chat/cleanup-settings');
+}
+
+export function updateChatCleanupSettings(
+  retentionPeriod: ChatRetentionPeriod
+): Promise<ApiResponse<ChatCleanupSettings>> {
+  return api.put<ChatCleanupSettings>('/v1/admin/chat/cleanup-settings', { retentionPeriod });
 }

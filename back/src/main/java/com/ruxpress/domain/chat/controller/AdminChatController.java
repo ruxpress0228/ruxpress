@@ -2,10 +2,14 @@ package com.ruxpress.domain.chat.controller;
 
 import com.ruxpress.common.dto.ApiResponse;
 import com.ruxpress.common.dto.PageResponse;
+import com.ruxpress.domain.chat.dto.request.ChatCleanupSettingsRequest;
+import com.ruxpress.domain.chat.dto.response.ChatCleanupSettingsResponse;
 import com.ruxpress.domain.chat.dto.response.ChatMessageResponse;
 import com.ruxpress.domain.chat.dto.response.ChatRoomResponse;
 import com.ruxpress.domain.chat.entity.SenderType;
+import com.ruxpress.domain.chat.service.ChatCleanupSettingsService;
 import com.ruxpress.domain.chat.service.ChatService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.MediaType;
@@ -21,6 +25,21 @@ import java.util.List;
 public class AdminChatController {
 
     private final ChatService chatService;
+    private final ChatCleanupSettingsService chatCleanupSettingsService;
+
+    @GetMapping("/cleanup-settings")
+    public ApiResponse<ChatCleanupSettingsResponse> getCleanupSettings() {
+        return ApiResponse.success(chatCleanupSettingsService.getSettings());
+    }
+
+    @PutMapping("/cleanup-settings")
+    public ApiResponse<ChatCleanupSettingsResponse> updateCleanupSettings(
+            Authentication authentication,
+            @Valid @RequestBody ChatCleanupSettingsRequest request) {
+        Long adminId = (Long) authentication.getPrincipal();
+        return ApiResponse.success(
+                chatCleanupSettingsService.updateRetentionPeriod(request.getRetentionPeriod(), adminId));
+    }
 
     @GetMapping("/rooms")
     public ApiResponse<PageResponse<ChatRoomResponse>> listRooms(

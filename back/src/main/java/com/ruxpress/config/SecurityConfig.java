@@ -51,6 +51,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/admin/settings/**").hasRole("SUPER_ADMIN")
                         .requestMatchers("/api/v1/admin/inquiries/**").hasAnyRole("SUPER_ADMIN", "COUNSELOR")
                         .requestMatchers("/api/v1/admin/stats/**").hasAnyRole("SUPER_ADMIN", "COUNSELOR")
+                        .requestMatchers(HttpMethod.PUT, "/api/v1/admin/chat/cleanup-settings").hasRole("SUPER_ADMIN")
                         .requestMatchers("/api/v1/admin/**").hasAnyRole("SUPER_ADMIN", "COUNSELOR")
                         .requestMatchers(HttpMethod.GET, "/api/v1/notices/**").permitAll()
                         .requestMatchers("/h2-console/**").permitAll()
