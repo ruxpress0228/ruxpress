@@ -5,6 +5,7 @@ import { Button } from "../../components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../components/ui/select";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useBalance } from "../../hooks/balance/useBalance";
+import { BalanceEquivalents } from "../../components/balance/BalanceEquivalents";
 import { getMyWalletLedger, type WalletLedgerEntry } from "../../api/balance";
 import { formatDate, formatNumber } from "../../utils/format";
 import type { PageResponse } from "../../types";
@@ -71,6 +72,7 @@ export default function WalletLedger() {
           <p className="text-3xl font-bold text-blue-600">
             {balance == null ? "—" : `₩${formatNumber(balance, locale, numOpt)}`}
           </p>
+          <BalanceEquivalents balance={balance} hintKey="wallet.balanceEquivalentsHint" className="text-sm text-gray-500 mt-2" />
         </CardContent>
       </Card>
 

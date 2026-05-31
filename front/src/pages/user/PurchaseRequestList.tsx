@@ -17,6 +17,7 @@ import { cn } from "../../components/ui/utils";
 import { purchaseListSummaryChipActiveClasses, purchaseStatusAccent } from "../../utils/purchaseStatusStyle";
 import { usePurchase } from "../../hooks/purchase/usePurchase";
 import { useBalance } from "../../hooks/balance/useBalance";
+import { BalanceEquivalents } from "../../components/balance/BalanceEquivalents";
 import { useI18n } from "../../i18n/I18nProvider";
 import type { PurchaseRequestStatus } from "../../types";
 import type { PurchaseRequestListItem } from "../../types/purchase";
@@ -313,6 +314,10 @@ export default function PurchaseRequestList() {
               <p className="truncate text-sm font-bold text-blue-900 md:text-lg">
                 ₩{(balance ?? 0).toLocaleString(dateLocale, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </p>
+              <BalanceEquivalents
+                balance={balance}
+                className="truncate text-[10px] text-blue-600/80 md:text-xs"
+              />
             </div>
           </Link>
           <Link to="/purchase/new" className="shrink-0">

@@ -20,6 +20,7 @@ import { toast } from "sonner";
 import { api, clearUserSession, notifyUserAuthChange, readAuthValue, writeAuthValue } from "../../utils/api";
 import { STORAGE_KEYS } from "../../utils/constants";
 import { useBalance } from "../../hooks/balance/useBalance";
+import { BalanceEquivalents } from "../../components/balance/BalanceEquivalents";
 import type { User as UserProfile, UserAddress } from "../../types/domain";
 
 function formatDateKo(iso: string | undefined): string {
@@ -382,6 +383,7 @@ export default function MyPage() {
                   <p className="font-semibold text-blue-700">
                     ₩{(balance ?? 0).toLocaleString("ko-KR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </p>
+                  <BalanceEquivalents balance={balance} />
                 </div>
                 <Button asChild variant="outline" size="sm" className="shrink-0">
                   <Link to="/wallet">지갑·내역</Link>
