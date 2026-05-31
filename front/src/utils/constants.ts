@@ -10,6 +10,8 @@ export const DEFAULT_LOCALE: Locale = 'ru';
 export const STORAGE_KEYS = {
   TOKEN: 'ruxpress_token',
   LOCALE: 'ruxpress_locale',
+  /** 언어 드롭다운에서 사용자가 직접 선택했을 때만 '1' */
+  LOCALE_USER_CHOICE: 'ruxpress_locale_user_choice',
   USER_ID: 'ruxpress_user_id',
   USER_EMAIL: 'ruxpress_user_email',
   USER_NICKNAME: 'ruxpress_user_nickname',

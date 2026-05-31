@@ -1,14 +1,6 @@
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useMemo,
-  useState,
-  type ReactNode,
-} from "react";
-import { STORAGE_KEYS, DEFAULT_LOCALE } from "../utils/constants";
+import { createContext, useEffect, useCallback, useContext, useMemo, useState, type ReactNode } from "react";
 import type { Locale } from "../utils/constants";
-import { setLocale as setModuleLocale, translate } from "./index";
+import { ensureLocaleInitialized, setLocale as setModuleLocale, translate } from "./index";
 
 type I18nContextValue = {
   locale: Locale;
@@ -18,21 +10,15 @@ type I18nContextValue = {
 
 const I18nContext = createContext<I18nContextValue | null>(null);
 
-function readStoredLocale(): Locale {
-  const raw = localStorage.getItem(STORAGE_KEYS.LOCALE);
-  if (raw === "ko" || raw === "ru" || raw === "en") return raw;
-  return DEFAULT_LOCALE;
-}
-
 export function I18nProvider({ children }: { children: ReactNode }) {
-  const [locale, setLocaleState] = useState<Locale>(() => {
-    const initial = readStoredLocale();
-    setModuleLocale(initial);
-    return initial;
-  });
+  const [locale, setLocaleState] = useState<Locale>(() => ensureLocaleInitialized());
+
+  useEffect(() => {
+    document.documentElement.lang = locale;
+  }, [locale]);
 
   const setLocale = useCallback((newLocale: Locale) => {
-    setModuleLocale(newLocale);
+    setModuleLocale(newLocale, { userChoice: true });
     setLocaleState(newLocale);
   }, []);
 

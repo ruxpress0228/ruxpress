@@ -1,4 +1,5 @@
 import { API_BASE, STORAGE_KEYS, USER_AUTH_CHANGE_EVENT } from './constants';
+import { getLocale } from '../i18n/index';
 import type { ApiResponse } from '../types';
 
 export function notifyUserAuthChange(): void {
@@ -54,10 +55,8 @@ function getHeaders(): Record<string, string> {
     headers['Authorization'] = `Bearer ${token}`;
   }
 
-  const locale = localStorage.getItem(STORAGE_KEYS.LOCALE);
-  if (locale) {
-    headers['Accept-Language'] = locale;
-  }
+  const locale = getLocale();
+  headers['Accept-Language'] = locale;
 
   return headers;
 }
@@ -66,8 +65,7 @@ function getHeadersForUpload(): Record<string, string> {
   const headers: Record<string, string> = {};
   const token = readAuthValue(STORAGE_KEYS.TOKEN);
   if (token) headers['Authorization'] = `Bearer ${token}`;
-  const locale = localStorage.getItem(STORAGE_KEYS.LOCALE);
-  if (locale) headers['Accept-Language'] = locale;
+  headers['Accept-Language'] = getLocale();
   return headers;
 }
 
