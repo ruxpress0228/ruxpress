@@ -72,7 +72,7 @@ public class AdminNotificationService {
         }
         String title = "새 채팅 상담 요청";
         String body = String.format("회원 #%d 이 채팅 상담을 시작했습니다.", userId);
-        String dataJson = String.format("{\"roomId\":\"%s\",\"userId\":%d}", roomId, userId);
+        String dataJson = String.format("{\"roomId\":\"%s\",\"userId\":%d,\"kind\":\"ROOM_OPEN\"}", roomId, userId);
         String linkUrl = "/admin/chat";
         fanOutAndSave(adminIds, AdminNotificationType.NEW_CHAT_MESSAGE, title, body, dataJson, linkUrl);
     }
@@ -84,10 +84,13 @@ public class AdminNotificationService {
         }
         String preview = (contentPreview != null && contentPreview.length() > 50)
                 ? contentPreview.substring(0, 50) + "…"
-                : contentPreview;
+                : (contentPreview != null ? contentPreview : "");
         String title = "새 채팅 메시지";
         String body = String.format("회원 #%d: %s", userId, preview);
-        String dataJson = String.format("{\"roomId\":\"%s\",\"userId\":%d}", roomId, userId);
+        String safePreview = preview.replace("\\", "\\\\").replace("\"", "\\\"");
+        String dataJson = String.format(
+                "{\"roomId\":\"%s\",\"userId\":%d,\"kind\":\"MESSAGE\",\"preview\":\"%s\"}",
+                roomId, userId, safePreview);
         String linkUrl = "/admin/chat";
         fanOutAndSave(adminIds, AdminNotificationType.NEW_CHAT_MESSAGE, title, body, dataJson, linkUrl);
     }

@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router";
 import { Bell, Check, ChevronRight } from "lucide-react";
 import { Button } from "../ui/button";
 import { useTranslation } from "../../hooks/useTranslation";
+import { resolveAdminNotificationText } from "../../utils/adminNotificationI18n";
 import { api } from "../../utils/api";
 import type {
   AdminNotification,
@@ -170,7 +171,9 @@ export default function AdminNotificationBell() {
               </p>
             ) : (
               <ul className="divide-y divide-gray-100">
-                {summary.items.map((item) => (
+                {summary.items.map((item) => {
+                  const text = resolveAdminNotificationText(item, t);
+                  return (
                   <li key={item.id}>
                     <button
                       type="button"
@@ -185,10 +188,10 @@ export default function AdminNotificationBell() {
                         )}
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium text-gray-900 truncate">
-                            {item.title}
+                            {text.title}
                           </p>
                           <p className="text-xs text-gray-600 mt-0.5 line-clamp-2">
-                            {item.body}
+                            {text.body}
                           </p>
                           <p className="text-[10px] text-gray-400 mt-1">
                             {formatRelativeTime(item.createdAt, t)}
@@ -197,7 +200,8 @@ export default function AdminNotificationBell() {
                       </div>
                     </button>
                   </li>
-                ))}
+                  );
+                })}
               </ul>
             )}
           </div>

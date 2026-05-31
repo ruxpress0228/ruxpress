@@ -6,6 +6,7 @@ import { Card, CardContent } from "../../components/ui/card";
 import { Badge } from "../../components/ui/badge";
 import { toast } from "sonner";
 import { useTranslation } from "../../hooks/useTranslation";
+import { resolveAdminNotificationText } from "../../utils/adminNotificationI18n";
 import { api } from "../../utils/api";
 import type { AdminNotification, AdminNotificationSummary, AdminNotificationType, ApiResponse } from "../../types";
 
@@ -140,7 +141,9 @@ export default function AdminNotifications() {
           ) : (
             <>
               <ul className="divide-y divide-gray-100">
-                {items.map((item) => (
+                {items.map((item) => {
+                  const text = resolveAdminNotificationText(item, t);
+                  return (
                   <li key={item.id}>
                     <button
                       type="button"
@@ -156,13 +159,13 @@ export default function AdminNotifications() {
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2">
                             <p className={`text-sm truncate ${item.isRead ? "text-gray-700" : "font-semibold text-gray-900"}`}>
-                              {item.title}
+                              {text.title}
                             </p>
                             {!item.isRead && (
                               <span className="w-2 h-2 rounded-full bg-blue-500 flex-shrink-0" />
                             )}
                           </div>
-                          <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">{item.body}</p>
+                          <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">{text.body}</p>
                         </div>
                         <p className="text-[11px] text-gray-400 flex-shrink-0 pt-0.5">
                           {formatRelativeTime(item.createdAt, t)}
@@ -170,7 +173,8 @@ export default function AdminNotifications() {
                       </div>
                     </button>
                   </li>
-                ))}
+                  );
+                })}
               </ul>
 
               <div className="flex items-center justify-between p-4 border-t">
