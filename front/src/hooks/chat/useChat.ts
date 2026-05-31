@@ -3,6 +3,7 @@ import { Client, type IMessage } from '@stomp/stompjs';
 import { STORAGE_KEYS, USER_AUTH_CHANGE_EVENT } from '@/utils/constants';
 import { readAuthValue } from '@/utils/api';
 import type { ChatMessage } from '@/types/chat';
+import { isChatRoomClosedEvent } from '@/types/chat';
 import { getChatMessages, getAdminRoomMessages, uploadChatAttachment, uploadAdminChatAttachment } from '@/api/chat';
 
 function buildWsUrl(): string {
@@ -18,15 +19,22 @@ function appendUnique(prev: ChatMessage[], chatMsg: ChatMessage): ChatMessage[] 
 interface UseChatOptions {
   isAdmin?: boolean;
   connectLive?: boolean;
+  onRoomClosed?: () => void;
 }
 
 export function useChat(roomId: string | null, options: UseChatOptions = {}) {
-  const { isAdmin = false, connectLive = true } = options;
+  const { isAdmin = false, connectLive = true, onRoomClosed } = options;
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [connected, setConnected] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [roomClosed, setRoomClosed] = useState(false);
   const [authToken, setAuthToken] = useState(() => readAuthValue(STORAGE_KEYS.TOKEN));
   const clientRef = useRef<Client | null>(null);
+  const onRoomClosedRef = useRef(onRoomClosed);
+
+  useEffect(() => {
+    onRoomClosedRef.current = onRoomClosed;
+  }, [onRoomClosed]);
 
   useEffect(() => {
     const syncToken = () => setAuthToken(readAuthValue(STORAGE_KEYS.TOKEN));
@@ -37,6 +45,7 @@ export function useChat(roomId: string | null, options: UseChatOptions = {}) {
 
   useEffect(() => {
     setMessages([]);
+    setRoomClosed(false);
     if (!roomId) return;
     const fetch = isAdmin ? getAdminRoomMessages : getChatMessages;
     fetch(roomId).then((res) => {
@@ -45,7 +54,7 @@ export function useChat(roomId: string | null, options: UseChatOptions = {}) {
   }, [roomId, isAdmin]);
 
   useEffect(() => {
-    if (!roomId || !connectLive) {
+    if (!roomId || !connectLive || roomClosed) {
       setConnected(false);
       return;
     }
@@ -61,7 +70,14 @@ export function useChat(roomId: string | null, options: UseChatOptions = {}) {
       onConnect: () => {
         setConnected(true);
         client.subscribe(`/topic/chat/${roomId}`, (msg: IMessage) => {
-          const chatMsg = JSON.parse(msg.body) as ChatMessage;
+          const payload: unknown = JSON.parse(msg.body);
+          if (isChatRoomClosedEvent(payload)) {
+            setRoomClosed(true);
+            setConnected(false);
+            onRoomClosedRef.current?.();
+            return;
+          }
+          const chatMsg = payload as ChatMessage;
           setMessages((prev) => appendUnique(prev, chatMsg));
         });
       },
@@ -84,18 +100,18 @@ export function useChat(roomId: string | null, options: UseChatOptions = {}) {
       clientRef.current = null;
       setConnected(false);
     };
-  }, [roomId, connectLive, authToken]);
+  }, [roomId, connectLive, roomClosed, authToken]);
 
   const sendMessage = useCallback((content: string) => {
-    if (!clientRef.current?.connected || !roomId || !connectLive) return;
+    if (!clientRef.current?.connected || !roomId || !connectLive || roomClosed) return;
     clientRef.current.publish({
       destination: `/app/chat/${roomId}/send`,
       body: JSON.stringify({ content }),
     });
-  }, [roomId, connectLive]);
+  }, [roomId, connectLive, roomClosed]);
 
   const uploadAttachment = useCallback(async (file: File, caption?: string) => {
-    if (!roomId || !connectLive) return;
+    if (!roomId || !connectLive || roomClosed) return;
     setUploading(true);
     try {
       const upload = isAdmin ? uploadAdminChatAttachment : uploadChatAttachment;
@@ -106,7 +122,7 @@ export function useChat(roomId: string | null, options: UseChatOptions = {}) {
       throw err;
     }
     setUploading(false);
-  }, [roomId, connectLive, isAdmin]);
+  }, [roomId, connectLive, roomClosed, isAdmin]);
 
   const reloadMessages = useCallback(async () => {
     if (!roomId) return;
@@ -115,5 +131,18 @@ export function useChat(roomId: string | null, options: UseChatOptions = {}) {
     if (res.code === 200 && res.data) setMessages(res.data);
   }, [roomId, isAdmin]);
 
-  return { messages, connected, uploading, sendMessage, uploadAttachment, reloadMessages };
+  const resetRoomClosed = useCallback(() => {
+    setRoomClosed(false);
+  }, []);
+
+  return {
+    messages,
+    connected,
+    uploading,
+    roomClosed,
+    sendMessage,
+    uploadAttachment,
+    reloadMessages,
+    resetRoomClosed,
+  };
 }

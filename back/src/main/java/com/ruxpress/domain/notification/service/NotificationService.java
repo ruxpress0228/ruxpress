@@ -75,6 +75,16 @@ public class NotificationService {
         pushKafkaOutboxService.scheduleDispatchAfterCommit(saved);
     }
 
+    public void notifyChatRoomClosed(Long userId, String roomId) {
+        Notification saved = notificationRepository.saveAndFlush(Notification.create(
+                userId,
+                NotificationType.CHAT,
+                "채팅 종료",
+                "관리자가 상담을 종료했습니다. 새 상담은 채팅 메뉴에서 다시 시작할 수 있습니다.",
+                "{\"roomId\":\"" + escapeJson(roomId) + "\",\"event\":\"ROOM_CLOSED\"}"));
+        pushKafkaOutboxService.scheduleDispatchAfterCommit(saved);
+    }
+
     public void notifyPurchaseStatusChanged(Long userId, Long purchaseRequestId, String requestNumber,
                                             PurchaseRequestStatus newStatus) {
         String body = String.format("구매 요청 %s 상태가 '%s'(으)로 변경되었습니다.",

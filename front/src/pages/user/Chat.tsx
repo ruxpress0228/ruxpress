@@ -25,14 +25,48 @@ export default function Chat() {
   const chatScrollRef = useRef<HTMLDivElement>(null);
   const pastScrollRef = useRef<HTMLDivElement>(null);
 
-  const { messages, connected, uploading, sendMessage, uploadAttachment } = useChat(currentRoom?.id ?? null);
-
   const loadPastRooms = useCallback(async () => {
     const res = await getMyChatRooms();
     if (res.code === 200 && res.data) {
       setPastRooms(res.data.filter((r) => r.status === 'CLOSED'));
     }
   }, []);
+
+  const isLive = currentRoom?.status === 'OPEN';
+
+  const handleRoomClosed = useCallback(() => {
+    toast.info(t('chat.closedByAdmin'));
+    setCurrentRoom((prev) => (prev ? { ...prev, status: 'CLOSED' } : prev));
+    void loadPastRooms();
+  }, [t, loadPastRooms]);
+
+  const {
+    messages,
+    connected,
+    uploading,
+    roomClosed,
+    sendMessage,
+    uploadAttachment,
+    resetRoomClosed,
+  } = useChat(currentRoom?.id ?? null, {
+    connectLive: isLive,
+    onRoomClosed: handleRoomClosed,
+  });
+
+  const chatEnded = roomClosed || currentRoom?.status === 'CLOSED';
+
+  const handleStartNewChat = async () => {
+    try {
+      const res = await getOrCreateRoom();
+      if (res.code === 200 && res.data) {
+        setCurrentRoom(res.data);
+        resetRoomClosed();
+        void loadPastRooms();
+      }
+    } catch {
+      toast.error(t('chat.newChatError'));
+    }
+  };
 
   useEffect(() => {
     getOrCreateRoom().then((res) => {
@@ -64,13 +98,13 @@ export default function Chat() {
 
   const handleSend = () => {
     const text = input.trim();
-    if (!text || !connected) return;
+    if (!text || !connected || chatEnded) return;
     sendMessage(text);
     setInput('');
   };
 
   const handleUpload = async (file: File) => {
-    if (!connected) return;
+    if (!connected || chatEnded) return;
     try {
       await uploadAttachment(file);
     } catch (err) {
@@ -106,10 +140,23 @@ export default function Chat() {
           className="flex-1 min-h-0 flex flex-col mt-0 data-[state=inactive]:hidden"
         >
           <div className="flex justify-end mb-2">
-            <Badge variant={connected ? 'default' : 'secondary'}>
-              {connected ? t('chat.connected') : t('chat.connecting')}
+            <Badge variant={connected && !chatEnded ? 'default' : 'secondary'}>
+              {chatEnded
+                ? t('chat.status.closed')
+                : connected
+                  ? t('chat.connected')
+                  : t('chat.connecting')}
             </Badge>
           </div>
+
+          {chatEnded && (
+            <div className="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+              <p>{t('chat.closedByAdmin')}</p>
+              <Button variant="outline" size="sm" className="mt-2" onClick={() => void handleStartNewChat()}>
+                {t('chat.startNew')}
+              </Button>
+            </div>
+          )}
 
           <div ref={chatScrollRef} className="flex-1 min-h-0 overflow-y-auto border rounded-lg bg-muted/30">
             <div className="p-3 sm:p-4">
@@ -131,18 +178,22 @@ export default function Chat() {
           </div>
 
           <div className="mt-3">
-            <ChatInputBar
-              input={input}
-              onInputChange={setInput}
-              onSend={handleSend}
-              onUpload={handleUpload}
-              disabled={!connected}
-              uploading={uploading}
-              placeholder={t('chat.inputPlaceholder')}
-              sendLabel={t('chat.send')}
-              attachLabel={t('chat.attach')}
-              fileTooLargeLabel={t('chat.upload.fileTooLarge')}
-            />
+            {chatEnded ? (
+              <p className="text-center text-muted-foreground text-sm py-2">{t('chat.closedHint')}</p>
+            ) : (
+              <ChatInputBar
+                input={input}
+                onInputChange={setInput}
+                onSend={handleSend}
+                onUpload={handleUpload}
+                disabled={!connected}
+                uploading={uploading}
+                placeholder={t('chat.inputPlaceholder')}
+                sendLabel={t('chat.send')}
+                attachLabel={t('chat.attach')}
+                fileTooLargeLabel={t('chat.upload.fileTooLarge')}
+              />
+            )}
           </div>
         </TabsContent>
 

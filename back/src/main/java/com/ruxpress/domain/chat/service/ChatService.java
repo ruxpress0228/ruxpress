@@ -10,6 +10,7 @@ import com.ruxpress.common.storage.FileStoragePort;
 import com.ruxpress.common.util.ModulePrefix;
 import com.ruxpress.domain.adminnotification.service.AdminNotificationService;
 import com.ruxpress.domain.chat.dto.response.ChatMessageResponse;
+import com.ruxpress.domain.chat.dto.response.ChatRoomClosedEvent;
 import com.ruxpress.domain.chat.dto.response.ChatRoomResponse;
 import com.ruxpress.domain.chat.entity.ChatMessage;
 import com.ruxpress.domain.chat.entity.ChatMessageType;
@@ -169,7 +170,12 @@ public class ChatService {
     @Transactional
     public ChatRoomResponse closeRoom(String roomId) {
         ChatRoom room = findRoom(roomId);
+        if (room.getStatus() == ChatRoomStatus.CLOSED) {
+            return ChatRoomResponse.from(room);
+        }
         room.close();
+        notificationService.notifyChatRoomClosed(room.getUserId(), roomId);
+        messagingTemplate.convertAndSend("/topic/chat/" + roomId, ChatRoomClosedEvent.of(roomId));
         return ChatRoomResponse.from(room);
     }
 
