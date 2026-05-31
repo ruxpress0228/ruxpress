@@ -313,6 +313,8 @@ CREATE TABLE `chat_message` (
 	`sender_id`	BIGINT	NOT NULL	COMMENT '발신자 ID (users.id 또는 admins.id — sender_type으로 구분)',
 	`sender_type`	ENUM('USER', 'ADMIN')	NOT NULL	COMMENT '발신자 구분',
 	`content`	TEXT	NOT NULL	COMMENT '메시지 본문 (최대 2000자)',
+	`message_type`	ENUM('TEXT', 'IMAGE', 'FILE')	NOT NULL	DEFAULT 'TEXT'	COMMENT '메시지 유형',
+	`attachment_id`	BIGINT	NULL	COMMENT 'attachments.id',
 	`is_read`	TINYINT(1)	NOT NULL	DEFAULT 0	COMMENT '상대방 읽음 여부',
 	`created_at`	DATETIME(6)	NOT NULL,
 	PRIMARY KEY (`chat_message_id`),

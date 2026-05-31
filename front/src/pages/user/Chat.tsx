@@ -4,50 +4,15 @@ import { getOrCreateRoom, getMyChatRooms, getChatMessages } from '@/api/chat';
 import { useChat } from '@/hooks/chat/useChat';
 import { useI18n } from '@/i18n/I18nProvider';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import type { ChatRoom, ChatMessage, SenderType } from '@/types/chat';
-
-function formatTime(iso: string): string {
-  return new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-}
+import { ChatMessageBubble } from '@/components/chat/ChatMessageBubble';
+import { ChatInputBar } from '@/components/chat/ChatInputBar';
+import { toast } from 'sonner';
+import type { ChatRoom, ChatMessage } from '@/types/chat';
 
 function formatDateTime(iso: string): string {
   return new Date(iso).toLocaleString();
-}
-
-function MessageBubble({
-  msg,
-  mineType,
-}: {
-  msg: ChatMessage;
-  mineType: SenderType;
-}) {
-  const { t } = useI18n();
-  const isMine = msg.senderType === mineType;
-  const otherLabelKey = msg.senderType === 'USER' ? 'chat.user' : 'chat.admin';
-  return (
-    <div className={`flex mb-3 ${isMine ? 'justify-end' : 'justify-start'}`}>
-      <div
-        className={`max-w-[80%] rounded-2xl px-4 py-2 text-sm break-words ${
-          isMine
-            ? 'bg-primary text-primary-foreground'
-            : 'bg-background border'
-        }`}
-      >
-        {!isMine && (
-          <p className="text-xs font-medium mb-1 opacity-60">
-            {t(otherLabelKey)}
-          </p>
-        )}
-        <p className="whitespace-pre-wrap">{msg.content}</p>
-        <p className="text-[10px] opacity-50 mt-1 text-right">
-          {formatTime(msg.createdAt)}
-        </p>
-      </div>
-    </div>
-  );
 }
 
 export default function Chat() {
@@ -60,7 +25,7 @@ export default function Chat() {
   const chatScrollRef = useRef<HTMLDivElement>(null);
   const pastScrollRef = useRef<HTMLDivElement>(null);
 
-  const { messages, connected, sendMessage } = useChat(currentRoom?.id ?? null);
+  const { messages, connected, uploading, sendMessage, uploadAttachment } = useChat(currentRoom?.id ?? null);
 
   const loadPastRooms = useCallback(async () => {
     const res = await getMyChatRooms();
@@ -104,10 +69,13 @@ export default function Chat() {
     setInput('');
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
-      e.preventDefault();
-      handleSend();
+  const handleUpload = async (file: File) => {
+    if (!connected) return;
+    try {
+      await uploadAttachment(file);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : t('chat.upload.error');
+      toast.error(message);
     }
   };
 
@@ -151,26 +119,30 @@ export default function Chat() {
                 </p>
               )}
               {messages.map((msg) => (
-                <MessageBubble key={msg.id} msg={msg} mineType="USER" />
+                <ChatMessageBubble
+                  key={msg.id}
+                  msg={msg}
+                  mineType="USER"
+                  otherLabel={t('chat.admin')}
+                  fileLabel={t('chat.fileUnavailable')}
+                />
               ))}
             </div>
           </div>
 
-          <div className="flex gap-2 mt-3">
-            <Input
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder={t('chat.inputPlaceholder')}
+          <div className="mt-3">
+            <ChatInputBar
+              input={input}
+              onInputChange={setInput}
+              onSend={handleSend}
+              onUpload={handleUpload}
               disabled={!connected}
-              maxLength={2000}
+              uploading={uploading}
+              placeholder={t('chat.inputPlaceholder')}
+              sendLabel={t('chat.send')}
+              attachLabel={t('chat.attach')}
+              fileTooLargeLabel={t('chat.upload.fileTooLarge')}
             />
-            <Button
-              onClick={handleSend}
-              disabled={!connected || !input.trim()}
-            >
-              {t('chat.send')}
-            </Button>
           </div>
         </TabsContent>
 
@@ -228,7 +200,13 @@ export default function Chat() {
                     </p>
                   )}
                   {pastMessages.map((msg) => (
-                    <MessageBubble key={msg.id} msg={msg} mineType="USER" />
+                    <ChatMessageBubble
+                      key={msg.id}
+                      msg={msg}
+                      mineType="USER"
+                      otherLabel={t('chat.admin')}
+                      fileLabel={t('chat.fileUnavailable')}
+                    />
                   ))}
                 </div>
               </div>

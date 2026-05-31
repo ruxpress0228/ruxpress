@@ -4,9 +4,12 @@ import com.ruxpress.common.dto.ApiResponse;
 import com.ruxpress.common.util.JwtUtil;
 import com.ruxpress.domain.chat.dto.response.ChatMessageResponse;
 import com.ruxpress.domain.chat.dto.response.ChatRoomResponse;
+import com.ruxpress.domain.chat.entity.SenderType;
 import com.ruxpress.domain.chat.service.ChatService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import jakarta.servlet.http.HttpServletRequest;
 
@@ -38,4 +41,14 @@ public class UserChatController {
         return ApiResponse.success(chatService.getMessages(roomId, userId, false));
     }
 
+    @PostMapping(value = "/rooms/{roomId}/attachments", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ApiResponse<ChatMessageResponse> uploadAttachment(
+            HttpServletRequest request,
+            @PathVariable String roomId,
+            @RequestPart("file") MultipartFile file,
+            @RequestParam(value = "caption", required = false) String caption) {
+        Long userId = jwtUtil.getUserId(request);
+        return ApiResponse.success(chatService.uploadAttachment(
+                roomId, userId, SenderType.USER, file, caption));
+    }
 }

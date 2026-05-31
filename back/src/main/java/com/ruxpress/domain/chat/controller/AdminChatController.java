@@ -4,11 +4,14 @@ import com.ruxpress.common.dto.ApiResponse;
 import com.ruxpress.common.dto.PageResponse;
 import com.ruxpress.domain.chat.dto.response.ChatMessageResponse;
 import com.ruxpress.domain.chat.dto.response.ChatRoomResponse;
+import com.ruxpress.domain.chat.entity.SenderType;
 import com.ruxpress.domain.chat.service.ChatService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.http.MediaType;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -42,5 +45,16 @@ public class AdminChatController {
     @GetMapping("/rooms/{roomId}/messages")
     public ApiResponse<List<ChatMessageResponse>> getMessages(@PathVariable String roomId) {
         return ApiResponse.success(chatService.getMessages(roomId, null, true));
+    }
+
+    @PostMapping(value = "/rooms/{roomId}/attachments", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ApiResponse<ChatMessageResponse> uploadAttachment(
+            @PathVariable String roomId,
+            Authentication authentication,
+            @RequestPart("file") MultipartFile file,
+            @RequestParam(value = "caption", required = false) String caption) {
+        Long adminId = (Long) authentication.getPrincipal();
+        return ApiResponse.success(chatService.uploadAttachment(
+                roomId, adminId, SenderType.ADMIN, file, caption));
     }
 }

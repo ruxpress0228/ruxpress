@@ -1,18 +1,22 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Client, type IMessage } from '@stomp/stompjs';
 import { STORAGE_KEYS, USER_AUTH_CHANGE_EVENT } from '@/utils/constants';
 import { readAuthValue } from '@/utils/api';
 import type { ChatMessage } from '@/types/chat';
-import { getChatMessages, getAdminRoomMessages } from '@/api/chat';
+import { getChatMessages, getAdminRoomMessages, uploadChatAttachment, uploadAdminChatAttachment } from '@/api/chat';
 
 function buildWsUrl(): string {
   const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
   return `${proto}//${window.location.host}/ws`;
 }
 
+function appendUnique(prev: ChatMessage[], chatMsg: ChatMessage): ChatMessage[] {
+  if (prev.some((m) => m.id === chatMsg.id)) return prev;
+  return [...prev, chatMsg];
+}
+
 interface UseChatOptions {
   isAdmin?: boolean;
-  /** When false, only history is loaded (no WebSocket connection). Default true. */
   connectLive?: boolean;
 }
 
@@ -20,6 +24,7 @@ export function useChat(roomId: string | null, options: UseChatOptions = {}) {
   const { isAdmin = false, connectLive = true } = options;
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [connected, setConnected] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [authToken, setAuthToken] = useState(() => readAuthValue(STORAGE_KEYS.TOKEN));
   const clientRef = useRef<Client | null>(null);
 
@@ -30,7 +35,6 @@ export function useChat(roomId: string | null, options: UseChatOptions = {}) {
     return () => window.removeEventListener(USER_AUTH_CHANGE_EVENT, syncToken);
   }, []);
 
-  // Load history whenever the room changes
   useEffect(() => {
     setMessages([]);
     if (!roomId) return;
@@ -40,7 +44,6 @@ export function useChat(roomId: string | null, options: UseChatOptions = {}) {
     });
   }, [roomId, isAdmin]);
 
-  // Open WebSocket only for live rooms
   useEffect(() => {
     if (!roomId || !connectLive) {
       setConnected(false);
@@ -59,7 +62,7 @@ export function useChat(roomId: string | null, options: UseChatOptions = {}) {
         setConnected(true);
         client.subscribe(`/topic/chat/${roomId}`, (msg: IMessage) => {
           const chatMsg = JSON.parse(msg.body) as ChatMessage;
-          setMessages((prev) => [...prev, chatMsg]);
+          setMessages((prev) => appendUnique(prev, chatMsg));
         });
       },
       onDisconnect: () => setConnected(false),
@@ -83,13 +86,27 @@ export function useChat(roomId: string | null, options: UseChatOptions = {}) {
     };
   }, [roomId, connectLive, authToken]);
 
-  const sendMessage = (content: string) => {
+  const sendMessage = useCallback((content: string) => {
     if (!clientRef.current?.connected || !roomId || !connectLive) return;
     clientRef.current.publish({
       destination: `/app/chat/${roomId}/send`,
       body: JSON.stringify({ content }),
     });
-  };
+  }, [roomId, connectLive]);
 
-  return { messages, connected, sendMessage };
+  const uploadAttachment = useCallback(async (file: File, caption?: string) => {
+    if (!roomId || !connectLive) return;
+    setUploading(true);
+    try {
+      const upload = isAdmin ? uploadAdminChatAttachment : uploadChatAttachment;
+      const message = await upload(roomId, file, caption);
+      setMessages((prev) => appendUnique(prev, message));
+    } catch (err) {
+      setUploading(false);
+      throw err;
+    }
+    setUploading(false);
+  }, [roomId, connectLive, isAdmin]);
+
+  return { messages, connected, uploading, sendMessage, uploadAttachment };
 }
