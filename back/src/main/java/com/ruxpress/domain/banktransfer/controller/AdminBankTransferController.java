@@ -13,6 +13,7 @@ import com.ruxpress.domain.banktransfer.service.BankTransferService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -52,7 +53,8 @@ public class AdminBankTransferController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "50") int size) {
         return ApiResponse.success(
-                bankTransferService.listForAdmin(status, entryType, userEmail, PageRequest.of(page, size)));
+                bankTransferService.listForAdmin(status, entryType, userEmail,
+                        PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"))));
     }
 
     @GetMapping("/{id}")
