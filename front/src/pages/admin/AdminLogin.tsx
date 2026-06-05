@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router";
+import { Globe } from "lucide-react";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import { Label } from "../../components/ui/label";
@@ -8,7 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../..
 import { toast } from "sonner";
 import { api, notifyUserAuthChange } from "../../utils/api";
 import { unwrap } from "../../utils/exception";
-import { STORAGE_KEYS } from "../../utils/constants";
+import { LOCALES, STORAGE_KEYS } from "../../utils/constants";
 import { useTranslation } from "../../hooks/useTranslation";
 
 interface LoginResponse {
@@ -20,12 +21,25 @@ interface LoginResponse {
 }
 
 export default function AdminLogin() {
-  const { t } = useTranslation();
+  const { t, locale, setLocale } = useTranslation();
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [langOpen, setLangOpen] = useState(false);
+  const langRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!langOpen) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (langRef.current && !langRef.current.contains(e.target as Node)) {
+        setLangOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [langOpen]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -62,7 +76,42 @@ export default function AdminLogin() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 relative">
+      <div className="absolute top-4 right-4" ref={langRef}>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          title={t("common.language")}
+          onClick={() => setLangOpen((v) => !v)}
+          aria-expanded={langOpen}
+          aria-haspopup="listbox"
+        >
+          <Globe className="w-5 h-5" />
+        </Button>
+        {langOpen && (
+          <div
+            className="absolute right-0 top-full mt-1 min-w-[10rem] rounded-md border border-gray-200 bg-white py-1 shadow-lg z-10"
+            role="listbox"
+          >
+            {LOCALES.map((loc) => (
+              <button
+                key={loc}
+                type="button"
+                role="option"
+                aria-selected={locale === loc}
+                className={`block w-full px-3 py-2 text-left text-sm hover:bg-gray-100 ${locale === loc ? "bg-blue-50 text-blue-700 font-medium" : "text-gray-900"}`}
+                onClick={() => {
+                  setLocale(loc);
+                  setLangOpen(false);
+                }}
+              >
+                {t(`locale.${loc}`)}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1">
           <div className="flex items-center justify-center mb-4">
