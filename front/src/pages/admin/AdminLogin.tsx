@@ -82,7 +82,7 @@ export default function AdminLogin() {
               <Input
                 id="admin-email"
                 type="email"
-                placeholder="admin@ruxpress.com"
+                placeholder="admin@main-proxy.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required

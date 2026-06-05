@@ -144,7 +144,7 @@ export default function AdminAdmins() {
           <div className="space-y-4">
             <div className="space-y-2">
               <Label>{t("admin.common.col.email")} *</Label>
-              <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="admin@ruxpress.com" disabled={submitting} />
+              <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="admin@main-proxy.com" disabled={submitting} />
             </div>
             <div className="space-y-2">
               <Label>{t("admin.login.password")} *</Label>

@@ -69,7 +69,7 @@ public class NotificationService {
         Notification saved = notificationRepository.saveAndFlush(Notification.create(
                 userId,
                 NotificationType.CHAT,
-                "RuxPress 관리자",
+                "Main-Proxy 관리자",
                 preview,
                 "{\"roomId\":\"" + escapeJson(roomId) + "\"}"));
         pushKafkaOutboxService.scheduleDispatchAfterCommit(saved);
