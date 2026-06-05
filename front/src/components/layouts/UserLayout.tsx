@@ -64,7 +64,7 @@ export default function UserLayout() {
               <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-blue-400 rounded-lg flex items-center justify-center">
                 <span className="text-white text-xs font-bold tracking-tight">MP</span>
               </div>
-              <span className="text-xl font-bold text-gray-900">Main-Proxy</span>
+              <span className="text-xl font-bold text-gray-900">Main Proxy</span>
             </Link>
 
             <nav className="hidden md:flex space-x-1">
@@ -181,7 +181,7 @@ export default function UserLayout() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <div>
-              <h3 className="font-bold text-gray-900 mb-3">Main-Proxy</h3>
+              <h3 className="font-bold text-gray-900 mb-3">Main Proxy</h3>
               <p className="text-sm text-gray-600">{t("footer.tagline")}</p>
             </div>
             <div>

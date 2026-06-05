@@ -101,7 +101,7 @@ export default function AdminLayout() {
                 <span className="text-white text-xs font-bold tracking-tight">MP</span>
               </div>
               <div>
-                <h2 className="font-bold text-gray-900">Main-Proxy</h2>
+                <h2 className="font-bold text-gray-900">Main Proxy</h2>
                 <p className="text-xs text-gray-500">{t("nav.admin.label")}</p>
               </div>
             </div>

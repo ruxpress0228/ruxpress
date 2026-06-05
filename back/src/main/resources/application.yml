@@ -85,7 +85,7 @@ app:
     verification:
       subject: ${MAIL_VERIFICATION_SUBJECT:}
     password-reset:
-      subject: ${MAIL_PASSWORD_RESET_SUBJECT:Main-Proxy 비밀번호 재설정}
+      subject: ${MAIL_PASSWORD_RESET_SUBJECT:Main Proxy 비밀번호 재설정}
   jwt:
     # 로컬에서 환경 변수 미설정 시에도 기동되도록 기본값(운영은 반드시 JWT_* 로 덮어쓰기)
     secret: ${JWT_SECRET:local-dev-only-change-me-use-strong-secret-in-production-min-32chars}

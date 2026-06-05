@@ -19,10 +19,10 @@ public class EmailService {
     @Value("${app.mail.from:noreply@ruxpress.com}")
     private String fromAddress;
 
-    @Value("${app.mail.verification.subject:Main-Proxy 이메일 인증}")
+    @Value("${app.mail.verification.subject:Main Proxy 이메일 인증}")
     private String subject;
 
-    @Value("${app.mail.password-reset.subject:Main-Proxy 비밀번호 재설정}")
+    @Value("${app.mail.password-reset.subject:Main Proxy 비밀번호 재설정}")
     private String passwordResetSubject;
 
     @Value("${spring.mail.password:}")
@@ -38,7 +38,7 @@ public class EmailService {
             return;
         }
         String body = String.format(
-                "Main-Proxy 이메일 인증 코드입니다.\n\n인증번호: %s\n\n유효시간: 10분\n\n본인이 요청한 것이 아니라면 무시하세요.",
+                "Main Proxy 이메일 인증 코드입니다.\n\n인증번호: %s\n\n유효시간: 10분\n\n본인이 요청한 것이 아니라면 무시하세요.",
                 code);
         SimpleMailMessage message = new SimpleMailMessage();
         message.setFrom(fromAddress);

@@ -15,7 +15,7 @@ public class RootController {
                 <head>
                   <meta charset="UTF-8"/>
                   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-                  <title>Main-Proxy API</title>
+                  <title>Main Proxy API</title>
                   <style>
                     body { font-family: system-ui, sans-serif; max-width: 42rem; margin: 2rem auto; padding: 0 1rem; line-height: 1.5; color: #1a1a1a; }
                     h1 { font-size: 1.25rem; }
@@ -24,7 +24,7 @@ public class RootController {
                   </style>
                 </head>
                 <body>
-                  <h1>Main-Proxy 백엔드 (Spring Boot)</h1>
+                  <h1>Main Proxy 백엔드 (Spring Boot)</h1>
                   <p>이 주소(<code>http://localhost:8080</code>)는 API 서버입니다. 웹 화면은 프론트 개발 서버에서 띄웁니다.</p>
                   <ul>
                     <li><a href="/api/health">헬스 체크</a> — <code>GET /api/health</code></li>

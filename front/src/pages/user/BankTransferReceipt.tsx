@@ -54,7 +54,7 @@ export default function BankTransferReceipt() {
       <Card className="print:border-0 print:shadow-none">
         <CardHeader className="print:text-center border-b print:border-gray-300 pb-4">
           <CardTitle className="text-2xl">{t("bankTransfer.receiptTitle")}</CardTitle>
-          <p className="text-sm text-gray-500 mt-2">Main-Proxy · {t("bankTransfer.receiptSubtitle")}</p>
+          <p className="text-sm text-gray-500 mt-2">Main Proxy · {t("bankTransfer.receiptSubtitle")}</p>
         </CardHeader>
         <CardContent className="pt-6 space-y-4 text-sm">
           <div className="grid grid-cols-2 gap-2">

@@ -68,7 +68,7 @@ app:
     verification:
       subject: ${MAIL_VERIFICATION_SUBJECT:}
     password-reset:
-      subject: ${MAIL_PASSWORD_RESET_SUBJECT:Main-Proxy 비밀번호 재설정}
+      subject: ${MAIL_PASSWORD_RESET_SUBJECT:Main Proxy 비밀번호 재설정}
   jwt:
     secret: ${JWT_SECRET:local-dev-only-change-me-use-strong-secret-in-production-min-32chars}
     expiration: ${JWT_EXPIRATION:604800000}
