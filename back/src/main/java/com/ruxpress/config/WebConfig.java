@@ -11,6 +11,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Arrays;
 import java.util.concurrent.TimeUnit;
 
 @Configuration
@@ -21,10 +22,17 @@ public class WebConfig implements WebMvcConfigurer {
     @Value("${storage.local.upload-dir:./uploads}")
     private String uploadDir;
 
+    @Value("${app.cors.allowed-origins:http://localhost:3000,http://localhost:80,http://localhost}")
+    private String allowedOrigins;
+
     @Override
     public void addCorsMappings(CorsRegistry registry) {
+        String[] origins = Arrays.stream(allowedOrigins.split(","))
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .toArray(String[]::new);
         registry.addMapping("/api/**")
-                .allowedOrigins("http://localhost:3000", "http://localhost:80", "http://localhost")
+                .allowedOrigins(origins)
                 .allowedMethods("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")
                 .allowedHeaders("*")
                 .allowCredentials(true)

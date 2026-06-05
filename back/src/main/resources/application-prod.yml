@@ -61,8 +61,10 @@ ruxpress:
       result: ruxpress.notification.push.result
 
 app:
+  cors:
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:https://main-proxy.com,https://www.main-proxy.com}
   frontend:
-    base-url: ${FRONTEND_BASE_URL:http://localhost}
+    base-url: ${FRONTEND_BASE_URL:https://main-proxy.com}
   mail:
     from: ${MAIL_FROM:}
     verification:

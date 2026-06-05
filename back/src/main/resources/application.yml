@@ -76,6 +76,8 @@ ruxpress:
       result: ruxpress.notification.push.result
 
 app:
+  cors:
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000,http://localhost:80,http://localhost}
   frontend:
     base-url: ${FRONTEND_BASE_URL:http://localhost}
   mail:
