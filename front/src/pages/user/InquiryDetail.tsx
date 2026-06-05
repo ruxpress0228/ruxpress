@@ -287,7 +287,7 @@ export default function InquiryDetail() {
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center space-x-2">
                     <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
-                      <span className="text-white text-sm font-bold">R</span>
+                      <span className="text-white text-xs font-bold tracking-tight">MP</span>
                     </div>
                     <div>
                       <p className="font-semibold text-gray-900">{t("inquiry.detail.admin")}</p>

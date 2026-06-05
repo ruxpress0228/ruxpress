@@ -89,7 +89,7 @@ export default function Login() {
         <CardHeader className="space-y-1">
           <div className="flex items-center justify-center mb-4">
             <div className="w-12 h-12 bg-gradient-to-br from-blue-600 to-blue-400 rounded-xl flex items-center justify-center">
-              <span className="text-white text-2xl font-bold">R</span>
+              <span className="text-white text-lg font-bold tracking-tight">MP</span>
             </div>
           </div>
           <CardTitle className="text-2xl text-center">{t("login.title")}</CardTitle>

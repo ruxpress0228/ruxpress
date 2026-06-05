@@ -62,7 +62,7 @@ export default function UserLayout() {
           <div className="flex justify-between items-center h-16">
             <Link to="/" className="flex items-center space-x-2">
               <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-blue-400 rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold">R</span>
+                <span className="text-white text-xs font-bold tracking-tight">MP</span>
               </div>
               <span className="text-xl font-bold text-gray-900">Main-Proxy</span>
             </Link>
