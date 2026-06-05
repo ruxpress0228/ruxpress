@@ -5,7 +5,7 @@ import { Button } from "../ui/button";
 import { Badge } from "../ui/badge";
 import { useTranslation } from "../../hooks/useTranslation";
 import { LOCALES, STORAGE_KEYS, USER_AUTH_CHANGE_EVENT } from "../../utils/constants";
-import { clearUserSession } from "../../utils/api";
+import { clearUserSession, readAuthValue } from "../../utils/api";
 
 export default function UserLayout() {
   const location = useLocation();
@@ -25,8 +25,8 @@ export default function UserLayout() {
     setAuthRevision((n) => n + 1);
   }, [location.pathname]);
 
-  const userToken = localStorage.getItem(STORAGE_KEYS.TOKEN);
-  const userNickname = localStorage.getItem(STORAGE_KEYS.USER_NICKNAME);
+  const userToken = readAuthValue(STORAGE_KEYS.TOKEN);
+  const userNickname = readAuthValue(STORAGE_KEYS.USER_NICKNAME);
 
   useEffect(() => {
     if (!langOpen) return;
@@ -62,9 +62,9 @@ export default function UserLayout() {
           <div className="flex justify-between items-center h-16">
             <Link to="/" className="flex items-center space-x-2">
               <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-blue-400 rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold">R</span>
+                <span className="text-white text-xs font-bold tracking-tight">MP</span>
               </div>
-              <span className="text-xl font-bold text-gray-900">Ruxpress</span>
+              <span className="text-xl font-bold text-gray-900">Main Proxy</span>
             </Link>
 
             <nav className="hidden md:flex space-x-1">
@@ -129,10 +129,10 @@ export default function UserLayout() {
               {userToken ? (
                 <div className="flex items-center gap-1 max-w-[14rem]">
                   <span className="hidden sm:inline text-sm text-gray-700 truncate" title={userNickname ?? ""}>
-                    {userNickname ?? "회원"}
+                    {userNickname ?? t("nav.memberFallback")}
                   </span>
                   <Link to="/mypage">
-                    <Button variant="ghost" size="icon" title="마이페이지">
+                    <Button variant="ghost" size="icon" title={t("nav.myPage")}>
                       <User className="w-5 h-5" />
                     </Button>
                   </Link>
@@ -143,7 +143,7 @@ export default function UserLayout() {
               ) : (
                 <Link to="/login">
                   <Button variant="ghost" size="sm" className="text-blue-600">
-                    로그인
+                    {t("nav.login")}
                   </Button>
                 </Link>
               )}
@@ -181,7 +181,7 @@ export default function UserLayout() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <div>
-              <h3 className="font-bold text-gray-900 mb-3">Ruxpress</h3>
+              <h3 className="font-bold text-gray-900 mb-3">Main Proxy</h3>
               <p className="text-sm text-gray-600">{t("footer.tagline")}</p>
             </div>
             <div>
@@ -193,7 +193,6 @@ export default function UserLayout() {
             </div>
             <div>
               <h4 className="font-semibold text-gray-900 mb-3">{t("footer.inquiry")}</h4>
-              <p className="text-sm text-gray-600">{t("footer.email")}</p>
               <p className="text-sm text-gray-600">{t("footer.hours")}</p>
             </div>
           </div>

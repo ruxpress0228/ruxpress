@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect } from "react";
+import { toast } from "sonner";
 
 /** 로그인/로그아웃 시에만 사용 ([Login], [api.clearUserSession]) */
 export interface AndroidBridge {
@@ -25,13 +26,12 @@ declare global {
  * FCM·push-context는 네이티브 [setAuthToken]에서 처리.
  */
 export function useAndroidBridge() {
-  const [pushNotification, setPushNotification] = useState<PushPayload | null>(null);
-
   useEffect(() => {
     if (typeof window === "undefined" || !window.Android) return;
 
     window.onPushReceived = (payload: PushPayload) => {
-      setPushNotification(payload);
+      const line = payload.body ? `${payload.title}\n${payload.body}` : payload.title;
+      toast.info(line);
     };
 
     return () => {
@@ -39,9 +39,7 @@ export function useAndroidBridge() {
     };
   }, []);
 
-  const clearPushNotification = useCallback(() => {
-    setPushNotification(null);
-  }, []);
+  const clearPushNotification = useCallback(() => {}, []);
 
-  return { pushNotification, clearPushNotification };
+  return { clearPushNotification };
 }

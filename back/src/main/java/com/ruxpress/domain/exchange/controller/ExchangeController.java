@@ -1,9 +1,7 @@
 package com.ruxpress.domain.exchange.controller;
 
 import com.ruxpress.common.dto.ApiResponse;
-import com.ruxpress.common.exception.BusinessException;
-import com.ruxpress.common.exception.ErrorCode;
-import com.ruxpress.domain.exchange.dto.CurrentExchangeRateResponse;
+import com.ruxpress.domain.exchange.dto.CurrentExchangeRatesResponse;
 import com.ruxpress.domain.exchange.dto.ExchangeRateResponse;
 import com.ruxpress.domain.exchange.dto.ManualExchangeRateRequest;
 import com.ruxpress.domain.exchange.service.ExchangeService;
@@ -22,34 +20,29 @@ public class ExchangeController {
     private final ExchangeService exchangeService;
 
     @GetMapping("/current")
-    public ApiResponse<CurrentExchangeRateResponse> getCurrent() {
-        return exchangeService.getCurrent()
-                .map(ApiResponse::success)
-                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND, "환율 정보가 없습니다"));
+    public ApiResponse<CurrentExchangeRatesResponse> getCurrent() {
+        return ApiResponse.success(exchangeService.getCurrentRates());
     }
 
     @GetMapping
     public ApiResponse<Page<ExchangeRateResponse>> getHistory(
+            @RequestParam(required = false) String baseCurrency,
             @PageableDefault(size = 20) Pageable pageable) {
-        Page<ExchangeRateResponse> page = exchangeService.getHistory(pageable);
+        Page<ExchangeRateResponse> page = exchangeService.getHistory(baseCurrency, pageable);
         return ApiResponse.success(page);
     }
 
     @PostMapping("/fetch")
-    public ApiResponse<CurrentExchangeRateResponse> triggerFetch() {
+    public ApiResponse<CurrentExchangeRatesResponse> triggerFetch() {
         exchangeService.fetchAndSave();
-        return exchangeService.getCurrent()
-                .map(ApiResponse::success)
-                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND, "환율 정보가 없습니다"));
+        return ApiResponse.success(exchangeService.getCurrentRates());
     }
 
     @PostMapping("/manual")
-    public ApiResponse<CurrentExchangeRateResponse> setManual(
+    public ApiResponse<CurrentExchangeRatesResponse> setManual(
             @Valid @RequestBody ManualExchangeRateRequest request) {
         Long adminId = null; // TODO: from SecurityContext when admin auth is implemented
-        exchangeService.setManual(request.getRate(), adminId);
-        return exchangeService.getCurrent()
-                .map(ApiResponse::success)
-                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND, "환율 정보가 없습니다"));
+        exchangeService.setManual(request.getCurrency(), request.getRate(), adminId);
+        return ApiResponse.success(exchangeService.getCurrentRates());
     }
 }

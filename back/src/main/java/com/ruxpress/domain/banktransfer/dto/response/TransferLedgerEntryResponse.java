@@ -1,5 +1,6 @@
 package com.ruxpress.domain.banktransfer.dto.response;
 
+import com.ruxpress.common.dto.AttachmentResponse;
 import com.ruxpress.domain.banktransfer.entity.TransferLedgerEntry;
 import com.ruxpress.domain.banktransfer.entity.TransferLedgerEntryType;
 import com.ruxpress.domain.banktransfer.entity.TransferLedgerStatus;
@@ -8,6 +9,7 @@ import lombok.Getter;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Getter
 @AllArgsConstructor
@@ -32,11 +34,24 @@ public class TransferLedgerEntryResponse {
     private final Long confirmedByAdminId;
     private final LocalDateTime createdAt;
     private final SettlementAccountResponse settlementAccount;
+    private final List<AttachmentResponse> attachments;
+    /** CONFIRMED 루트 입금 — 정산·환불 가능 잔여 (null이면 해당 없음) */
+    private final BigDecimal remainingSettleOrRefundAmount;
 
     public static TransferLedgerEntryResponse of(
             TransferLedgerEntry e,
             SettlementAccountResponse settlementAccount,
-            String userEmail) {
+            String userEmail,
+            List<AttachmentResponse> attachments) {
+        return of(e, settlementAccount, userEmail, attachments, null);
+    }
+
+    public static TransferLedgerEntryResponse of(
+            TransferLedgerEntry e,
+            SettlementAccountResponse settlementAccount,
+            String userEmail,
+            List<AttachmentResponse> attachments,
+            BigDecimal remainingSettleOrRefundAmount) {
         return new TransferLedgerEntryResponse(
                 e.getId(),
                 e.getUserId(),
@@ -55,6 +70,8 @@ public class TransferLedgerEntryResponse {
                 e.getConfirmedAt(),
                 e.getConfirmedByAdminId(),
                 e.getCreatedAt(),
-                settlementAccount);
+                settlementAccount,
+                attachments,
+                remainingSettleOrRefundAmount);
     }
 }

@@ -5,6 +5,8 @@ import com.ruxpress.domain.banktransfer.entity.TransferLedgerEntryType;
 import com.ruxpress.domain.banktransfer.entity.TransferLedgerStatus;
 import org.springframework.data.jpa.domain.Specification;
 
+import java.util.Collection;
+
 public final class TransferLedgerSpecifications {
 
     private TransferLedgerSpecifications() {
@@ -23,5 +25,13 @@ public final class TransferLedgerSpecifications {
     public static Specification<TransferLedgerEntry> userIdEquals(Long userId) {
         return (root, query, cb) ->
                 userId == null ? cb.conjunction() : cb.equal(root.get("userId"), userId);
+    }
+
+    public static Specification<TransferLedgerEntry> userIdIn(Collection<Long> userIds) {
+        return (root, query, cb) -> {
+            if (userIds == null) return cb.conjunction();
+            if (userIds.isEmpty()) return cb.disjunction();
+            return root.get("userId").in(userIds);
+        };
     }
 }

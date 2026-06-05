@@ -26,7 +26,7 @@ spring:
     basename: messages/messages
     encoding: UTF-8
   datasource:
-    url: jdbc:mariadb://localhost:3306/${DB_NAME:ruxpress}
+    url: jdbc:mariadb://${DB_HOST:mariadb}:3306/${DB_NAME:ruxpress}
     driver-class-name: org.mariadb.jdbc.Driver
     username: ${DB_USERNAME:ruxpress}
     password: ${DB_PASSWORD:ruxpress}
@@ -68,15 +68,15 @@ app:
     verification:
       subject: ${MAIL_VERIFICATION_SUBJECT:}
     password-reset:
-      subject: ${MAIL_PASSWORD_RESET_SUBJECT:Ruxpress 비밀번호 재설정}
+      subject: ${MAIL_PASSWORD_RESET_SUBJECT:Main Proxy 비밀번호 재설정}
   jwt:
     secret: ${JWT_SECRET:local-dev-only-change-me-use-strong-secret-in-production-min-32chars}
-    expiration: ${JWT_EXPIRATION:86400000}
+    expiration: ${JWT_EXPIRATION:604800000}
 
 storage:
   type: local
   local:
-    upload-dir: ./uploads
+    upload-dir: ${UPLOAD_DIR:/app/uploads}
   s3:
     bucket: ${S3_BUCKET:}
     region: ${S3_REGION:ap-northeast-2}

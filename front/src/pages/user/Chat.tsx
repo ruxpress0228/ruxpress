@@ -4,51 +4,15 @@ import { getOrCreateRoom, getMyChatRooms, getChatMessages } from '@/api/chat';
 import { useChat } from '@/hooks/chat/useChat';
 import { useI18n } from '@/i18n/I18nProvider';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import type { ChatRoom, ChatMessage, SenderType } from '@/types/chat';
-
-function formatTime(iso: string): string {
-  return new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-}
+import { ChatMessageBubble } from '@/components/chat/ChatMessageBubble';
+import { ChatInputBar } from '@/components/chat/ChatInputBar';
+import { toast } from 'sonner';
+import type { ChatRoom, ChatMessage } from '@/types/chat';
 
 function formatDateTime(iso: string): string {
   return new Date(iso).toLocaleString();
-}
-
-function MessageBubble({
-  msg,
-  mineType,
-}: {
-  msg: ChatMessage;
-  mineType: SenderType;
-}) {
-  const { t } = useI18n();
-  const isMine = msg.senderType === mineType;
-  const otherLabelKey = msg.senderType === 'USER' ? 'chat.user' : 'chat.admin';
-  return (
-    <div className={`flex mb-3 ${isMine ? 'justify-end' : 'justify-start'}`}>
-      <div
-        className={`max-w-[80%] rounded-2xl px-4 py-2 text-sm break-words ${
-          isMine
-            ? 'bg-primary text-primary-foreground'
-            : 'bg-background border'
-        }`}
-      >
-        {!isMine && (
-          <p className="text-xs font-medium mb-1 opacity-60">
-            {t(otherLabelKey)}
-          </p>
-        )}
-        <p className="whitespace-pre-wrap">{msg.content}</p>
-        <p className="text-[10px] opacity-50 mt-1 text-right">
-          {formatTime(msg.createdAt)}
-        </p>
-      </div>
-    </div>
-  );
 }
 
 export default function Chat() {
@@ -58,10 +22,8 @@ export default function Chat() {
   const [selectedPastRoomId, setSelectedPastRoomId] = useState<string | null>(null);
   const [pastMessages, setPastMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
-  const bottomRef = useRef<HTMLDivElement>(null);
-  const pastBottomRef = useRef<HTMLDivElement>(null);
-
-  const { messages, connected, sendMessage } = useChat(currentRoom?.id ?? null);
+  const chatScrollRef = useRef<HTMLDivElement>(null);
+  const pastScrollRef = useRef<HTMLDivElement>(null);
 
   const loadPastRooms = useCallback(async () => {
     const res = await getMyChatRooms();
@@ -69,6 +31,42 @@ export default function Chat() {
       setPastRooms(res.data.filter((r) => r.status === 'CLOSED'));
     }
   }, []);
+
+  const isLive = currentRoom?.status === 'OPEN';
+
+  const handleRoomClosed = useCallback(() => {
+    toast.info(t('chat.closedByAdmin'));
+    setCurrentRoom((prev) => (prev ? { ...prev, status: 'CLOSED' } : prev));
+    void loadPastRooms();
+  }, [t, loadPastRooms]);
+
+  const {
+    messages,
+    connected,
+    uploading,
+    roomClosed,
+    sendMessage,
+    uploadAttachment,
+    resetRoomClosed,
+  } = useChat(currentRoom?.id ?? null, {
+    connectLive: isLive,
+    onRoomClosed: handleRoomClosed,
+  });
+
+  const chatEnded = roomClosed || currentRoom?.status === 'CLOSED';
+
+  const handleStartNewChat = async () => {
+    try {
+      const res = await getOrCreateRoom();
+      if (res.code === 200 && res.data) {
+        setCurrentRoom(res.data);
+        resetRoomClosed();
+        void loadPastRooms();
+      }
+    } catch {
+      toast.error(t('chat.newChatError'));
+    }
+  };
 
   useEffect(() => {
     getOrCreateRoom().then((res) => {
@@ -78,7 +76,8 @@ export default function Chat() {
   }, [loadPastRooms]);
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+    const el = chatScrollRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
   }, [messages]);
 
   useEffect(() => {
@@ -89,25 +88,28 @@ export default function Chat() {
     getChatMessages(selectedPastRoomId).then((res) => {
       if (res.code === 200 && res.data) {
         setPastMessages(res.data);
-        setTimeout(
-          () => pastBottomRef.current?.scrollIntoView({ behavior: 'auto' }),
-          0,
-        );
+        setTimeout(() => {
+          const el = pastScrollRef.current;
+          if (el) el.scrollTop = el.scrollHeight;
+        }, 0);
       }
     });
   }, [selectedPastRoomId]);
 
   const handleSend = () => {
     const text = input.trim();
-    if (!text || !connected) return;
+    if (!text || !connected || chatEnded) return;
     sendMessage(text);
     setInput('');
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
-      e.preventDefault();
-      handleSend();
+  const handleUpload = async (file: File) => {
+    if (!connected || chatEnded) return;
+    try {
+      await uploadAttachment(file);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : t('chat.upload.error');
+      toast.error(message);
     }
   };
 
@@ -138,12 +140,25 @@ export default function Chat() {
           className="flex-1 min-h-0 flex flex-col mt-0 data-[state=inactive]:hidden"
         >
           <div className="flex justify-end mb-2">
-            <Badge variant={connected ? 'default' : 'secondary'}>
-              {connected ? t('chat.connected') : t('chat.connecting')}
+            <Badge variant={connected && !chatEnded ? 'default' : 'secondary'}>
+              {chatEnded
+                ? t('chat.status.closed')
+                : connected
+                  ? t('chat.connected')
+                  : t('chat.connecting')}
             </Badge>
           </div>
 
-          <ScrollArea className="flex-1 min-h-0 border rounded-lg bg-muted/30">
+          {chatEnded && (
+            <div className="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+              <p>{t('chat.closedByAdmin')}</p>
+              <Button variant="outline" size="sm" className="mt-2" onClick={() => void handleStartNewChat()}>
+                {t('chat.startNew')}
+              </Button>
+            </div>
+          )}
+
+          <div ref={chatScrollRef} className="flex-1 min-h-0 overflow-y-auto border rounded-lg bg-muted/30">
             <div className="p-3 sm:p-4">
               {messages.length === 0 && (
                 <p className="text-center text-muted-foreground text-sm py-8">
@@ -151,27 +166,34 @@ export default function Chat() {
                 </p>
               )}
               {messages.map((msg) => (
-                <MessageBubble key={msg.id} msg={msg} mineType="USER" />
+                <ChatMessageBubble
+                  key={msg.id}
+                  msg={msg}
+                  mineType="USER"
+                  otherLabel={t('chat.admin')}
+                  fileLabel={t('chat.fileUnavailable')}
+                />
               ))}
-              <div ref={bottomRef} />
             </div>
-          </ScrollArea>
+          </div>
 
-          <div className="flex gap-2 mt-3">
-            <Input
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder={t('chat.inputPlaceholder')}
-              disabled={!connected}
-              maxLength={2000}
-            />
-            <Button
-              onClick={handleSend}
-              disabled={!connected || !input.trim()}
-            >
-              {t('chat.send')}
-            </Button>
+          <div className="mt-3">
+            {chatEnded ? (
+              <p className="text-center text-muted-foreground text-sm py-2">{t('chat.closedHint')}</p>
+            ) : (
+              <ChatInputBar
+                input={input}
+                onInputChange={setInput}
+                onSend={handleSend}
+                onUpload={handleUpload}
+                disabled={!connected}
+                uploading={uploading}
+                placeholder={t('chat.inputPlaceholder')}
+                sendLabel={t('chat.send')}
+                attachLabel={t('chat.attach')}
+                fileTooLargeLabel={t('chat.upload.fileTooLarge')}
+              />
+            )}
           </div>
         </TabsContent>
 
@@ -180,7 +202,7 @@ export default function Chat() {
           className="flex-1 min-h-0 flex flex-col mt-0 data-[state=inactive]:hidden"
         >
           {selectedPastRoomId === null ? (
-            <ScrollArea className="flex-1 min-h-0 border rounded-lg">
+            <div className="flex-1 min-h-0 overflow-y-auto border rounded-lg">
               {pastRooms.length === 0 && (
                 <p className="text-center text-muted-foreground text-sm p-6">
                   {t('chat.history.empty')}
@@ -205,7 +227,7 @@ export default function Chat() {
                   </p>
                 </button>
               ))}
-            </ScrollArea>
+            </div>
           ) : (
             <div className="flex flex-col flex-1 min-h-0">
               <div className="flex items-center justify-between gap-2 mb-2">
@@ -221,7 +243,7 @@ export default function Chat() {
                   {t('chat.history.readonly')}
                 </Badge>
               </div>
-              <ScrollArea className="flex-1 min-h-0 border rounded-lg bg-muted/30">
+              <div ref={pastScrollRef} className="flex-1 min-h-0 overflow-y-auto border rounded-lg bg-muted/30">
                 <div className="p-3 sm:p-4">
                   {pastMessages.length === 0 && (
                     <p className="text-center text-muted-foreground text-sm py-8">
@@ -229,11 +251,16 @@ export default function Chat() {
                     </p>
                   )}
                   {pastMessages.map((msg) => (
-                    <MessageBubble key={msg.id} msg={msg} mineType="USER" />
+                    <ChatMessageBubble
+                      key={msg.id}
+                      msg={msg}
+                      mineType="USER"
+                      otherLabel={t('chat.admin')}
+                      fileLabel={t('chat.fileUnavailable')}
+                    />
                   ))}
-                  <div ref={pastBottomRef} />
                 </div>
-              </ScrollArea>
+              </div>
             </div>
           )}
         </TabsContent>

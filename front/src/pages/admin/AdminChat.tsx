@@ -1,39 +1,88 @@
-import { useEffect, useRef, useState } from 'react';
-import { ChevronLeft } from 'lucide-react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { ChevronLeft, RefreshCw } from 'lucide-react';
 import {
   getAdminChatRooms,
   adminJoinRoom,
   adminCloseRoom,
+  getChatCleanupSettings,
+  updateChatCleanupSettings,
 } from '@/api/chat';
 import { useChat } from '@/hooks/chat/useChat';
+import { useTranslation } from '@/hooks/useTranslation';
+import { readAuthValue } from '@/utils/api';
+import { DEFAULT_PAGE_SIZE, PAGE_SIZE_OPTIONS } from '@/utils/constants';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import type { ChatRoom, ChatRoomStatus } from '@/types/chat';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { ChatMessageBubble } from '@/components/chat/ChatMessageBubble';
+import { ChatInputBar } from '@/components/chat/ChatInputBar';
+import { toast } from 'sonner';
+import type { ChatRoom, ChatRoomStatus, ChatCleanupSettings, ChatRetentionPeriod } from '@/types/chat';
 
-function formatTime(iso: string): string {
-  return new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+const ROOM_LIST_POLL_MS = 15_000;
+const ADMIN_STORAGE_KEY = 'ruxpress_admin';
+
+function readAdminRole(): string | null {
+  try {
+    const raw = readAuthValue(ADMIN_STORAGE_KEY);
+    return raw ? (JSON.parse(raw) as { role?: string }).role ?? null : null;
+  } catch {
+    return null;
+  }
 }
 
 export default function AdminChat() {
+  const { t } = useTranslation();
   const [rooms, setRooms] = useState<ChatRoom[]>([]);
   const [selectedRoomId, setSelectedRoomId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<ChatRoomStatus>('OPEN');
   const [input, setInput] = useState('');
+  const [roomsPage, setRoomsPage] = useState(0);
+  const [roomsSize, setRoomsSize] = useState(DEFAULT_PAGE_SIZE);
+  const [roomsTotalPages, setRoomsTotalPages] = useState(0);
+  const [roomsRefreshing, setRoomsRefreshing] = useState(false);
+  const [cleanupSettings, setCleanupSettings] = useState<ChatCleanupSettings | null>(null);
+  const [retentionSaving, setRetentionSaving] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const isSuperAdmin = readAdminRole() === 'SUPER_ADMIN';
 
   const selectedRoom = rooms.find((r) => r.id === selectedRoomId) ?? null;
   const isLive = selectedRoom?.status === 'OPEN';
 
-  const { messages, connected, sendMessage } = useChat(selectedRoomId, {
+  const { messages, connected, uploading, sendMessage, uploadAttachment, reloadMessages } = useChat(selectedRoomId, {
     isAdmin: true,
     connectLive: isLive,
   });
 
+  const loadRooms = useCallback(async (p: number, s: number) => {
+    const res = await getAdminChatRooms(p, s);
+    if (res.code === 200 && res.data) {
+      setRooms(res.data.content);
+      setRoomsTotalPages(res.data.totalPages ?? 0);
+      return true;
+    }
+    return false;
+  }, []);
+
   useEffect(() => {
-    loadRooms();
+    void loadRooms(roomsPage, roomsSize);
+  }, [roomsPage, roomsSize, loadRooms]);
+
+  useEffect(() => {
+    if (activeTab !== 'OPEN') return;
+    const timer = setInterval(() => {
+      void loadRooms(roomsPage, roomsSize);
+    }, ROOM_LIST_POLL_MS);
+    return () => clearInterval(timer);
+  }, [activeTab, roomsPage, roomsSize, loadRooms]);
+
+  useEffect(() => {
+    getChatCleanupSettings().then((res) => {
+      if (res.code === 200 && res.data) setCleanupSettings(res.data);
+    });
   }, []);
 
   useEffect(() => {
@@ -44,10 +93,19 @@ export default function AdminChat() {
     setSelectedRoomId(null);
   }, [activeTab]);
 
-  async function loadRooms() {
-    const res = await getAdminChatRooms(0, 100);
-    if (res.code === 200 && res.data) setRooms(res.data.content);
-  }
+  const handleRefresh = async () => {
+    setRoomsRefreshing(true);
+    try {
+      const ok = await loadRooms(roomsPage, roomsSize);
+      if (selectedRoomId) await reloadMessages();
+      if (ok) toast.success(t('admin.chat.refreshDone'));
+      else toast.error(t('admin.chat.refreshError'));
+    } catch {
+      toast.error(t('admin.chat.refreshError'));
+    } finally {
+      setRoomsRefreshing(false);
+    }
+  };
 
   async function handleSelectRoom(room: ChatRoom) {
     if (room.status === 'OPEN' && room.adminId === null) {
@@ -62,9 +120,9 @@ export default function AdminChat() {
   async function handleCloseRoom(roomId: string) {
     const res = await adminCloseRoom(roomId);
     if (res.code === 200 && res.data) {
-      setRooms((prev) => prev.map((r) => (r.id === roomId ? res.data! : r)));
       setSelectedRoomId(null);
       setActiveTab('CLOSED');
+      void loadRooms(roomsPage, roomsSize);
     }
   }
 
@@ -75,10 +133,31 @@ export default function AdminChat() {
     setInput('');
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
-      e.preventDefault();
-      handleSend();
+  const handleUpload = async (file: File) => {
+    if (!connected) return;
+    try {
+      await uploadAttachment(file);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : t('chat.upload.error');
+      toast.error(message);
+    }
+  };
+
+  const handleRetentionChange = async (value: ChatRetentionPeriod) => {
+    if (!isSuperAdmin) return;
+    setRetentionSaving(true);
+    try {
+      const res = await updateChatCleanupSettings(value);
+      if (res.code === 200 && res.data) {
+        setCleanupSettings(res.data);
+        toast.success(t('admin.chat.retention.saved'));
+      } else {
+        toast.error(t('admin.chat.retention.saveError'));
+      }
+    } catch {
+      toast.error(t('admin.chat.retention.saveError'));
+    } finally {
+      setRetentionSaving(false);
     }
   };
 
@@ -86,23 +165,61 @@ export default function AdminChat() {
 
   return (
     <div className="flex flex-col lg:flex-row h-[calc(100dvh-7rem)] min-h-[480px] gap-3">
-      {/* Room list */}
       <div
         className={`flex-col gap-2 lg:w-80 ${
           selectedRoom ? 'hidden lg:flex' : 'flex'
         }`}
       >
-        <h2 className="font-semibold text-lg">채팅 목록</h2>
+        <div className="flex items-center justify-between gap-2">
+          <h2 className="font-semibold text-lg">{t('admin.chat.roomList')}</h2>
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-8 gap-1"
+            disabled={roomsRefreshing}
+            onClick={() => void handleRefresh()}
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${roomsRefreshing ? 'animate-spin' : ''}`} />
+            {t('admin.chat.refresh')}
+          </Button>
+        </div>
+        <Card>
+          <CardHeader className="py-3 px-4">
+            <CardTitle className="text-sm">{t('admin.chat.retention.title')}</CardTitle>
+            <CardDescription className="text-xs">{t('admin.chat.retention.desc')}</CardDescription>
+          </CardHeader>
+          <CardContent className="px-4 pb-4 pt-0">
+            <Select
+              value={cleanupSettings?.retentionPeriod ?? 'PERMANENT'}
+              onValueChange={(v) => void handleRetentionChange(v as ChatRetentionPeriod)}
+              disabled={!isSuperAdmin || retentionSaving || !cleanupSettings}
+            >
+              <SelectTrigger className="h-9 text-sm">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {(cleanupSettings?.options ?? [{ value: 'PERMANENT', months: 0 }]).map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value}>
+                    {t(`admin.chat.retention.${opt.value}`)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {!isSuperAdmin && (
+              <p className="text-xs text-muted-foreground mt-2">{t('admin.chat.retention.superOnly')}</p>
+            )}
+          </CardContent>
+        </Card>
         <Tabs
           value={activeTab}
           onValueChange={(v) => setActiveTab(v as ChatRoomStatus)}
         >
           <TabsList className="w-full">
             <TabsTrigger value="OPEN" className="flex-1">
-              진행중
+              {t('admin.chat.tab.open')}
             </TabsTrigger>
             <TabsTrigger value="CLOSED" className="flex-1">
-              종료
+              {t('admin.chat.tab.closed')}
             </TabsTrigger>
           </TabsList>
         </Tabs>
@@ -110,8 +227,8 @@ export default function AdminChat() {
           {filteredRooms.length === 0 && (
             <p className="text-center text-muted-foreground text-sm p-4">
               {activeTab === 'OPEN'
-                ? '진행중인 채팅이 없습니다'
-                : '종료된 채팅이 없습니다'}
+                ? t('admin.chat.empty.open')
+                : t('admin.chat.empty.closed')}
             </p>
           )}
           {filteredRooms.map((room) => (
@@ -124,17 +241,19 @@ export default function AdminChat() {
             >
               <div className="flex items-center justify-between gap-2">
                 <span className="text-sm font-medium truncate">
-                  사용자 #{room.userId}
+                  {t('admin.chat.userLabel')} #{room.userId}
                 </span>
                 <Badge
                   variant={room.status === 'OPEN' ? 'default' : 'secondary'}
                   className="text-xs shrink-0"
                 >
-                  {room.status === 'OPEN' ? '진행중' : '종료'}
+                  {room.status === 'OPEN' ? t('admin.chat.status.open') : t('admin.chat.status.closed')}
                 </Badge>
               </div>
               <p className="text-xs text-muted-foreground mt-1">
-                {room.adminId ? `담당: ${room.adminId}` : '미배정'}
+                {room.adminId
+                  ? `${t('admin.chat.assigned')} ${room.adminId}`
+                  : t('admin.chat.unassigned')}
               </p>
               <p className="text-xs text-muted-foreground">
                 {new Date(room.updatedAt).toLocaleString()}
@@ -142,9 +261,29 @@ export default function AdminChat() {
             </button>
           ))}
         </ScrollArea>
+        <div className="flex items-center justify-between pt-2 flex-wrap gap-1">
+          <div className="flex items-center gap-1 text-xs text-muted-foreground">
+            <span>{t('admin.chat.pageSize')}</span>
+            <Select
+              value={String(roomsSize)}
+              onValueChange={(v) => { setRoomsSize(Number(v)); setRoomsPage(0); }}
+            >
+              <SelectTrigger className="w-[70px] h-7 text-xs"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {PAGE_SIZE_OPTIONS.map((s) => (
+                  <SelectItem key={s} value={String(s)}>{s}{t('admin.chat.pageSizeSuffix')}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex items-center gap-1">
+            <Button variant="outline" size="sm" className="h-7 px-2 text-xs" disabled={roomsPage <= 0} onClick={() => setRoomsPage((p) => p - 1)}>{t('admin.chat.prev')}</Button>
+            <span className="text-xs text-muted-foreground">{roomsPage + 1} / {Math.max(1, roomsTotalPages)}</span>
+            <Button variant="outline" size="sm" className="h-7 px-2 text-xs" disabled={roomsPage >= roomsTotalPages - 1} onClick={() => setRoomsPage((p) => p + 1)}>{t('admin.chat.next')}</Button>
+          </div>
+        </div>
       </div>
 
-      {/* Chat area */}
       <div
         className={`flex-1 flex-col min-h-0 ${
           selectedRoom ? 'flex' : 'hidden lg:flex'
@@ -152,7 +291,7 @@ export default function AdminChat() {
       >
         {!selectedRoom ? (
           <div className="flex-1 flex items-center justify-center text-muted-foreground border rounded-lg">
-            채팅방을 선택하세요
+            {t('admin.chat.selectRoom')}
           </div>
         ) : (
           <div className="flex-1 flex flex-col border rounded-lg overflow-hidden bg-card min-h-0">
@@ -167,21 +306,31 @@ export default function AdminChat() {
                   <ChevronLeft className="w-4 h-4" />
                 </Button>
                 <h3 className="font-semibold truncate">
-                  사용자 #{selectedRoom.userId}
+                  {t('admin.chat.userLabel')} #{selectedRoom.userId}
                 </h3>
               </div>
               <div className="flex items-center gap-2 shrink-0">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  disabled={roomsRefreshing}
+                  title={t('admin.chat.refresh')}
+                  onClick={() => void handleRefresh()}
+                >
+                  <RefreshCw className={`w-4 h-4 ${roomsRefreshing ? 'animate-spin' : ''}`} />
+                </Button>
                 {isLive && (
                   <Badge
                     variant={connected ? 'default' : 'secondary'}
                     className="text-xs"
                   >
-                    {connected ? '연결됨' : '연결중...'}
+                    {connected ? t('chat.connected') : t('chat.connecting')}
                   </Badge>
                 )}
                 {!isLive && (
                   <Badge variant="secondary" className="text-xs">
-                    조회 전용
+                    {t('chat.history.readonly')}
                   </Badge>
                 )}
                 {isLive && (
@@ -190,7 +339,7 @@ export default function AdminChat() {
                     size="sm"
                     onClick={() => handleCloseRoom(selectedRoom.id)}
                   >
-                    종료
+                    {t('admin.chat.close')}
                   </Button>
                 )}
               </div>
@@ -200,63 +349,40 @@ export default function AdminChat() {
               <div className="p-3 sm:p-4">
                 {messages.length === 0 && (
                   <p className="text-center text-muted-foreground text-sm py-8">
-                    메시지가 없습니다
+                    {t('chat.history.noMessages')}
                   </p>
                 )}
-                {messages.map((msg) => {
-                  // Admin view: admin messages (mine) on the right, user on the left
-                  const isMine = msg.senderType === 'ADMIN';
-                  return (
-                    <div
-                      key={msg.id}
-                      className={`flex mb-3 ${
-                        isMine ? 'justify-end' : 'justify-start'
-                      }`}
-                    >
-                      <div
-                        className={`max-w-[80%] rounded-2xl px-4 py-2 text-sm break-words ${
-                          isMine
-                            ? 'bg-primary text-primary-foreground'
-                            : 'bg-background border'
-                        }`}
-                      >
-                        {!isMine && (
-                          <p className="text-xs font-medium mb-1 opacity-60">
-                            사용자
-                          </p>
-                        )}
-                        <p className="whitespace-pre-wrap">{msg.content}</p>
-                        <p className="text-[10px] opacity-50 mt-1 text-right">
-                          {formatTime(msg.createdAt)}
-                        </p>
-                      </div>
-                    </div>
-                  );
-                })}
+                {messages.map((msg) => (
+                  <ChatMessageBubble
+                    key={msg.id}
+                    msg={msg}
+                    mineType="ADMIN"
+                    otherLabel={t('admin.chat.userShort')}
+                    fileLabel={t('chat.fileUnavailable')}
+                  />
+                ))}
                 <div ref={bottomRef} />
               </div>
             </ScrollArea>
 
             {isLive ? (
-              <div className="p-3 border-t flex gap-2">
-                <Input
-                  value={input}
-                  onChange={(e) => setInput(e.target.value)}
-                  onKeyDown={handleKeyDown}
-                  placeholder="메시지 입력..."
+              <div className="p-3 border-t">
+                <ChatInputBar
+                  input={input}
+                  onInputChange={setInput}
+                  onSend={handleSend}
+                  onUpload={handleUpload}
                   disabled={!connected}
-                  maxLength={2000}
+                  uploading={uploading}
+                  placeholder={t('chat.inputPlaceholder')}
+                  sendLabel={t('chat.send')}
+                  attachLabel={t('chat.attach')}
+                  fileTooLargeLabel={t('chat.upload.fileTooLarge')}
                 />
-                <Button
-                  onClick={handleSend}
-                  disabled={!connected || !input.trim()}
-                >
-                  전송
-                </Button>
               </div>
             ) : (
               <p className="text-center text-muted-foreground text-sm py-3 border-t">
-                종료된 채팅방입니다
+                {t('admin.chat.closedRoom')}
               </p>
             )}
           </div>

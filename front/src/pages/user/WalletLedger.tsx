@@ -2,10 +2,13 @@ import { useEffect, useRef, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../components/ui/table";
 import { Button } from "../../components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../components/ui/select";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useBalance } from "../../hooks/balance/useBalance";
+import { BalanceEquivalents } from "../../components/balance/BalanceEquivalents";
 import { getMyWalletLedger, type WalletLedgerEntry } from "../../api/balance";
 import { formatDate, formatNumber } from "../../utils/format";
+import { DEFAULT_PAGE_SIZE, PAGE_SIZE_OPTIONS } from "../../utils/constants";
 import type { PageResponse } from "../../types";
 
 function entryLabel(t: (k: string) => string, type: string): string {
@@ -19,37 +22,35 @@ export default function WalletLedger() {
   const { balance } = useBalance();
   const prevBalanceRef = useRef(balance);
   const [page, setPage] = useState(0);
+  const [size, setSize] = useState(DEFAULT_PAGE_SIZE);
   const [data, setData] = useState<PageResponse<WalletLedgerEntry> | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const load = async (p: number, options?: { silent?: boolean }) => {
+  const load = async (p: number, s: number, options?: { silent?: boolean }) => {
     const silent = options?.silent === true;
-    if (!silent) {
-      setLoading(true);
-    }
+    if (!silent) setLoading(true);
     try {
-      const res = await getMyWalletLedger(p, 20);
+      const res = await getMyWalletLedger(p, s);
       setData(res);
       setPage(res.page ?? p);
     } catch {
       setData(null);
     } finally {
-      if (!silent) {
-        setLoading(false);
-      }
+      if (!silent) setLoading(false);
     }
   };
 
   useEffect(() => {
-    void load(0);
+    void load(0, size);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
     if (prevBalanceRef.current !== balance && prevBalanceRef.current != null) {
-      void load(page, { silent: true });
+      void load(page, size, { silent: true });
     }
     prevBalanceRef.current = balance;
-  }, [balance, page]);
+  }, [balance, page, size]);
 
   const rows = data?.content ?? [];
   const numOpt = { minimumFractionDigits: 2, maximumFractionDigits: 2 };
@@ -70,6 +71,7 @@ export default function WalletLedger() {
           <p className="text-3xl font-bold text-blue-600">
             {balance == null ? "—" : `₩${formatNumber(balance, locale, numOpt)}`}
           </p>
+          <BalanceEquivalents balance={balance} hintKey="wallet.balanceEquivalentsHint" className="text-sm text-gray-500 mt-2" />
         </CardContent>
       </Card>
 
@@ -118,28 +120,32 @@ export default function WalletLedger() {
                   )}
                 </TableBody>
               </Table>
-              <div className="flex items-center justify-between p-4 border-t">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  disabled={page <= 0}
-                  onClick={() => void load(page - 1)}
-                >
-                  {t("wallet.ledger.prev")}
-                </Button>
-                <span className="text-sm text-gray-500">
-                  {page + 1} / {Math.max(1, data?.totalPages ?? 1)}
-                </span>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  disabled={data != null && page >= (data.totalPages ?? 1) - 1}
-                  onClick={() => void load(page + 1)}
-                >
-                  {t("wallet.ledger.next")}
-                </Button>
+              <div className="flex items-center justify-between p-4 border-t flex-wrap gap-2">
+                <div className="flex items-center gap-2 text-sm text-gray-500">
+                  <span>페이지당</span>
+                  <Select
+                    value={String(size)}
+                    onValueChange={(v) => { const s = Number(v); setSize(s); void load(0, s); }}
+                  >
+                    <SelectTrigger className="w-[80px] h-8 text-xs"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {PAGE_SIZE_OPTIONS.map((s) => (
+                        <SelectItem key={s} value={String(s)}>{s}건</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button type="button" variant="outline" size="sm" disabled={page <= 0} onClick={() => void load(page - 1, size)}>
+                    {t("wallet.ledger.prev")}
+                  </Button>
+                  <span className="text-sm text-gray-500">
+                    {page + 1} / {Math.max(1, data?.totalPages ?? 1)}
+                  </span>
+                  <Button type="button" variant="outline" size="sm" disabled={data != null && page >= (data.totalPages ?? 1) - 1} onClick={() => void load(page + 1, size)}>
+                    {t("wallet.ledger.next")}
+                  </Button>
+                </div>
               </div>
             </>
           )}

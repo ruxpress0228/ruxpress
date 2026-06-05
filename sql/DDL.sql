@@ -63,11 +63,12 @@ CREATE TABLE `purchase_requests` (
 	`id`	BIGINT	NOT NULL AUTO_INCREMENT,
 	`user_id`	BIGINT	NOT NULL	COMMENT '요청자 ID',
 	`request_number`	VARCHAR(30)	NOT NULL	COMMENT '요청 번호',
-	`product_name`	VARCHAR(300)	NOT NULL	COMMENT '상품명',
+	`request_name`	VARCHAR(300)	NOT NULL	COMMENT '요청명',
 	`quantity`	INT	NOT NULL	DEFAULT 1	COMMENT '수량',
 	`urls`	JSON	NULL	COMMENT '상품 URL 목록 JSON',
 	`options`	JSON	NULL	COMMENT '옵션 목록 JSON (색상/사이즈 등)',
-	`price_rub`	DECIMAL(18, 2)	NULL	COMMENT '상품 가격 (루블)',
+	`price_rub`	DECIMAL(18, 2)	NULL	COMMENT '상품 가격 (quote 통화 금액)',
+	`quote_currency`	VARCHAR(3)	NOT NULL	DEFAULT 'RUB'	COMMENT '표시·스냅샷 기준 외화 (RUB, USD, CNY)',
 	`price_krw`	DECIMAL(18, 2)	NULL	COMMENT '환산 가격 (원화)',
 	`exchange_rate_id`	BIGINT	NULL	COMMENT '적용 환율 ID',
 	`fee_amount`	DECIMAL(18, 2)	NULL	COMMENT '수수료',
@@ -75,9 +76,17 @@ CREATE TABLE `purchase_requests` (
 	`charged_amount_krw`	DECIMAL(18, 2)	NULL	COMMENT '지갑 선차감',
 	`settled_amount_krw`	DECIMAL(18, 2)	NULL	COMMENT '확정 실제 비용',
 	`memo`	TEXT	NULL	COMMENT '특이사항 메모',
-	`status`	ENUM('DRAFT', 'SUBMITTED', 'REVIEWING', 'CONFIRMED', 'PURCHASING', 'PURCHASED', 'SHIPPING', 'DELIVERED', 'CANCELLED', 'REFUNDED')	NOT NULL	DEFAULT 'DRAFT'	COMMENT '상태',
+	`status`	ENUM('REQUESTED', 'PURCHASING', 'SHIPPING', 'COMPLETED', 'CANCELLED')	NOT NULL	DEFAULT 'REQUESTED'	COMMENT '상태',
 	`admin_memo`	TEXT	NULL	COMMENT '관리자 내부 메모',
 	`assigned_admin_id`	BIGINT	NULL	COMMENT '담당 관리자 ID',
+	`tracking_number`	VARCHAR(64)	NULL	COMMENT '운송장번호 (관리자 입력)',
+	`shipping_user_address_id`	BIGINT	NULL	COMMENT '선택한 회원 배송지 ID (참조)',
+	`shipping_label`	VARCHAR(50)	NULL	COMMENT '배송지 라벨 스냅샷',
+	`shipping_recipient_name`	VARCHAR(50)	NULL	COMMENT '수령인 스냅샷',
+	`shipping_recipient_phone`	VARCHAR(20)	NULL	COMMENT '연락처 스냅샷',
+	`shipping_postal_code`	VARCHAR(10)	NULL	COMMENT '우편번호 스냅샷',
+	`shipping_address_line1`	VARCHAR(255)	NULL	COMMENT '주소1 스냅샷',
+	`shipping_address_line2`	VARCHAR(255)	NULL	COMMENT '주소2 스냅샷',
 	`created_at`	DATETIME	NOT NULL,
 	`updated_at`	DATETIME	NOT NULL	DEFAULT CURRENT_TIMESTAMP,
 	`deleted_at`	DATETIME	NULL	COMMENT '소프트 삭제',
@@ -87,7 +96,7 @@ CREATE TABLE `purchase_requests` (
 CREATE TABLE `notifications` (
 	`id`	BIGINT	NOT NULL AUTO_INCREMENT,
 	`user_id`	BIGINT	NOT NULL	COMMENT '수신자 ID',
-	`type`	ENUM('SIGNUP', 'NEW_DEVICE', 'INQUIRY_REPLY', 'NOTICE', 'PROMOTION', 'PURCHASE_STATUS', 'BALANCE', 'BANK_DEPOSIT')	NOT NULL	COMMENT '알림 유형',
+	`type`	ENUM('SIGNUP', 'NEW_DEVICE', 'INQUIRY_REPLY', 'NOTICE', 'PROMOTION', 'PURCHASE_STATUS', 'BALANCE', 'BANK_DEPOSIT', 'CHAT')	NOT NULL	COMMENT '알림 유형',
 	`channel`	ENUM('PUSH', 'SMS', 'EMAIL')	NOT NULL	DEFAULT 'PUSH'	COMMENT '발송 채널',
 	`title`	VARCHAR(200)	NOT NULL	COMMENT '제목',
 	`body`	TEXT	NOT NULL	COMMENT '본문',
@@ -117,10 +126,27 @@ CREATE TABLE `users` (
 	`created_at`	DATETIME	NOT NULL	DEFAULT CURRENT_TIMESTAMP	COMMENT '가입 일시',
 	`updated_at`	DATETIME	NOT NULL	DEFAULT CURRENT_TIMESTAMP,
 	`deleted_at`	DATETIME	NULL	COMMENT '소프트 삭제',
-	`address_postal_code` VARCHAR(10) NULL COMMENT '우편번호',
-	`address_line1` VARCHAR(255) NULL COMMENT '기본 주소',
-	`address_line2` VARCHAR(255) NULL COMMENT '상세 주소',
+	`address_postal_code` VARCHAR(10) NULL COMMENT '우편번호 (기본 배송지 캐시)',
+	`address_line1` VARCHAR(255) NULL COMMENT '기본 주소 (기본 배송지 캐시)',
+	`address_line2` VARCHAR(255) NULL COMMENT '상세 주소 (기본 배송지 캐시)',
 	PRIMARY KEY (`id`)
+);
+
+CREATE TABLE `user_addresses` (
+	`id`	BIGINT	NOT NULL AUTO_INCREMENT	COMMENT '배송지 고유 ID',
+	`user_id`	BIGINT	NOT NULL	COMMENT '회원 ID',
+	`label`	VARCHAR(50)	NULL	COMMENT '배송지 별칭 (예: 집, 회사)',
+	`recipient_name`	VARCHAR(50)	NULL	COMMENT '수령인 이름',
+	`recipient_phone`	VARCHAR(20)	NULL	COMMENT '수령인 연락처',
+	`postal_code`	VARCHAR(10)	NULL	COMMENT '우편번호',
+	`address_line1`	VARCHAR(255)	NOT NULL	COMMENT '기본 주소',
+	`address_line2`	VARCHAR(255)	NULL	COMMENT '상세 주소',
+	`is_default`	TINYINT(1)	NOT NULL DEFAULT 0	COMMENT '기본 배송지 여부 (회원당 1건)',
+	`created_at`	DATETIME	NOT NULL	DEFAULT CURRENT_TIMESTAMP,
+	`updated_at`	DATETIME	NOT NULL	DEFAULT CURRENT_TIMESTAMP,
+	PRIMARY KEY (`id`),
+	KEY `idx_user_addresses_user` (`user_id`),
+	CONSTRAINT `fk_user_addresses_user` FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE CASCADE
 );
 
 CREATE TABLE `notices` (
@@ -182,7 +208,7 @@ CREATE TABLE `user_social_accounts` (
 
 CREATE TABLE `attachments` (
 	`id`	BIGINT	NOT NULL AUTO_INCREMENT,
-	`ref_type`	ENUM('PURCHASE', 'INQUIRY', 'REVIEW', 'CHAT')	NOT NULL	COMMENT '참조 대상 유형',
+	`ref_type`	ENUM('PURCHASE', 'INQUIRY', 'REVIEW', 'CHAT', 'BANK_TRANSFER', 'BANK_TRANSFER_NOTICE')	NOT NULL	COMMENT '참조 대상 유형',
 	`ref_id`	BIGINT	NOT NULL	COMMENT '참조 대상 ID',
 	`original_filename`	VARCHAR(300)	NOT NULL	COMMENT '원본 파일명',
 	`stored_url`	VARCHAR(500)	NOT NULL	COMMENT 'S3 저장 URL',
@@ -190,6 +216,7 @@ CREATE TABLE `attachments` (
 	`file_size`	INT	NOT NULL	COMMENT '파일 크기 (bytes)',
 	`mime_type`	VARCHAR(100)	NOT NULL	COMMENT 'MIME 타입',
 	`sort_order`	INT	NOT NULL	DEFAULT 0	COMMENT '정렬 순서',
+	`uploaded_by_admin`	TINYINT(1)	NULL	COMMENT '관리자 업로드 여부 (NULL/0=사용자, 1=관리자)',
 	`created_at`	DATETIME	NOT NULL,
 	PRIMARY KEY (`id`)
 );
@@ -198,13 +225,14 @@ CREATE TABLE `exchange_rates` (
 	`id`	BIGINT	NOT NULL AUTO_INCREMENT,
 	`base_currency`	VARCHAR(3)	NOT NULL	DEFAULT 'RUB'	COMMENT '기준 통화',
 	`target_currency`	VARCHAR(3)	NOT NULL	DEFAULT 'KRW'	COMMENT '대상 통화',
-	`rate`	DECIMAL(18, 6)	NOT NULL	COMMENT '환율 (1 RUB = ? KRW)',
+	`rate`	DECIMAL(18, 6)	NOT NULL	COMMENT '환율 (1 base_currency = ? KRW)',
 	`source`	ENUM('API', 'MANUAL')	NOT NULL	DEFAULT 'API'	COMMENT '출처',
 	`admin_id`	BIGINT	NULL	COMMENT '수동 입력 시 관리자 ID',
 	`is_current`	TINYINT(1)	NOT NULL	DEFAULT 0	COMMENT '현재 적용 환율',
 	`fetched_at`	DATETIME	NOT NULL	COMMENT '조회/입력 시각',
 	`created_at`	DATETIME	NOT NULL,
-	PRIMARY KEY (`id`)
+	PRIMARY KEY (`id`),
+	KEY `IX_EXCHANGE_RATES_BASE_CURRENT` (`base_currency`, `is_current`)
 );
 
 -- REQ-017: 입금 계좌 (관리자 등록)
@@ -285,6 +313,8 @@ CREATE TABLE `chat_message` (
 	`sender_id`	BIGINT	NOT NULL	COMMENT '발신자 ID (users.id 또는 admins.id — sender_type으로 구분)',
 	`sender_type`	ENUM('USER', 'ADMIN')	NOT NULL	COMMENT '발신자 구분',
 	`content`	TEXT	NOT NULL	COMMENT '메시지 본문 (최대 2000자)',
+	`message_type`	ENUM('TEXT', 'IMAGE', 'FILE')	NOT NULL	DEFAULT 'TEXT'	COMMENT '메시지 유형',
+	`attachment_id`	BIGINT	NULL	COMMENT 'attachments.id',
 	`is_read`	TINYINT(1)	NOT NULL	DEFAULT 0	COMMENT '상대방 읽음 여부',
 	`created_at`	DATETIME(6)	NOT NULL,
 	PRIMARY KEY (`chat_message_id`),
@@ -296,7 +326,7 @@ CREATE TABLE `chat_message` (
 CREATE TABLE IF NOT EXISTS `wallet_ledger_entries` (
 	`id`	BIGINT	NOT NULL AUTO_INCREMENT,
 	`user_id`	BIGINT	NOT NULL	COMMENT '회원 ID',
-	`entry_type`	ENUM('CREDIT_BANK_DEPOSIT','CREDIT_CARD','CREDIT_PURCHASE_REFUND','CREDIT_PURCHASE_ADJUSTMENT','DEBIT_PURCHASE','DEBIT_BANK_REFUND')	NOT NULL	COMMENT '원장 유형',
+	`entry_type`	ENUM('CREDIT_BANK_DEPOSIT','CREDIT_CARD','CREDIT_PURCHASE_REFUND','CREDIT_PURCHASE_ADJUSTMENT','DEBIT_PURCHASE','DEBIT_BANK_REFUND','CREDIT_ADMIN_ADJUSTMENT','DEBIT_ADMIN_ADJUSTMENT')	NOT NULL	COMMENT '원장 유형',
 	`amount`	DECIMAL(18, 2)	NOT NULL	COMMENT '금액 (양수)',
 	`currency`	VARCHAR(3)	NOT NULL	DEFAULT 'KRW',
 	`idempotency_key`	VARCHAR(100)	NOT NULL	COMMENT '멱등 키',
@@ -308,4 +338,20 @@ CREATE TABLE IF NOT EXISTS `wallet_ledger_entries` (
 	PRIMARY KEY (`id`),
 	UNIQUE KEY `UK_WALLET_LEDGER_IDEM` (`idempotency_key`),
 	KEY `IX_WALLET_LEDGER_USER` (`user_id`)
+);
+
+CREATE TABLE `admin_notifications` (
+	`id`	BIGINT	NOT NULL AUTO_INCREMENT,
+	`admin_id`	BIGINT	NOT NULL	COMMENT '수신 관리자 ID',
+	`type`	ENUM('NEW_PURCHASE_REQUEST', 'NEW_DEPOSIT_REPORT', 'NEW_INQUIRY')	NOT NULL	COMMENT '알림 유형',
+	`title`	VARCHAR(200)	NOT NULL	COMMENT '제목',
+	`body`	TEXT	NOT NULL	COMMENT '본문',
+	`data_json`	JSON	NULL	COMMENT '추가 데이터 (연관 리소스 ID 등)',
+	`link_url`	VARCHAR(500)	NULL	COMMENT '클릭 시 이동할 관리자 페이지 URL',
+	`is_read`	TINYINT(1)	NOT NULL	DEFAULT 0	COMMENT '읽음 여부',
+	`read_at`	DATETIME	NULL	COMMENT '읽음 시각',
+	`created_at`	DATETIME	NOT NULL,
+	PRIMARY KEY (`id`),
+	KEY `idx_admin_notif_admin_created` (`admin_id`, `created_at`),
+	KEY `idx_admin_notif_admin_read` (`admin_id`, `is_read`)
 );

@@ -30,22 +30,18 @@ class RuxpressFcmService : FirebaseMessagingService() {
         val body = message.notification?.body ?: message.data["body"] ?: ""
         val url = message.data["url"]
 
-        // 포그라운드일 때: MainActivity가 살아있으면 WebView JS 호출
+        // 포그라운드: WebView JS + 시스템 알림(권한 있을 때)
         MainActivity.instance?.let { activity ->
-            val payload = buildString {
-                append("{")
-                append("\"title\":\"$title\",")
-                append("\"body\":\"$body\"")
-                url?.let { append(",\"url\":\"$it\"") }
-                append("}")
-            }
+            val payload = org.json.JSONObject().apply {
+                put("title", title)
+                put("body", body)
+                url?.let { put("url", it) }
+            }.toString()
             activity.runOnUiThread {
                 activity.evaluateJavascript("window.onPushReceived($payload)", null)
             }
-            return
         }
 
-        // 백그라운드일 때: 시스템 알림 표시
         showNotification(title, body, url)
     }
 
@@ -55,7 +51,7 @@ class RuxpressFcmService : FirebaseMessagingService() {
         val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
         val channel = NotificationChannel(
-            channelId, "기본 알림", NotificationManager.IMPORTANCE_DEFAULT
+            channelId, "기본 알림", NotificationManager.IMPORTANCE_HIGH
         )
         manager.createNotificationChannel(channel)
 

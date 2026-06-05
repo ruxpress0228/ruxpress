@@ -108,4 +108,26 @@ public class WalletLedgerEntry {
         e.idempotencyKey = "bank_refund_debit:" + transferRefundEntryId;
         return e;
     }
+
+    public static WalletLedgerEntry creditAdminAdjustment(
+            Long userId, BigDecimal amount, String idempotencyKey, String memo) {
+        WalletLedgerEntry e = new WalletLedgerEntry();
+        e.userId = userId;
+        e.entryType = WalletLedgerEntryType.CREDIT_ADMIN_ADJUSTMENT;
+        e.amount = amount;
+        e.idempotencyKey = idempotencyKey;
+        e.memo = memo;
+        return e;
+    }
+
+    public static WalletLedgerEntry debitAdminAdjustment(
+            Long userId, BigDecimal amount, String idempotencyKey, String memo) {
+        WalletLedgerEntry e = new WalletLedgerEntry();
+        e.userId = userId;
+        e.entryType = WalletLedgerEntryType.DEBIT_ADMIN_ADJUSTMENT;
+        e.amount = amount;
+        e.idempotencyKey = idempotencyKey;
+        e.memo = memo;
+        return e;
+    }
 }

@@ -1,13 +1,16 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router";
+import { Globe } from "lucide-react";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import { Label } from "../../components/ui/label";
+import { Checkbox } from "../../components/ui/checkbox";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../components/ui/card";
 import { toast } from "sonner";
-import { api } from "../../utils/api";
+import { api, notifyUserAuthChange } from "../../utils/api";
 import { unwrap } from "../../utils/exception";
-import { STORAGE_KEYS } from "../../utils/constants";
+import { LOCALES, STORAGE_KEYS } from "../../utils/constants";
+import { useTranslation } from "../../hooks/useTranslation";
 
 interface LoginResponse {
   token: string;
@@ -18,10 +21,25 @@ interface LoginResponse {
 }
 
 export default function AdminLogin() {
+  const { t, locale, setLocale } = useTranslation();
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [rememberMe, setRememberMe] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [langOpen, setLangOpen] = useState(false);
+  const langRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!langOpen) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (langRef.current && !langRef.current.contains(e.target as Node)) {
+        setLangOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [langOpen]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -29,44 +47,91 @@ export default function AdminLogin() {
     try {
       const res = await api.post<LoginResponse>("/v1/admin/auth/login", { email, password });
       const data = unwrap(res);
-      localStorage.setItem(STORAGE_KEYS.TOKEN, data.token);
-      localStorage.setItem("ruxpress_admin", JSON.stringify({
+      const storage: Storage = rememberMe ? localStorage : sessionStorage;
+      localStorage.removeItem(STORAGE_KEYS.TOKEN);
+      sessionStorage.removeItem(STORAGE_KEYS.TOKEN);
+      localStorage.removeItem("ruxpress_admin");
+      sessionStorage.removeItem("ruxpress_admin");
+
+      storage.setItem(STORAGE_KEYS.TOKEN, data.token);
+      storage.setItem("ruxpress_admin", JSON.stringify({
         id: data.adminId,
         email: data.email,
         name: data.name,
         role: data.role,
       }));
-      toast.success(`${data.name}님, 환영합니다`);
+      if (rememberMe) {
+        localStorage.setItem(STORAGE_KEYS.REMEMBER_ME, "1");
+      } else {
+        localStorage.removeItem(STORAGE_KEYS.REMEMBER_ME);
+      }
+      notifyUserAuthChange();
+      toast.success(t("admin.login.welcome", { name: data.name }));
       navigate("/admin");
     } catch {
-      toast.error("이메일 또는 비밀번호가 올바르지 않습니다");
+      toast.error(t("admin.login.invalidCredentials"));
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 relative">
+      <div className="absolute top-4 right-4" ref={langRef}>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          title={t("common.language")}
+          onClick={() => setLangOpen((v) => !v)}
+          aria-expanded={langOpen}
+          aria-haspopup="listbox"
+        >
+          <Globe className="w-5 h-5" />
+        </Button>
+        {langOpen && (
+          <div
+            className="absolute right-0 top-full mt-1 min-w-[10rem] rounded-md border border-gray-200 bg-white py-1 shadow-lg z-10"
+            role="listbox"
+          >
+            {LOCALES.map((loc) => (
+              <button
+                key={loc}
+                type="button"
+                role="option"
+                aria-selected={locale === loc}
+                className={`block w-full px-3 py-2 text-left text-sm hover:bg-gray-100 ${locale === loc ? "bg-blue-50 text-blue-700 font-medium" : "text-gray-900"}`}
+                onClick={() => {
+                  setLocale(loc);
+                  setLangOpen(false);
+                }}
+              >
+                {t(`locale.${loc}`)}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1">
           <div className="flex items-center justify-center mb-4">
             <div className="w-12 h-12 bg-gradient-to-br from-blue-600 to-blue-400 rounded-xl flex items-center justify-center">
-              <span className="text-white text-2xl font-bold">R</span>
+              <span className="text-white text-lg font-bold tracking-tight">MP</span>
             </div>
           </div>
-          <CardTitle className="text-2xl text-center">관리자 로그인</CardTitle>
+          <CardTitle className="text-2xl text-center">{t("admin.login.title")}</CardTitle>
           <CardDescription className="text-center">
-            Ruxpress 관리자 페이지
+            {t("admin.login.subtitle")}
           </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="admin-email">이메일</Label>
+              <Label htmlFor="admin-email">{t("admin.login.email")}</Label>
               <Input
                 id="admin-email"
                 type="email"
-                placeholder="admin@ruxpress.com"
+                placeholder="admin@main-proxy.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
@@ -74,7 +139,7 @@ export default function AdminLogin() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="admin-password">비밀번호</Label>
+              <Label htmlFor="admin-password">{t("admin.login.password")}</Label>
               <Input
                 id="admin-password"
                 type="password"
@@ -85,8 +150,18 @@ export default function AdminLogin() {
                 disabled={loading}
               />
             </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="admin-remember-me"
+                checked={rememberMe}
+                onCheckedChange={(v) => setRememberMe(v === true)}
+              />
+              <Label htmlFor="admin-remember-me" className="text-sm font-normal cursor-pointer">
+                {t("admin.login.rememberMe")}
+              </Label>
+            </div>
             <Button type="submit" className="w-full" size="lg" disabled={loading}>
-              {loading ? "로그인 중..." : "로그인"}
+              {loading ? t("admin.login.submitting") : t("admin.login.submit")}
             </Button>
           </form>
         </CardContent>

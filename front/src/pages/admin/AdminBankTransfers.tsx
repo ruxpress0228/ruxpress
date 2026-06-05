@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react";
-import { CheckCircle, Undo2, XCircle, RefreshCw } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { CheckCircle, Undo2, XCircle, RefreshCw, Eye, ImageOff, Landmark } from "lucide-react";
+import { cn } from "../../components/ui/utils";
 import { Button } from "../../components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../components/ui/card";
 import { Input } from "../../components/ui/input";
@@ -22,6 +23,7 @@ import { Badge } from "../../components/ui/badge";
 import { toast } from "sonner";
 import {
   adminListLedgerEntries,
+  adminGetLedgerEntry,
   adminConfirmLedgerEntry,
   adminSettleLedger,
   adminRefundLedger,
@@ -29,11 +31,18 @@ import {
 } from "../../api/bankTransfer";
 import { useTranslation } from "../../hooks/useTranslation";
 import { formatDate } from "../../utils/format";
-import type { TransferLedgerEntry } from "../../types/bankTransfer";
+import { readAuthValue } from "../../utils/api";
+import { DEFAULT_PAGE_SIZE, PAGE_SIZE_OPTIONS } from "../../utils/constants";
+import type { TransferLedgerEntry, TransferLedgerStatus } from "../../types/bankTransfer";
+
+const ADMIN_STORAGE_KEY = "ruxpress_admin";
+
+type StatusChipValue = "all" | TransferLedgerStatus;
+const COUNTABLE_STATUSES: TransferLedgerStatus[] = ["PENDING", "CONFIRMED", "CANCELLED"];
 
 function getAdminRole(): string | null {
   try {
-    const raw = localStorage.getItem("ruxpress_admin");
+    const raw = readAuthValue(ADMIN_STORAGE_KEY);
     if (!raw) return null;
     return JSON.parse(raw).role as string;
   } catch {
@@ -42,22 +51,42 @@ function getAdminRole(): string | null {
 }
 
 function isRootDeposit(e: TransferLedgerEntry) {
-  return (
-    e.parentEntryId == null &&
-    e.entryType === "DEPOSIT"
-  );
+  return e.parentEntryId == null && e.entryType === "DEPOSIT";
+}
+
+function remainingForAction(e: TransferLedgerEntry): number {
+  if (!isRootDeposit(e) || e.status !== "CONFIRMED") return 0;
+  if (e.remainingSettleOrRefundAmount != null) {
+    return Math.max(0, e.remainingSettleOrRefundAmount);
+  }
+  return 0;
+}
+
+function isFullyProcessedRoot(e: TransferLedgerEntry): boolean {
+  return isRootDeposit(e) && e.status === "CONFIRMED" && remainingForAction(e) <= 0;
 }
 
 export default function AdminBankTransfers() {
   const { t, locale } = useTranslation();
   const isSuper = getAdminRole() === "SUPER_ADMIN";
+  const filterChips: { value: StatusChipValue; label: string }[] = [
+    { value: "all", label: t("admin.bank.filterAll") },
+    { value: "PENDING", label: "PENDING" },
+    { value: "CONFIRMED", label: "CONFIRMED" },
+    { value: "CANCELLED", label: "CANCELLED" },
+  ];
   const [rows, setRows] = useState<TransferLedgerEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState<string>("");
-  const [entryType, setEntryType] = useState<string>("");
+  const [entryType, setEntryType] = useState<string>("DEPOSIT");
   const [userEmailFilter, setUserEmailFilter] = useState("");
   const [page, setPage] = useState(0);
+  const [size, setSize] = useState(DEFAULT_PAGE_SIZE);
   const [totalPages, setTotalPages] = useState(0);
+  const [totalElements, setTotalElements] = useState(0);
+  const [summaryCounts, setSummaryCounts] = useState<
+    Partial<Record<"ALL" | TransferLedgerStatus, number>> | null
+  >(null);
 
   const [actionOpen, setActionOpen] = useState(false);
   const [actionKind, setActionKind] = useState<"settle" | "refund" | null>(null);
@@ -65,18 +94,38 @@ export default function AdminBankTransfers() {
   const [actionAmount, setActionAmount] = useState("");
   const [actionMemo, setActionMemo] = useState("");
 
-  const load = async (p = page) => {
+  const [detailOpen, setDetailOpen] = useState(false);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [detail, setDetail] = useState<TransferLedgerEntry | null>(null);
+
+  const openDetail = async (id: number) => {
+    setDetail(null);
+    setDetailOpen(true);
+    setDetailLoading(true);
+    try {
+      const data = await adminGetLedgerEntry(id);
+      setDetail(data);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : t("admin.bank.ledger.loadError"));
+      setDetailOpen(false);
+    } finally {
+      setDetailLoading(false);
+    }
+  };
+
+  const load = async (p = page, s = size) => {
     try {
       setLoading(true);
       const res = await adminListLedgerEntries({
         page: p,
-        size: 30,
+        size: s,
         status: status || undefined,
         entryType: entryType || undefined,
         userEmail: userEmailFilter.trim() || undefined,
       });
       setRows(res.content ?? []);
       setTotalPages(res.totalPages ?? 0);
+      setTotalElements(res.totalElements ?? 0);
       setPage(res.page ?? 0);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : t("admin.bank.ledger.loadError"));
@@ -85,9 +134,73 @@ export default function AdminBankTransfers() {
     }
   };
 
+  const loadSummary = useCallback(async () => {
+    const base = {
+      page: 0,
+      size: 1,
+      userEmail: userEmailFilter.trim() || undefined,
+    };
+    try {
+      const [all, ...per] = await Promise.all([
+        adminListLedgerEntries(base),
+        ...COUNTABLE_STATUSES.map((st) => adminListLedgerEntries({ ...base, status: st })),
+      ]);
+      const next: Partial<Record<"ALL" | TransferLedgerStatus, number>> = { ALL: all.totalElements };
+      COUNTABLE_STATUSES.forEach((st, i) => {
+        next[st] = per[i]?.totalElements ?? 0;
+      });
+      setSummaryCounts(next);
+    } catch {
+      setSummaryCounts({});
+    }
+  }, [userEmailFilter]);
+
   useEffect(() => {
     load(0);
+    void loadSummary();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const firstEmailMount = useRef(true);
+  useEffect(() => {
+    if (firstEmailMount.current) {
+      firstEmailMount.current = false;
+      return;
+    }
+    const id = setTimeout(() => {
+      setPage(0);
+      void load(0, size);
+      void loadSummary();
+    }, 300);
+    return () => clearTimeout(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userEmailFilter]);
+
+  const setStatusFilter = (next: StatusChipValue) => {
+    const value = next === "all" ? "" : next;
+    setStatus(value);
+    setPage(0);
+    void (async () => {
+      try {
+        setLoading(true);
+        const res = await adminListLedgerEntries({
+          page: 0,
+          size,
+          status: value || undefined,
+          entryType: entryType || undefined,
+          userEmail: userEmailFilter.trim() || undefined,
+        });
+        setRows(res.content ?? []);
+        setTotalPages(res.totalPages ?? 0);
+        setTotalElements(res.totalElements ?? 0);
+        setPage(res.page ?? 0);
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : t("admin.bank.ledger.loadError"));
+      } finally {
+        setLoading(false);
+      }
+    })();
+  };
 
   const onConfirm = async (id: number) => {
     if (!isSuper) {
@@ -152,6 +265,46 @@ export default function AdminBankTransfers() {
       <div>
         <h1 className="text-2xl font-bold text-gray-900">{t("admin.bank.ledger.title")}</h1>
         <p className="text-gray-600 text-sm">{t("admin.bank.ledger.subtitle")}</p>
+        <p className="mt-1 text-xs text-gray-500">{t("admin.bank.ledger.totalLine", { n: totalElements.toLocaleString(locale === "en" ? "en-US" : locale === "ru" ? "ru-RU" : "ko-KR") })}</p>
+      </div>
+
+      <div className="rounded-xl border border-gray-100 bg-white p-3 shadow-sm md:p-3.5">
+        <div className="mb-2 flex items-center justify-between gap-2">
+          <p className="text-xs font-semibold text-gray-700 md:text-sm">{t("admin.bank.ledger.summaryTitle")}</p>
+          <Landmark className="h-4 w-4 text-gray-400" aria-hidden />
+        </div>
+        <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-4 sm:gap-2">
+          {filterChips.map((chip) => {
+            const key = chip.value === "all" ? "ALL" : chip.value;
+            const count = summaryCounts?.[key];
+            const active = (status === "" && chip.value === "all") || status === chip.value;
+            return (
+              <button
+                key={chip.value}
+                type="button"
+                onClick={() => setStatusFilter(chip.value)}
+                className={cn(
+                  "flex min-h-[52px] flex-col items-center justify-center rounded-lg border px-1 py-1.5 text-center transition-all sm:min-h-[56px]",
+                  active
+                    ? "border-blue-300 bg-blue-50/90 ring-2 ring-blue-400/35"
+                    : "border-transparent bg-gray-50/80 hover:bg-gray-100/90",
+                )}
+              >
+                <span
+                  className={cn(
+                    "text-lg font-bold tabular-nums leading-none sm:text-xl",
+                    active ? "text-blue-900" : "text-gray-900",
+                  )}
+                >
+                  {count == null ? "–" : count}
+                </span>
+                <span className="mt-0.5 line-clamp-2 text-[10px] font-medium text-gray-600 sm:text-xs">
+                  {chip.label}
+                </span>
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       <Card>
@@ -160,30 +313,43 @@ export default function AdminBankTransfers() {
         </CardHeader>
         <CardContent className="flex flex-wrap gap-4 items-end">
           <div className="space-y-1">
-            <Label>{t("admin.bank.ledger.status")}</Label>
-            <Select value={status || "ALL"} onValueChange={(v) => setStatus(v === "ALL" ? "" : v)}>
-              <SelectTrigger className="w-[160px]">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="ALL">{t("admin.bank.all")}</SelectItem>
-                <SelectItem value="PENDING">PENDING</SelectItem>
-                <SelectItem value="CONFIRMED">CONFIRMED</SelectItem>
-                <SelectItem value="CANCELLED">CANCELLED</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-1">
             <Label>{t("admin.bank.ledger.entryType")}</Label>
-            <Select value={entryType || "ALL"} onValueChange={(v) => setEntryType(v === "ALL" ? "" : v)}>
-              <SelectTrigger className="w-[180px]">
+            <Select
+              value={entryType || "ALL"}
+              onValueChange={(v) => {
+                const next = v === "ALL" ? "" : v;
+                setEntryType(next);
+                setPage(0);
+                void (async () => {
+                  try {
+                    setLoading(true);
+                    const res = await adminListLedgerEntries({
+                      page: 0,
+                      size,
+                      status: status || undefined,
+                      entryType: next || undefined,
+                      userEmail: userEmailFilter.trim() || undefined,
+                    });
+                    setRows(res.content ?? []);
+                    setTotalPages(res.totalPages ?? 0);
+                    setTotalElements(res.totalElements ?? 0);
+                    setPage(res.page ?? 0);
+                  } catch (e) {
+                    toast.error(e instanceof Error ? e.message : t("admin.bank.ledger.loadError"));
+                  } finally {
+                    setLoading(false);
+                  }
+                })();
+              }}
+            >
+              <SelectTrigger className="w-40">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value="DEPOSIT">{t("admin.bank.ledger.entryTypeDeposit")}</SelectItem>
+                <SelectItem value="SETTLEMENT">{t("admin.bank.ledger.entryTypeSettlement")}</SelectItem>
+                <SelectItem value="REFUND">{t("admin.bank.ledger.entryTypeRefund")}</SelectItem>
                 <SelectItem value="ALL">{t("admin.bank.all")}</SelectItem>
-                <SelectItem value="DEPOSIT">DEPOSIT</SelectItem>
-                <SelectItem value="SETTLEMENT">SETTLEMENT</SelectItem>
-                <SelectItem value="REFUND">REFUND</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -191,7 +357,7 @@ export default function AdminBankTransfers() {
             <Label>{t("admin.bank.ledger.userEmail")}</Label>
             <Input
               className="w-64"
-              type="email"
+              type="text"
               autoComplete="off"
               placeholder={t("admin.bank.ledger.userEmailPlaceholder")}
               value={userEmailFilter}
@@ -201,7 +367,8 @@ export default function AdminBankTransfers() {
           <Button
             onClick={() => {
               setPage(0);
-              load(0);
+              load(0, size);
+              void loadSummary();
             }}
           >
             <RefreshCw className="w-4 h-4 mr-2" />
@@ -233,6 +400,7 @@ export default function AdminBankTransfers() {
                   <TableHead>Status</TableHead>
                   <TableHead>Parent</TableHead>
                   <TableHead>{t("admin.bank.table.created")}</TableHead>
+                  <TableHead className="text-center w-[80px]">{t("admin.common.detail")}</TableHead>
                   <TableHead className="text-right">{t("admin.bank.actions")}</TableHead>
                 </TableRow>
               </TableHeader>
@@ -245,33 +413,59 @@ export default function AdminBankTransfers() {
                     </TableCell>
                     <TableCell>{r.entryType}</TableCell>
                     <TableCell>
-                      {r.amount.toLocaleString(locale === "en" ? "en-US" : "ko-KR")} {r.currency}
+                      <div className="flex flex-col gap-0.5">
+                        <span>
+                          {r.amount.toLocaleString(locale === "en" ? "en-US" : "ko-KR")} {r.currency}
+                        </span>
+                        {isRootDeposit(r) && r.status === "CONFIRMED" && r.remainingSettleOrRefundAmount != null ? (
+                          <span className="text-xs text-gray-500">
+                            {t("admin.bank.ledger.remaining")}:{" "}
+                            {Math.max(0, r.remainingSettleOrRefundAmount).toLocaleString(
+                              locale === "en" ? "en-US" : "ko-KR",
+                            )}
+                          </span>
+                        ) : null}
+                      </div>
                     </TableCell>
                     <TableCell>
-                      <Badge variant={r.status === "CONFIRMED" ? "default" : "secondary"}>{r.status}</Badge>
+                      <div className="flex flex-wrap items-center gap-1">
+                        <Badge variant={r.status === "CONFIRMED" ? "default" : "secondary"}>{r.status}</Badge>
+                        {isFullyProcessedRoot(r) ? (
+                          <Badge variant="outline" className="text-gray-600">
+                            {t("admin.bank.ledger.processed")}
+                          </Badge>
+                        ) : null}
+                      </div>
                     </TableCell>
                     <TableCell>{r.parentEntryId ?? "—"}</TableCell>
                     <TableCell>{formatDate(r.createdAt, locale)}</TableCell>
+                    <TableCell className="text-center">
+                      <Button size="sm" variant="ghost" onClick={() => void openDetail(r.id)}>
+                        <Eye className="w-4 h-4 mr-1" />
+                        {t("admin.common.detail")}
+                      </Button>
+                    </TableCell>
                     <TableCell className="text-right">
-                      <div className="flex flex-wrap justify-end gap-1">
+                      <div className="inline-flex flex-col items-stretch gap-1 min-w-[108px]">
                       {isRootDeposit(r) && r.status === "PENDING" && isSuper ? (
                         <>
-                          <Button size="sm" variant="default" onClick={() => onConfirm(r.id)}>
+                          <Button size="sm" variant="default" className="justify-start w-full" onClick={() => onConfirm(r.id)}>
                             <CheckCircle className="w-4 h-4 mr-1" />
                             {t("admin.bank.confirm")}
                           </Button>
-                          <Button size="sm" variant="outline" onClick={() => onCancel(r.id)}>
+                          <Button size="sm" variant="outline" className="justify-start w-full" onClick={() => onCancel(r.id)}>
                             <XCircle className="w-4 h-4 mr-1" />
                             {t("admin.bank.cancelReq")}
                           </Button>
                         </>
                       ) : null}
-                      {isRootDeposit(r) && r.status === "CONFIRMED" && isSuper ? (
+                      {isRootDeposit(r) && r.status === "CONFIRMED" && isSuper && remainingForAction(r) > 0 ? (
                         <>
                           <Button
                             size="sm"
                             variant="secondary"
-                            onClick={() => openSettleRefund("settle", r.id, r.amount)}
+                            className="justify-start w-full"
+                            onClick={() => openSettleRefund("settle", r.id, remainingForAction(r))}
                           >
                             <CheckCircle className="w-4 h-4 mr-1" />
                             {t("admin.bank.settle")}
@@ -279,12 +473,17 @@ export default function AdminBankTransfers() {
                           <Button
                             size="sm"
                             variant="outline"
-                            onClick={() => openSettleRefund("refund", r.id, r.amount)}
+                            className="justify-start w-full"
+                            onClick={() => openSettleRefund("refund", r.id, remainingForAction(r))}
                           >
                             <Undo2 className="w-4 h-4 mr-1" />
                             {t("admin.bank.refund")}
                           </Button>
                         </>
+                      ) : isFullyProcessedRoot(r) ? (
+                        <span className="text-xs text-gray-500 px-1 py-2">{t("admin.bank.ledger.processed")}</span>
+                      ) : !isRootDeposit(r) ? (
+                        <span className="text-xs text-gray-400 px-1 py-2">{t("admin.bank.ledger.childRecord")}</span>
                       ) : null}
                       </div>
                     </TableCell>
@@ -293,31 +492,140 @@ export default function AdminBankTransfers() {
               </TableBody>
             </Table>
           )}
-          {totalPages > 1 ? (
-            <div className="flex justify-center gap-2 mt-4">
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={page <= 0}
-                onClick={() => load(page - 1)}
+          <div className="flex items-center justify-between p-4 border-t flex-wrap gap-2">
+            <div className="flex items-center gap-2 text-sm text-gray-500">
+              <span>{t("admin.common.pageSize")}</span>
+              <Select
+                value={String(size)}
+                onValueChange={(v) => { const s = Number(v); setSize(s); setPage(0); load(0, s); }}
               >
-                Prev
-              </Button>
-              <span className="text-sm self-center">
-                {page + 1} / {totalPages}
-              </span>
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={page >= totalPages - 1}
-                onClick={() => load(page + 1)}
-              >
-                Next
-              </Button>
+                <SelectTrigger className="w-[80px] h-8 text-xs"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {PAGE_SIZE_OPTIONS.map((s) => (
+                    <SelectItem key={s} value={String(s)}>{t("admin.common.pageSizeSuffix", { n: s })}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
-          ) : null}
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm" disabled={page <= 0} onClick={() => load(page - 1, size)}>{t("admin.common.prev")}</Button>
+              <span className="text-sm text-gray-500">{t("admin.common.pageOf", { page: page + 1, total: Math.max(1, totalPages) })}</span>
+              <Button variant="outline" size="sm" disabled={page >= totalPages - 1} onClick={() => load(page + 1, size)}>{t("admin.common.next")}</Button>
+            </div>
+          </div>
         </CardContent>
       </Card>
+
+      <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{t("admin.bank.ledger.detailTitle", { id: detail ? `#${detail.id}` : "" })}</DialogTitle>
+          </DialogHeader>
+          {detailLoading || !detail ? (
+            <p className="text-sm text-gray-500 py-4">{t("admin.common.loading")}</p>
+          ) : (
+            <div className="space-y-4 text-sm">
+              <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                <div>
+                  <p className="text-gray-500">{t("admin.bank.ledger.detail.user")}</p>
+                  <p className="font-medium">{detail.userEmail ?? `#${detail.userId}`}</p>
+                </div>
+                <div>
+                  <p className="text-gray-500">{t("admin.bank.ledger.detail.type")}</p>
+                  <p className="font-medium">{detail.entryType}</p>
+                </div>
+                <div>
+                  <p className="text-gray-500">{t("admin.bank.ledger.detail.amount")}</p>
+                  <p className="font-medium">
+                    {detail.amount.toLocaleString(locale === "en" ? "en-US" : "ko-KR")} {detail.currency}
+                  </p>
+                  {detail.remainingSettleOrRefundAmount != null ? (
+                    <p className="text-xs text-amber-700 mt-0.5">
+                      {t("admin.bank.ledger.remaining")}:{" "}
+                      {Math.max(0, detail.remainingSettleOrRefundAmount).toLocaleString(
+                        locale === "en" ? "en-US" : "ko-KR",
+                      )}{" "}
+                      {detail.currency}
+                    </p>
+                  ) : null}
+                </div>
+                <div>
+                  <p className="text-gray-500">{t("admin.bank.ledger.detail.status")}</p>
+                  <Badge variant={detail.status === "CONFIRMED" ? "default" : "secondary"}>{detail.status}</Badge>
+                </div>
+                <div>
+                  <p className="text-gray-500">{t("admin.bank.ledger.detail.settlementAccount")}</p>
+                  <p className="font-medium">
+                    {detail.settlementAccount?.bankName} · {detail.settlementAccount?.accountNumber}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-gray-500">{t("admin.bank.ledger.detail.parentId")}</p>
+                  <p className="font-medium">{detail.parentEntryId ?? "—"}</p>
+                </div>
+                <div>
+                  <p className="text-gray-500">{t("admin.bank.ledger.detail.depositorName")}</p>
+                  <p className="font-medium">{detail.depositorName ?? "—"}</p>
+                </div>
+                <div>
+                  <p className="text-gray-500">{t("admin.bank.ledger.detail.depositMemo")}</p>
+                  <p className="font-medium break-words">{detail.depositorMemo ?? "—"}</p>
+                </div>
+                <div>
+                  <p className="text-gray-500">{t("admin.bank.ledger.detail.adminMemo")}</p>
+                  <p className="font-medium break-words">{detail.adminMemo ?? "—"}</p>
+                </div>
+                <div>
+                  <p className="text-gray-500">{t("admin.bank.ledger.detail.createdAt")}</p>
+                  <p className="font-medium">{formatDate(detail.createdAt, locale)}</p>
+                </div>
+                <div>
+                  <p className="text-gray-500">{t("admin.bank.ledger.detail.confirmedAt")}</p>
+                  <p className="font-medium">{detail.confirmedAt ? formatDate(detail.confirmedAt, locale) : "—"}</p>
+                </div>
+                <div>
+                  <p className="text-gray-500">{t("admin.bank.ledger.detail.confirmedAdminId")}</p>
+                  <p className="font-medium">{detail.confirmedByAdminId ?? "—"}</p>
+                </div>
+              </div>
+
+              <div className="pt-2 border-t">
+                <p className="font-semibold mb-2">{t("admin.bank.ledger.detail.evidence")}</p>
+                {!detail.attachments || detail.attachments.length === 0 ? (
+                  <div className="flex items-center gap-2 text-gray-500 py-3">
+                    <ImageOff className="w-4 h-4" />
+                    <span>{t("admin.bank.ledger.detail.noEvidence")}</span>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                    {detail.attachments.map((att) => {
+                      const src = att.viewUrl || att.storedUrl;
+                      return (
+                        <a
+                          key={att.id}
+                          href={src}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="block group"
+                          title={att.originalFilename}
+                        >
+                          <img
+                            src={att.thumbnailUrl || src}
+                            alt={att.originalFilename}
+                            className="h-32 w-full object-cover rounded border group-hover:opacity-90"
+                            loading="lazy"
+                          />
+                          <p className="text-xs text-gray-600 mt-1 truncate">{att.originalFilename}</p>
+                        </a>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={actionOpen} onOpenChange={setActionOpen}>
         <DialogContent>

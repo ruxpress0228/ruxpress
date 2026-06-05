@@ -1,15 +1,40 @@
 import { describe, it, expect, beforeEach } from 'vitest';
+import { STORAGE_KEYS } from '../utils/constants';
+import { readStoredLocale, persistLocale } from './localeStorage';
 import { getLocale, setLocale, t } from './index';
+
+describe('localeStorage', () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  it('returns ru when nothing is stored', () => {
+    expect(readStoredLocale()).toBe('ru');
+  });
+
+  it('returns ru when only legacy ko is stored without user choice', () => {
+    localStorage.setItem(STORAGE_KEYS.LOCALE, 'ko');
+    expect(readStoredLocale()).toBe('ru');
+  });
+
+  it('restores ko when user explicitly chose it', () => {
+    persistLocale('ko', { userChoice: true });
+    expect(readStoredLocale()).toBe('ko');
+  });
+});
 
 describe('i18n', () => {
   beforeEach(() => {
+    localStorage.clear();
     setLocale('ko');
   });
 
   describe('getLocale / setLocale', () => {
-    it('defaults to ko when no storage', () => {
-      setLocale('ko');
-      expect(getLocale()).toBe('ko');
+    it('defaults to ru when no storage', () => {
+      localStorage.clear();
+      expect(getLocale()).toBe('ko'); // set by beforeEach setLocale('ko')
+      setLocale('ru');
+      expect(getLocale()).toBe('ru');
     });
     it('returns set locale', () => {
       setLocale('en');

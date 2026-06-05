@@ -13,7 +13,7 @@ public class PurchaseRequestListResponse {
 
     private final Long id;
     private final String requestNumber;
-    private final String productName;
+    private final String requestName;
     private final Integer quantity;
     private final BigDecimal totalAmountKrw;
     private final BigDecimal chargedAmountKrw;

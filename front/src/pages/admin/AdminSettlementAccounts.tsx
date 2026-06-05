@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { Plus, Pencil, Trash2 } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { Plus, Pencil, Trash2, Upload, ImageIcon, X } from "lucide-react";
 import { Button } from "../../components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../components/ui/card";
 import { Input } from "../../components/ui/input";
@@ -12,9 +12,16 @@ import {
   adminCreateSettlementAccount,
   adminUpdateSettlementAccount,
   adminDeleteSettlementAccount,
+  adminListNoticeImages,
+  adminUploadNoticeImages,
+  adminDeleteNoticeImage,
 } from "../../api/bankTransfer";
 import { useTranslation } from "../../hooks/useTranslation";
-import type { SettlementAccount } from "../../types/bankTransfer";
+import type { BankTransferAttachment, SettlementAccount } from "../../types/bankTransfer";
+
+const ALLOWED_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
+const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
+const MAX_NOTICE_IMAGES = 20;
 
 export default function AdminSettlementAccounts() {
   const { t } = useTranslation();
@@ -27,6 +34,66 @@ export default function AdminSettlementAccounts() {
   const [accountHolder, setAccountHolder] = useState("");
   const [displayMemo, setDisplayMemo] = useState("");
   const [active, setActive] = useState(true);
+
+  const [noticeImages, setNoticeImages] = useState<BankTransferAttachment[]>([]);
+  const [noticeLoading, setNoticeLoading] = useState(true);
+  const [noticeUploading, setNoticeUploading] = useState(false);
+  const noticeInputRef = useRef<HTMLInputElement>(null);
+
+  const loadNoticeImages = async () => {
+    try {
+      setNoticeLoading(true);
+      const list = await adminListNoticeImages();
+      setNoticeImages(list);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : t("admin.settlement.noticeImages.loadError"));
+    } finally {
+      setNoticeLoading(false);
+    }
+  };
+
+  const onPickNoticeFiles = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const picked = Array.from(e.target.files || []);
+    e.target.value = "";
+    if (picked.length === 0) return;
+    const valid: File[] = [];
+    for (const f of picked) {
+      if (!ALLOWED_IMAGE_TYPES.has(f.type)) continue;
+      if (f.size > MAX_IMAGE_SIZE) continue;
+      valid.push(f);
+    }
+    if (valid.length < picked.length) {
+      toast.error(t("admin.settlement.noticeImages.invalidType"));
+    }
+    if (valid.length === 0) return;
+    if (noticeImages.length + valid.length > MAX_NOTICE_IMAGES) {
+      toast.error(t("admin.settlement.noticeImages.maxCount", { max: MAX_NOTICE_IMAGES }));
+      return;
+    }
+    void (async () => {
+      try {
+        setNoticeUploading(true);
+        const next = await adminUploadNoticeImages(valid);
+        setNoticeImages(next);
+        toast.success(t("admin.settlement.noticeImages.uploaded"));
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : t("admin.common.uploadError"));
+      } finally {
+        setNoticeUploading(false);
+      }
+    })();
+  };
+
+  const onDeleteNoticeImage = async (attachmentId: number) => {
+    if (!confirm(t("admin.settlement.noticeImages.deleteConfirm"))) return;
+    try {
+      await adminDeleteNoticeImage(attachmentId);
+      setNoticeImages((prev) => prev.filter((x) => x.id !== attachmentId));
+      toast.success(t("admin.settlement.noticeImages.deleted"));
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : t("admin.common.deleteError"));
+    }
+  };
 
   const load = async () => {
     try {
@@ -42,6 +109,7 @@ export default function AdminSettlementAccounts() {
 
   useEffect(() => {
     load();
+    void loadNoticeImages();
   }, []);
 
   const resetForm = () => {
@@ -212,6 +280,76 @@ export default function AdminSettlementAccounts() {
                 )}
               </TableBody>
             </Table>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between gap-2">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <ImageIcon className="w-5 h-5 text-blue-600" />
+                {t("admin.settlement.noticeImages.title")}
+              </CardTitle>
+              <CardDescription>
+                {t("admin.settlement.noticeImages.desc", { max: MAX_NOTICE_IMAGES })}
+              </CardDescription>
+            </div>
+            <div>
+              <input
+                ref={noticeInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                multiple
+                className="hidden"
+                onChange={onPickNoticeFiles}
+              />
+              <Button
+                type="button"
+                onClick={() => noticeInputRef.current?.click()}
+                disabled={noticeUploading || noticeImages.length >= MAX_NOTICE_IMAGES}
+              >
+                <Upload className="w-4 h-4 mr-2" />
+                {noticeUploading ? t("admin.common.uploading") : t("admin.settlement.noticeImages.add")}
+              </Button>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {noticeLoading ? (
+            <p className="text-sm text-gray-500">{t("admin.common.loading")}</p>
+          ) : noticeImages.length === 0 ? (
+            <p className="text-sm text-gray-500">{t("admin.settlement.noticeImages.empty")}</p>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+              {noticeImages.map((img) => {
+                const src = img.viewUrl || img.storedUrl;
+                return (
+                  <div key={img.id} className="relative group border rounded-lg overflow-hidden">
+                    <a href={src} target="_blank" rel="noopener noreferrer" title={img.originalFilename}>
+                      <img
+                        src={img.thumbnailUrl || src}
+                        alt={img.originalFilename}
+                        className="h-32 w-full object-cover"
+                        loading="lazy"
+                      />
+                    </a>
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      size="icon"
+                      className="absolute top-1 right-1 h-7 w-7 opacity-90"
+                      onClick={() => void onDeleteNoticeImage(img.id)}
+                      title={t("admin.common.delete")}
+                    >
+                      <X className="w-4 h-4" />
+                    </Button>
+                    <p className="text-xs text-gray-600 truncate px-2 py-1 bg-white">{img.originalFilename}</p>
+                  </div>
+                );
+              })}
+            </div>
           )}
         </CardContent>
       </Card>

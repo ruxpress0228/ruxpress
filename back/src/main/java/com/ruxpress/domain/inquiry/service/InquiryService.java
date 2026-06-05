@@ -9,6 +9,7 @@ import com.ruxpress.common.storage.FileStoragePort;
 import com.ruxpress.common.dto.AttachmentResponse;
 import com.ruxpress.common.dto.PageResponse;
 import com.ruxpress.common.util.ModulePrefix;
+import com.ruxpress.domain.adminnotification.service.AdminNotificationService;
 import com.ruxpress.domain.inquiry.dto.request.InquiryCreateRequest;
 import com.ruxpress.domain.inquiry.dto.response.AdminInquiryListResponse;
 import com.ruxpress.domain.inquiry.dto.response.InquiryListResponse;
@@ -19,6 +20,7 @@ import com.ruxpress.domain.inquiry.entity.InquiryReply;
 import com.ruxpress.domain.inquiry.entity.InquiryStatus;
 import com.ruxpress.domain.inquiry.repository.InquiryReplyRepository;
 import com.ruxpress.domain.inquiry.repository.InquiryRepository;
+import com.ruxpress.domain.notification.service.NotificationService;
 import com.ruxpress.domain.user.entity.User;
 import com.ruxpress.domain.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -45,6 +47,8 @@ public class InquiryService {
     private final UserRepository userRepository;
     private final AttachmentRepository attachmentRepository;
     private final FileStoragePort fileStoragePort;
+    private final NotificationService notificationService;
+    private final AdminNotificationService adminNotificationService;
 
     @Transactional
     public InquiryResponse createInquiry(Long userId, InquiryCreateRequest request,
@@ -86,6 +90,8 @@ public class InquiryService {
                 throw new BusinessException(ErrorCode.FILE_UPLOAD_FAILED, e.getMessage());
             }
         }
+
+        adminNotificationService.notifyNewInquiry(inquiry.getId(), inquiry.getTitle());
 
         return toDetailResponse(inquiry);
     }
@@ -166,6 +172,7 @@ public class InquiryService {
         inquiryReplyRepository.save(reply);
         inquiry.markAsReplied();
         inquiryRepository.save(inquiry);
+        notificationService.notifyInquiryReply(inquiry.getUserId(), inquiry.getId(), inquiry.getTitle());
         return toDetailResponse(inquiry);
     }
 
@@ -249,7 +256,8 @@ public class InquiryService {
                         a.getThumbnailUrl(),
                         fileStoragePort.getViewUrl(a.getStoredUrl()),
                         a.getFileSize(),
-                        a.getMimeType()
+                        a.getMimeType(),
+                        a.isUploadedByAdmin()
                 ))
                 .collect(Collectors.toList());
         User user = userRepository.findById(inquiry.getUserId()).orElse(null);

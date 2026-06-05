@@ -8,5 +8,9 @@ public enum WalletLedgerEntryType {
     /** 실제 비용 확정 후 차액만큼 지갑으로 되돌림 (복수 가능) */
     CREDIT_PURCHASE_ADJUSTMENT,
     DEBIT_PURCHASE,
-    DEBIT_BANK_REFUND
+    DEBIT_BANK_REFUND,
+    /** 관리자 수동 지급 */
+    CREDIT_ADMIN_ADJUSTMENT,
+    /** 관리자 수동 회수 */
+    DEBIT_ADMIN_ADJUSTMENT
 }

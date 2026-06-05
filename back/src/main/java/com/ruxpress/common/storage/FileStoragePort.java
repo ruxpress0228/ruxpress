@@ -23,8 +23,8 @@ public interface FileStoragePort {
     Resource loadAsResource(String storedUrl);
 
     /**
-     * storedUrl에 해당하는 파일을 브라우저에서 직접 열 수 있는 HTTPS URL로 반환한다.
-     * S3: Presigned URL, Local: null
+     * storedUrl에 해당하는 파일을 브라우저에서 직접 열 수 있는 URL로 반환한다.
+     * S3: Presigned URL. Local: {@code /api/v1/local-files/} 접두 경로 아래 리소스(동일 출처·API 프록시와 맞춤).
      */
     String getViewUrl(String storedUrl);
 

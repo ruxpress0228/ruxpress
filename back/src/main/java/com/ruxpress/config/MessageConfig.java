@@ -16,10 +16,10 @@ public class MessageConfig {
     @Bean
     public LocaleResolver localeResolver() {
         AcceptHeaderLocaleResolver resolver = new AcceptHeaderLocaleResolver();
-        resolver.setDefaultLocale(Locale.KOREAN);
+        resolver.setDefaultLocale(Locale.forLanguageTag("ru"));
         resolver.setSupportedLocales(List.of(
-                Locale.KOREAN,
                 Locale.forLanguageTag("ru"),
+                Locale.KOREAN,
                 Locale.ENGLISH
         ));
         return resolver;

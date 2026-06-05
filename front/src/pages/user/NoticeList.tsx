@@ -2,22 +2,35 @@ import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router";
 import { Eye, Pin } from "lucide-react";
 import { Badge } from "../../components/ui/badge";
+import { Button } from "../../components/ui/button";
 import { Card, CardContent } from "../../components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../components/ui/select";
 import { api } from "../../utils/api";
 import { unwrap } from "../../utils/exception";
+import { useTranslation } from "../../hooks/useTranslation";
+import { DEFAULT_PAGE_SIZE, PAGE_SIZE_OPTIONS } from "../../utils/constants";
 import type { Notice, PageResponse } from "../../types";
 
 export default function NoticeList() {
+  const { t, locale } = useTranslation();
+  const dateLocale = locale === "ko" ? "ko-KR" : locale === "ru" ? "ru-RU" : "en-US";
   const [notices, setNotices] = useState<Notice[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const [page, setPage] = useState(0);
+  const [size, setSize] = useState(DEFAULT_PAGE_SIZE);
+  const [totalPages, setTotalPages] = useState(0);
 
-  const load = useCallback(() => {
+  const load = useCallback((p: number, s: number) => {
     setLoading(true);
     setError(false);
     api
-      .get<PageResponse<Notice>>("/v1/notices?page=0&size=100")
-      .then((res) => setNotices(unwrap(res).content))
+      .get<PageResponse<Notice>>(`/v1/notices?page=${p}&size=${s}`)
+      .then((res) => {
+        const data = unwrap(res);
+        setNotices(data.content);
+        setTotalPages(data.totalPages);
+      })
       .catch(() => {
         setError(true);
         setNotices([]);
@@ -26,15 +39,20 @@ export default function NoticeList() {
   }, []);
 
   useEffect(() => {
-    load();
-  }, [load]);
+    load(page, size);
+  }, [page, size, load]);
+
+  const handleSizeChange = (newSize: number) => {
+    setSize(newSize);
+    setPage(0);
+  };
 
   const pinnedNotices = notices.filter((n) => n.isPinned);
   const regularNotices = notices.filter((n) => !n.isPinned);
 
   const formatDate = (n: Notice) => {
     const raw = n.publishedAt ?? n.createdAt;
-    return new Date(raw).toLocaleDateString("ko-KR", {
+    return new Date(raw).toLocaleDateString(dateLocale, {
       year: "numeric",
       month: "long",
       day: "numeric",
@@ -43,14 +61,14 @@ export default function NoticeList() {
 
   if (loading) {
     return (
-      <div className="py-12 text-center text-gray-500">불러오는 중...</div>
+      <div className="py-12 text-center text-gray-500">{t("notice.loading")}</div>
     );
   }
 
   if (error) {
     return (
       <div className="py-12 text-center text-red-600">
-        공지사항을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.
+        {t("notice.list.loadError")}
       </div>
     );
   }
@@ -58,8 +76,8 @@ export default function NoticeList() {
   return (
     <div>
       <div className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-900">공지사항</h1>
-        <p className="text-gray-600 mt-1">Ruxpress의 최신 소식을 확인하세요</p>
+        <h1 className="text-3xl font-bold text-gray-900">{t("notice.list.title")}</h1>
+        <p className="text-gray-600 mt-1">{t("notice.list.subtitle")}</p>
       </div>
 
       <div className="space-y-3">
@@ -71,7 +89,7 @@ export default function NoticeList() {
                   <div className="flex-1">
                     <div className="flex items-center space-x-2 mb-2">
                       <Pin className="w-4 h-4 text-yellow-600" />
-                      <Badge variant="destructive">중요</Badge>
+                      <Badge variant="destructive">{t("notice.important")}</Badge>
                     </div>
                     <h3 className="text-lg font-semibold text-gray-900 mb-1">
                       {notice.title}
@@ -121,13 +139,34 @@ export default function NoticeList() {
               <Eye className="w-8 h-8 text-gray-400" />
             </div>
             <h3 className="text-lg font-semibold text-gray-900 mb-2">
-              공지사항이 없습니다
+              {t("notice.list.emptyTitle")}
             </h3>
             <p className="text-gray-500">
-              새로운 공지사항이 등록되면 알려드리겠습니다
+              {t("notice.list.emptyDesc")}
             </p>
           </div>
         </Card>
+      )}
+
+      {totalPages > 0 && (
+        <div className="flex items-center justify-between mt-4 flex-wrap gap-2">
+          <div className="flex items-center gap-2 text-sm text-gray-500">
+            <span>{t("purchase.list.perPage")}</span>
+            <Select value={String(size)} onValueChange={(v) => handleSizeChange(Number(v))}>
+              <SelectTrigger className="w-[80px] h-8 text-xs"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {PAGE_SIZE_OPTIONS.map((s) => (
+                  <SelectItem key={s} value={String(s)}>{t("purchase.list.perPageOption", { n: s })}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" disabled={page <= 0} onClick={() => setPage((p) => p - 1)}>{t("purchase.list.prev")}</Button>
+            <span className="text-sm text-gray-500">{page + 1} / {Math.max(1, totalPages)}</span>
+            <Button variant="outline" size="sm" disabled={page >= totalPages - 1} onClick={() => setPage((p) => p + 1)}>{t("purchase.list.next")}</Button>
+          </div>
+        </div>
       )}
     </div>
   );

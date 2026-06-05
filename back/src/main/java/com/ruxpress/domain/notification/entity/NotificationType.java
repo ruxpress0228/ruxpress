@@ -8,5 +8,6 @@ public enum NotificationType {
     PROMOTION,
     PURCHASE_STATUS,
     BALANCE,
-    BANK_DEPOSIT
+    BANK_DEPOSIT,
+    CHAT
 }

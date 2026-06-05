@@ -6,8 +6,10 @@ import { Label } from "../../components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../components/ui/card";
 import { toast } from "sonner";
 import { api } from "../../utils/api";
+import { useTranslation } from "../../hooks/useTranslation";
 
 export default function ForgotPassword() {
+  const { t } = useTranslation();
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -15,19 +17,19 @@ export default function ForgotPassword() {
     e.preventDefault();
     const trimmed = email.trim();
     if (!trimmed) {
-      toast.error("이메일을 입력하세요");
+      toast.error(t("login.error.emailRequired"));
       return;
     }
     setLoading(true);
     try {
       const res = await api.post<unknown>("/v1/users/password/forgot", { email: trimmed });
       if (res.code === 200) {
-        toast.success(res.message ?? "안내 메일을 확인해 주세요");
+        toast.success(res.message ?? t("forgotPassword.toast.sent"));
       } else {
-        toast.error(res.message ?? "요청에 실패했습니다");
+        toast.error(res.message ?? t("forgotPassword.toast.failed"));
       }
     } catch {
-      toast.error("요청에 실패했습니다");
+      toast.error(t("forgotPassword.toast.failed"));
     } finally {
       setLoading(false);
     }
@@ -37,15 +39,15 @@ export default function ForgotPassword() {
     <div className="min-h-[80vh] flex items-center justify-center px-4">
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl text-center">비밀번호 찾기</CardTitle>
+          <CardTitle className="text-2xl text-center">{t("forgotPassword.title")}</CardTitle>
           <CardDescription className="text-center">
-            가입 시 사용한 이메일을 입력하시면 재설정 링크를 보내드립니다.
+            {t("forgotPassword.description")}
           </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="forgot-email">이메일</Label>
+              <Label htmlFor="forgot-email">{t("forgotPassword.emailLabel")}</Label>
               <Input
                 id="forgot-email"
                 type="email"
@@ -56,11 +58,11 @@ export default function ForgotPassword() {
               />
             </div>
             <Button type="submit" className="w-full" size="lg" disabled={loading}>
-              {loading ? "전송 중..." : "재설정 링크 보내기"}
+              {loading ? t("forgotPassword.submitting") : t("forgotPassword.submit")}
             </Button>
             <div className="text-center text-sm text-gray-600">
               <Link to="/login" className="text-blue-600 hover:underline font-medium">
-                로그인으로 돌아가기
+                {t("forgotPassword.backToLogin")}
               </Link>
             </div>
           </form>

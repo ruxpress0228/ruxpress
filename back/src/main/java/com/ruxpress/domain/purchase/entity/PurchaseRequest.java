@@ -24,8 +24,8 @@ public class PurchaseRequest extends BaseEntity {
     @Column(name = "request_number", nullable = false, length = 30)
     private String requestNumber;
 
-    @Column(name = "product_name", nullable = false, length = 300)
-    private String productName;
+    @Column(name = "request_name", nullable = false, length = 300)
+    private String requestName;
 
     @Column(nullable = false)
     private Integer quantity = 1;
@@ -38,6 +38,10 @@ public class PurchaseRequest extends BaseEntity {
 
     @Column(name = "price_rub", precision = 18, scale = 2)
     private BigDecimal priceRub;
+
+    /** 표시·스냅샷 기준 외화 (RUB, USD, CNY). price_rub 컬럼에 quote 금액 저장 */
+    @Column(name = "quote_currency", nullable = false, length = 3)
+    private String quoteCurrency = "RUB";
 
     @Column(name = "price_krw", precision = 18, scale = 2)
     private BigDecimal priceKrw;
@@ -64,7 +68,7 @@ public class PurchaseRequest extends BaseEntity {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private PurchaseRequestStatus status = PurchaseRequestStatus.DRAFT;
+    private PurchaseRequestStatus status = PurchaseRequestStatus.REQUESTED;
 
     @Column(name = "admin_memo", columnDefinition = "TEXT")
     private String adminMemo;
@@ -72,35 +76,71 @@ public class PurchaseRequest extends BaseEntity {
     @Column(name = "assigned_admin_id")
     private Long assignedAdminId;
 
+    @Column(name = "tracking_number", length = 64)
+    private String trackingNumber;
+
+    @Column(name = "shipping_user_address_id")
+    private Long shippingUserAddressId;
+
+    @Column(name = "shipping_label", length = 50)
+    private String shippingLabel;
+
+    @Column(name = "shipping_recipient_name", length = 50)
+    private String shippingRecipientName;
+
+    @Column(name = "shipping_recipient_phone", length = 20)
+    private String shippingRecipientPhone;
+
+    @Column(name = "shipping_postal_code", length = 10)
+    private String shippingPostalCode;
+
+    @Column(name = "shipping_address_line1", length = 255)
+    private String shippingAddressLine1;
+
+    @Column(name = "shipping_address_line2", length = 255)
+    private String shippingAddressLine2;
+
     public static PurchaseRequest create(
             Long userId,
             String requestNumber,
-            String productName,
+            String requestName,
             Integer quantity,
             String urls,
             String options,
             BigDecimal priceRub,
+            String quoteCurrency,
             BigDecimal priceKrw,
             Long exchangeRateId,
             BigDecimal feeAmount,
             BigDecimal totalAmountKrw,
             String memo,
-            PurchaseRequestStatus status
+            PurchaseRequestStatus status,
+            PurchaseShippingSnapshot shippingSnapshot
     ) {
         PurchaseRequest pr = new PurchaseRequest();
         pr.userId = userId;
         pr.requestNumber = requestNumber;
-        pr.productName = productName;
+        pr.requestName = requestName;
         pr.quantity = quantity != null ? quantity : 1;
         pr.urls = urls;
         pr.options = options;
         pr.priceRub = priceRub;
+        pr.quoteCurrency = (quoteCurrency != null && !quoteCurrency.isBlank()) ? quoteCurrency.toUpperCase() : "RUB";
         pr.priceKrw = priceKrw;
         pr.exchangeRateId = exchangeRateId;
         pr.feeAmount = feeAmount;
         pr.totalAmountKrw = totalAmountKrw;
         pr.memo = memo;
-        pr.status = status != null ? status : PurchaseRequestStatus.DRAFT;
+        pr.status = status != null ? status : PurchaseRequestStatus.REQUESTED;
+        if (shippingSnapshot != null) {
+            pr.shippingUserAddressId = shippingSnapshot.getUserAddressId();
+            pr.shippingLabel = shippingSnapshot.getLabel();
+            pr.shippingRecipientName = shippingSnapshot.getRecipientName();
+            pr.shippingRecipientPhone = shippingSnapshot.getRecipientPhone();
+            pr.shippingPostalCode = shippingSnapshot.getPostalCode();
+            pr.shippingAddressLine1 = shippingSnapshot.getAddressLine1();
+            pr.shippingAddressLine2 = shippingSnapshot.getAddressLine2();
+        }
         return pr;
     }
 
@@ -116,6 +156,13 @@ public class PurchaseRequest extends BaseEntity {
 
     public void assignAdmin(Long adminId) {
         this.assignedAdminId = adminId;
+    }
+
+    public void updateTrackingNumber(String trackingNumber) {
+        if (trackingNumber != null) {
+            String trimmed = trackingNumber.trim();
+            this.trackingNumber = trimmed.isEmpty() ? null : trimmed;
+        }
     }
 
     public void recordChargedAmount(BigDecimal amount) {

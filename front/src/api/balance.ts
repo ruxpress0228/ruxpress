@@ -1,4 +1,5 @@
 import { api } from "../utils/api";
+import { DEFAULT_PAGE_SIZE } from "../utils/constants";
 import type { PageResponse } from "../types";
 
 const BASE = "/v1/balances";
@@ -9,7 +10,9 @@ export type WalletLedgerEntryType =
   | "CREDIT_PURCHASE_REFUND"
   | "CREDIT_PURCHASE_ADJUSTMENT"
   | "DEBIT_PURCHASE"
-  | "DEBIT_BANK_REFUND";
+  | "DEBIT_BANK_REFUND"
+  | "CREDIT_ADMIN_ADJUSTMENT"
+  | "DEBIT_ADMIN_ADJUSTMENT";
 
 export interface WalletLedgerEntry {
   id: number;
@@ -29,7 +32,7 @@ export async function getMyBalance(): Promise<number> {
   return Number(res.data.balance);
 }
 
-export async function getMyWalletLedger(page = 0, size = 20): Promise<PageResponse<WalletLedgerEntry>> {
+export async function getMyWalletLedger(page = 0, size = DEFAULT_PAGE_SIZE): Promise<PageResponse<WalletLedgerEntry>> {
   const res = await api.get<PageResponse<WalletLedgerEntry>>(`${BASE}/me/ledger?page=${page}&size=${size}`);
   if (res.code !== 200 || res.data == null) throw new Error(res.message || "Failed to load ledger");
   return res.data;

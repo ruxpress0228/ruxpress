@@ -12,15 +12,26 @@ import com.ruxpress.common.storage.FileStorageUtil;
 import com.ruxpress.common.util.IDGenerateUtil;
 import com.ruxpress.common.util.JsonUtils;
 import com.ruxpress.common.util.ModulePrefix;
+import com.ruxpress.domain.admin.entity.SystemSetting;
+import com.ruxpress.domain.admin.repository.SystemSettingRepository;
+import com.ruxpress.domain.adminnotification.service.AdminNotificationService;
 import com.ruxpress.domain.balance.service.BalanceService;
 import com.ruxpress.domain.notification.service.NotificationService;
+import com.ruxpress.domain.purchase.dto.response.PurchaseShippingResponse;
+import com.ruxpress.domain.purchase.entity.PurchaseShippingSnapshot;
+import com.ruxpress.domain.user.entity.User;
+import com.ruxpress.domain.user.repository.UserRepository;
+import com.ruxpress.domain.user.service.UserAddressService;
 import com.ruxpress.domain.purchase.dto.request.AdminPurchaseStatusRequest;
 import com.ruxpress.domain.purchase.dto.request.AdminPurchaseWalletCreditRequest;
+import com.ruxpress.domain.purchase.dto.request.PurchaseItemRequest;
 import com.ruxpress.domain.purchase.dto.request.PurchaseRequestCreateRequest;
+import com.ruxpress.domain.purchase.dto.response.PurchaseItemResponse;
 import com.ruxpress.domain.purchase.dto.response.PurchaseRequestListResponse;
 import com.ruxpress.domain.purchase.dto.response.PurchaseRequestResponse;
 import com.ruxpress.domain.purchase.entity.PurchaseRequest;
 import com.ruxpress.domain.purchase.entity.PurchaseRequestStatus;
+import com.ruxpress.domain.exchange.service.ExchangeService;
 import com.ruxpress.domain.purchase.repository.PurchaseRequestRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -31,7 +42,13 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -39,12 +56,35 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class PurchaseService {
 
+    private static final String FEE_RATE_KEY = "fee_rate";
+    private static final BigDecimal DEFAULT_FEE_RATE_PERCENT = new BigDecimal("12");
+    private static final BigDecimal HUNDRED = new BigDecimal("100");
+
     private final PurchaseRequestRepository purchaseRequestRepository;
     private final AttachmentRepository attachmentRepository;
     private final FileStoragePort fileStoragePort;
     private final JsonUtils jsonUtils;
     private final BalanceService balanceService;
     private final NotificationService notificationService;
+    private final AdminNotificationService adminNotificationService;
+    private final SystemSettingRepository systemSettingRepository;
+    private final UserRepository userRepository;
+    private final ExchangeService exchangeService;
+    private final UserAddressService userAddressService;
+
+    private BigDecimal currentFeeRatePercent() {
+        return systemSettingRepository.findBySettingKey(FEE_RATE_KEY)
+                .map(SystemSetting::getSettingValue)
+                .map(v -> {
+                    try {
+                        return new BigDecimal(v);
+                    } catch (NumberFormatException e) {
+                        log.warn("fee_rate setting value '{}' is not a valid number, using default", v);
+                        return DEFAULT_FEE_RATE_PERCENT;
+                    }
+                })
+                .orElse(DEFAULT_FEE_RATE_PERCENT);
+    }
 
     @Transactional
     public PurchaseRequestResponse createPurchaseRequest(Long userId, PurchaseRequestCreateRequest request) {
@@ -73,29 +113,69 @@ public class PurchaseService {
 
     private PurchaseRequest createAndPersistPurchaseRequest(Long userId, PurchaseRequestCreateRequest request) {
         request.isValid();
+        String quoteCurrency = request.getQuoteCurrency() != null && !request.getQuoteCurrency().isBlank()
+                ? request.getQuoteCurrency().trim().toUpperCase()
+                : "RUB";
+        exchangeService.validateExchangeRateIdForCurrency(request.getExchangeRateId(), quoteCurrency);
         PurchaseRequestStatus effectiveStatus = request.getStatus() != null
                 ? request.getStatus()
-                : PurchaseRequestStatus.DRAFT;
+                : PurchaseRequestStatus.REQUESTED;
+
+        // items 가 있으면 URL별 단가·수량 모델을 신뢰값으로 사용. 없으면 레거시 priceKrw 단일 사용.
+        boolean hasItems = request.getItems() != null && !request.getItems().isEmpty();
+        BigDecimal priceKrw;
+        Integer quantity;
+        String urlsJson;
+        if (hasItems) {
+            BigDecimal sumPrice = BigDecimal.ZERO;
+            int sumQty = 0;
+            for (PurchaseItemRequest item : request.getItems()) {
+                item.validateUrlsPresent();
+                BigDecimal unit = item.getPriceKrw() != null ? item.getPriceKrw() : BigDecimal.ZERO;
+                int q = item.getQuantity() != null ? item.getQuantity() : 0;
+                sumPrice = sumPrice.add(unit.multiply(BigDecimal.valueOf(q)));
+                sumQty += q;
+            }
+            priceKrw = sumPrice;
+            quantity = sumQty > 0 ? sumQty : 1;
+            urlsJson = jsonUtils.toJson(normalizeItemsForStorage(request.getItems()));
+        } else {
+            priceKrw = request.getPriceKrw() != null ? request.getPriceKrw() : BigDecimal.ZERO;
+            quantity = request.getQuantity();
+            urlsJson = jsonUtils.toJson(request.getUrls());
+        }
+
+        // 수수료·총액은 클라이언트 값이 아니라 서버측 SystemSetting(fee_rate)으로 재계산한 신뢰값을 저장한다.
+        BigDecimal feeRatePercent = currentFeeRatePercent();
+        BigDecimal feeAmount = priceKrw.multiply(feeRatePercent)
+                .divide(HUNDRED, 2, RoundingMode.HALF_UP);
+        BigDecimal totalAmountKrw = priceKrw.add(feeAmount);
+
+        PurchaseShippingSnapshot shippingSnapshot = resolveShippingSnapshot(userId, request, effectiveStatus);
+
         String requestNumber = IDGenerateUtil.generatePurchaseRequestNumber();
         PurchaseRequest purchaseRequest = PurchaseRequest.create(
                 userId,
                 requestNumber,
-                request.getProductName(),
-                request.getQuantity(),
-                jsonUtils.toJson(request.getUrls()),
+                request.getRequestName(),
+                quantity,
+                urlsJson,
                 jsonUtils.toJson(request.getOptions()),
                 request.getPriceRub(),
-                request.getPriceKrw(),
+                quoteCurrency,
+                priceKrw,
                 request.getExchangeRateId(),
-                request.getFeeAmount(),
-                request.getTotalAmountKrw(),
+                feeAmount,
+                totalAmountKrw,
                 request.getMemo(),
-                effectiveStatus);
+                effectiveStatus,
+                shippingSnapshot);
         PurchaseRequest saved = purchaseRequestRepository.save(purchaseRequest);
-        if (effectiveStatus == PurchaseRequestStatus.SUBMITTED) {
-            balanceService.debitForPurchase(userId, request.getTotalAmountKrw(), saved.getId());
-            saved.recordChargedAmount(request.getTotalAmountKrw());
+        if (effectiveStatus == PurchaseRequestStatus.REQUESTED) {
+            balanceService.debitForPurchase(userId, totalAmountKrw, saved.getId());
+            saved.recordChargedAmount(totalAmountKrw);
             saved = purchaseRequestRepository.save(saved);
+            adminNotificationService.notifyNewPurchaseRequest(saved.getId(), saved.getRequestName());
         }
         return saved;
     }
@@ -162,7 +242,7 @@ public class PurchaseService {
     }
 
     @Transactional(readOnly = true)
-    public Resource getAttachmentResource(Long userId, Long attachmentId) {
+    public Resource getAttachmentResource(Long attachmentId, Long userId) {
         Attachment attachment = attachmentRepository.findById(attachmentId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
         if (attachment.getRefType() != AttachmentRefType.PURCHASE) {
@@ -215,12 +295,39 @@ public class PurchaseService {
 
     @Transactional(readOnly = true)
     public PageResponse<PurchaseRequestResponse> getAdminPurchaseRequests(
-            PurchaseRequestStatus status, Pageable pageable) {
-        Page<PurchaseRequest> page = status == null
-                ? purchaseRequestRepository.findByDeletedAtIsNull(pageable)
-                : purchaseRequestRepository.findByStatusAndDeletedAtIsNull(status, pageable);
+            PurchaseRequestStatus status, String userKeyword, Pageable pageable) {
+        Page<PurchaseRequest> page;
+        if (userKeyword != null && !userKeyword.isBlank()) {
+            List<Long> matchedUserIds = userRepository
+                    .searchByKeyword(userKeyword.trim(), Pageable.unpaged())
+                    .getContent()
+                    .stream()
+                    .map(User::getId)
+                    .toList();
+            if (matchedUserIds.isEmpty()) {
+                return new PageResponse<>(List.of(), 0, 0, pageable.getPageNumber(), pageable.getPageSize());
+            }
+            page = status == null
+                    ? purchaseRequestRepository.findByUserIdInAndDeletedAtIsNull(matchedUserIds, pageable)
+                    : purchaseRequestRepository.findByUserIdInAndStatusAndDeletedAtIsNull(matchedUserIds, status, pageable);
+        } else {
+            page = status == null
+                    ? purchaseRequestRepository.findByDeletedAtIsNull(pageable)
+                    : purchaseRequestRepository.findByStatusAndDeletedAtIsNull(status, pageable);
+        }
+
+        // 페이지 내 user_id 들을 한 번에 모아 user 정보를 IN 조회 — N+1 회피.
+        List<Long> userIds = page.getContent().stream()
+                .map(PurchaseRequest::getUserId)
+                .distinct()
+                .toList();
+        Map<Long, User> userMap = new HashMap<>();
+        if (!userIds.isEmpty()) {
+            userRepository.findAllById(userIds).forEach(u -> userMap.put(u.getId(), u));
+        }
+
         List<PurchaseRequestResponse> content = page.getContent().stream()
-                .map(this::toResponse)
+                .map(pr -> toResponseWithUser(pr, userMap.get(pr.getUserId())))
                 .collect(Collectors.toList());
         return new PageResponse<>(content, page.getTotalElements(), page.getTotalPages(), page.getNumber(),
                 page.getSize());
@@ -231,7 +338,8 @@ public class PurchaseService {
         PurchaseRequest pr = purchaseRequestRepository.findById(id)
                 .filter(p -> p.getDeletedAt() == null)
                 .orElseThrow(() -> new BusinessException(ErrorCode.PURCHASE_NOT_FOUND));
-        return toResponse(pr);
+        User user = userRepository.findById(pr.getUserId()).orElse(null);
+        return toResponseWithUser(pr, user);
     }
 
     @Transactional
@@ -240,18 +348,69 @@ public class PurchaseService {
         PurchaseRequest pr = purchaseRequestRepository.findById(id)
                 .filter(p -> p.getDeletedAt() == null)
                 .orElseThrow(() -> new BusinessException(ErrorCode.PURCHASE_NOT_FOUND));
+        PurchaseRequestStatus previousStatus = pr.getStatus();
         pr.changeStatus(request.getStatus());
         pr.updateAdminMemo(request.getAdminMemo());
+        pr.updateTrackingNumber(request.getTrackingNumber());
         if (adminId != null) {
             pr.assignAdmin(adminId);
         }
         PurchaseRequest saved = purchaseRequestRepository.save(pr);
 
-        if (request.getStatus() == PurchaseRequestStatus.REFUNDED) {
+        if (request.getStatus() == PurchaseRequestStatus.CANCELLED) {
             balanceService.creditForPurchaseRefund(saved.getUserId(), saved.getId());
         }
 
+        if (previousStatus != request.getStatus()) {
+            notificationService.notifyPurchaseStatusChanged(
+                    saved.getUserId(),
+                    saved.getId(),
+                    saved.getRequestNumber(),
+                    request.getStatus());
+        }
+
         return toResponse(saved);
+    }
+
+    @Transactional
+    public PurchaseRequestResponse uploadAdminAttachments(Long id, List<MultipartFile> files) {
+        PurchaseRequest pr = purchaseRequestRepository.findById(id)
+                .filter(p -> p.getDeletedAt() == null)
+                .orElseThrow(() -> new BusinessException(ErrorCode.PURCHASE_NOT_FOUND));
+        List<MultipartFile> fileList = files != null ? files : List.of();
+        if (fileList.isEmpty()) {
+            throw new BusinessException(ErrorCode.INVALID_INPUT, "업로드할 파일이 없습니다.");
+        }
+        if (fileList.size() > FileStorageUtil.MAX_IMAGE_COUNT) {
+            throw new BusinessException(ErrorCode.FILE_COUNT_EXCEEDED);
+        }
+
+        int baseSortOrder = attachmentRepository
+                .findByRefTypeAndRefIdOrderBySortOrder(AttachmentRefType.PURCHASE, pr.getId())
+                .size();
+        String directory = ModulePrefix.PURCHASE;
+        for (int i = 0; i < fileList.size(); i++) {
+            MultipartFile file = fileList.get(i);
+            FileStorageUtil.validateImageOrThrow(file);
+            try {
+                String storedUrl = fileStoragePort.store(directory, file);
+                Attachment attachment = Attachment.createByAdmin(
+                        AttachmentRefType.PURCHASE,
+                        pr.getId(),
+                        file.getOriginalFilename() != null ? file.getOriginalFilename() : "file",
+                        storedUrl,
+                        (int) file.getSize(),
+                        file.getContentType() != null ? file.getContentType() : "application/octet-stream",
+                        baseSortOrder + i);
+                attachmentRepository.save(attachment);
+            } catch (Exception e) {
+                log.error("Admin purchase attachment upload failed. purchaseId={}, idx={}", pr.getId(), i, e);
+                throw new BusinessException(ErrorCode.FILE_UPLOAD_FAILED, e.getMessage());
+            }
+        }
+
+        User user = userRepository.findById(pr.getUserId()).orElse(null);
+        return toResponseWithUser(pr, user);
     }
 
     @Transactional
@@ -291,7 +450,7 @@ public class PurchaseService {
         return new PurchaseRequestListResponse(
                 entity.getId(),
                 entity.getRequestNumber(),
-                entity.getProductName(),
+                entity.getRequestName(),
                 entity.getQuantity(),
                 entity.getTotalAmountKrw(),
                 entity.getChargedAmountKrw(),
@@ -301,6 +460,10 @@ public class PurchaseService {
     }
 
     private PurchaseRequestResponse toResponse(PurchaseRequest entity) {
+        return toResponseWithUser(entity, null);
+    }
+
+    private PurchaseRequestResponse toResponseWithUser(PurchaseRequest entity, User user) {
         List<Attachment> attachments = attachmentRepository.findByRefTypeAndRefIdOrderBySortOrder(
                 AttachmentRefType.PURCHASE,
                 entity.getId());
@@ -312,17 +475,48 @@ public class PurchaseService {
                         a.getThumbnailUrl(),
                         fileStoragePort.getViewUrl(a.getStoredUrl()),
                         a.getFileSize(),
-                        a.getMimeType()))
+                        a.getMimeType(),
+                        a.isUploadedByAdmin()))
                 .collect(Collectors.toList());
+
+        // urls JSON 컬럼은 (1) 신규 [{url, urls?, shop?, priceKrw, quantity}, ...] 또는 (2) 레거시 ["string", ...] 두 형식 모두 지원.
+        List<String> urlsList = new ArrayList<>();
+        List<PurchaseItemResponse> itemsList = new ArrayList<>();
+        var node = jsonUtils.parseJsonNode(entity.getUrls());
+        if (node != null && node.isArray()) {
+            for (var element : node) {
+                if (element.isObject()) {
+                    List<String> itemUrls = parseItemUrlsFromJson(element);
+                    String primaryUrl = itemUrls.isEmpty() ? null : itemUrls.get(0);
+                    String shop = element.path("shop").asText(null);
+                    java.math.BigDecimal priceKrw = element.has("priceKrw") && !element.get("priceKrw").isNull()
+                            ? new java.math.BigDecimal(element.get("priceKrw").asText())
+                            : null;
+                    Integer qty = element.has("quantity") && !element.get("quantity").isNull()
+                            ? element.get("quantity").asInt()
+                            : null;
+                    Map<String, String> itemOptions = parseItemOptionsFromJson(element);
+                    itemsList.add(new PurchaseItemResponse(
+                            primaryUrl, itemUrls, shop, priceKrw, qty, itemOptions));
+                    urlsList.addAll(itemUrls);
+                } else if (element.isTextual()) {
+                    urlsList.add(element.asText());
+                }
+            }
+        }
+
         return new PurchaseRequestResponse(
                 entity.getId(),
                 entity.getUserId(),
+                user != null ? user.getEmail() : null,
+                user != null ? user.getNickname() : null,
                 entity.getRequestNumber(),
-                entity.getProductName(),
+                entity.getRequestName(),
                 entity.getQuantity(),
-                jsonUtils.parseStrings(entity.getUrls()),
+                urlsList,
                 jsonUtils.parseJsonNode(entity.getOptions()),
                 entity.getPriceRub(),
+                entity.getQuoteCurrency(),
                 entity.getPriceKrw(),
                 entity.getExchangeRateId(),
                 entity.getFeeAmount(),
@@ -333,8 +527,103 @@ public class PurchaseService {
                 entity.getStatus(),
                 entity.getAdminMemo(),
                 entity.getAssignedAdminId(),
+                entity.getTrackingNumber(),
+                toShippingResponse(entity),
+                itemsList,
                 attachmentResponses,
                 entity.getCreatedAt(),
                 entity.getUpdatedAt());
+    }
+
+    private PurchaseShippingSnapshot resolveShippingSnapshot(
+            Long userId,
+            PurchaseRequestCreateRequest request,
+            PurchaseRequestStatus effectiveStatus) {
+        Long addrId = request.getShippingUserAddressId();
+        if (addrId == null) {
+            if (effectiveStatus == PurchaseRequestStatus.REQUESTED) {
+                throw new BusinessException(ErrorCode.INVALID_INPUT, "배송지를 선택해주세요.");
+            }
+            return null;
+        }
+        var ua = userAddressService.getOwnedAddressOrThrow(userId, addrId);
+        return new PurchaseShippingSnapshot(
+                ua.getId(),
+                ua.getLabel(),
+                ua.getRecipientName(),
+                ua.getRecipientPhone(),
+                ua.getPostalCode(),
+                ua.getAddressLine1(),
+                ua.getAddressLine2());
+    }
+
+    private PurchaseShippingResponse toShippingResponse(PurchaseRequest entity) {
+        if (entity.getShippingAddressLine1() == null && entity.getShippingUserAddressId() == null) {
+            return null;
+        }
+        return new PurchaseShippingResponse(
+                entity.getShippingUserAddressId(),
+                entity.getShippingLabel(),
+                entity.getShippingRecipientName(),
+                entity.getShippingRecipientPhone(),
+                entity.getShippingPostalCode(),
+                entity.getShippingAddressLine1(),
+                entity.getShippingAddressLine2());
+    }
+
+    private List<Map<String, Object>> normalizeItemsForStorage(List<PurchaseItemRequest> items) {
+        List<Map<String, Object>> out = new ArrayList<>();
+        for (PurchaseItemRequest item : items) {
+            List<String> resolved = item.resolvedUrls();
+            Map<String, Object> map = new LinkedHashMap<>();
+            map.put("url", resolved.get(0));
+            map.put("urls", resolved);
+            if (item.getShop() != null && !item.getShop().isBlank()) {
+                map.put("shop", item.getShop().trim());
+            }
+            map.put("priceKrw", item.getPriceKrw());
+            map.put("quantity", item.getQuantity());
+            if (item.getOptions() != null && !item.getOptions().isEmpty()) {
+                map.put("options", item.getOptions());
+            }
+            out.add(map);
+        }
+        return out;
+    }
+
+    private List<String> parseItemUrlsFromJson(com.fasterxml.jackson.databind.JsonNode element) {
+        List<String> itemUrls = new ArrayList<>();
+        if (element.has("urls") && element.get("urls").isArray()) {
+            for (var u : element.get("urls")) {
+                if (u.isTextual()) {
+                    String s = u.asText(null);
+                    if (s != null && !s.isBlank()) {
+                        itemUrls.add(s);
+                    }
+                }
+            }
+        }
+        if (itemUrls.isEmpty()) {
+            String url = element.path("url").asText(null);
+            if (url != null && !url.isBlank()) {
+                itemUrls.add(url);
+            }
+        }
+        return itemUrls;
+    }
+
+    private Map<String, String> parseItemOptionsFromJson(com.fasterxml.jackson.databind.JsonNode element) {
+        if (!element.has("options") || !element.get("options").isObject()) {
+            return null;
+        }
+        var optNode = element.get("options");
+        Map<String, String> parsed = new HashMap<>();
+        optNode.fields().forEachRemaining(e -> {
+            var v = e.getValue();
+            if (v != null && !v.isNull()) {
+                parsed.put(e.getKey(), v.isValueNode() ? v.asText() : v.toString());
+            }
+        });
+        return parsed.isEmpty() ? null : parsed;
     }
 }
