@@ -16,7 +16,24 @@
   <img alt="Nginx" src="https://img.shields.io/badge/Nginx-Reverse%20Proxy-009639?logo=nginx&logoColor=white">
 </p>
 
-> 🌐 **운영 도메인:** [https://main-proxy.com](https://main-proxy.com) — AWS(Seoul, `ap-northeast-2`) 위에서 Route 53 + ALB(HTTPS) + EC2 + RDS + S3로 운영됩니다.
+> 🌐 **운영 도메인:** [https://main-proxy.com](https://main-proxy.com) — AWS위에서 Route 53 + ALB(HTTPS) + EC2 + RDS + S3로 운영됩니다.
+
+---
+
+## 프로젝트 미리보기
+### 사용자 화면 (mobile)
+<p align="center">
+  <img width="33%" height="879" alt="홈화면1" src="https://github.com/user-attachments/assets/686f0baf-ef63-4555-a643-022e4778b31a" />
+  <img width="33%" height="857" alt="구매요청화면" src="https://github.com/user-attachments/assets/52a66720-4bb3-4044-bd74-c796373d3bfc" />
+  <img width="33%" height="857" alt="채팅화면" src="https://github.com/user-attachments/assets/fc70ae74-c266-4d32-ad62-8857fc2e5db0" />
+</p>
+
+### 관리자 화면 (PC)
+<p align="center">
+  <img width="1898" height="940" alt="관리자 화면 구매요청 관리" src="https://github.com/user-attachments/assets/3d4158f3-e6ef-442f-a9be-29ad67f892d5" />
+  <img width="1904" height="940" alt="관리자 화면 알림 센터" src="https://github.com/user-attachments/assets/8539e1a0-9982-4b76-b10a-fa438b5106dd" />
+  <img width="1902" height="939" alt="관리자 화면 채팅1" src="https://github.com/user-attachments/assets/2fd6155a-b889-4048-90e4-e5708b9cec82" />
+</p>
 
 ---
 
@@ -214,8 +231,6 @@ flowchart TD
 ---
 
 ## 6. 기술적 도전과 설계 결정
-
-> 면접에서 이야기할 수 있는 "왜 이렇게 만들었는가"를 정리했습니다.
 
 ### 6.1 금융 정합성 — 불변 원장(Ledger) 패턴
 잔액을 단일 컬럼으로 덮어쓰면 거래 추적이 불가능하고 동시성 버그에 취약합니다. 그래서 지갑(`UserWallet`)과 계좌이체(`TransferLedgerEntry`) 모두 **추가만 가능한 원장 엔트리**(`WalletLedgerEntry`, 타입: 충전/차감/관리자 조정 등)로 모든 변동을 기록하도록 설계했습니다. 잔액은 원장의 파생값으로 다루어 **모든 자금 이동에 감사 추적(audit trail)** 이 남습니다. 레거시 데이터는 `TransferLedgerLegacyMigration`으로 원장 모델에 맞춰 이관했습니다.
@@ -486,27 +501,3 @@ ruxpress/
 ```
 
 ---
-
-## 16. 개발 타임라인 (커밋 이력 기반)
-
-2026-02 ~ 2026-06, 약 4개월간 요구사항 단위(`REQ-xxx`) 기능 브랜치 전략으로 단계적으로 개발했습니다. (총 ~170 커밋, 커밋 메시지 기준)
-
-```mermaid
-timeline
-    title RuxPress 개발 타임라인
-    2026-02 : 프로젝트 시작 · 초기 구조 설계
-    2026-03 : 핵심 도메인 구축 (회원/인증·구매요청·환율·문의·계좌이체)
-    2026-04 : AWS 인프라 · 모바일(FCM/Kafka) · Docker 전환
-    2026-05 : 실시간 채팅 · 알림/푸시 · REQ2 개선 · 페이지네이션
-    2026-06 : 다국어 마무리 · 운영 도메인 배포
-```
-
-| 시기 | 단계 | 주요 작업 |
-|------|------|-----------|
-| **2026-02** | 🏗️ 착수 | 프로젝트 초기 구조 설계(`init`), 백엔드·프론트 스캐폴딩, DB DDL |
-| **2026-03** | 🧩 핵심 도메인 | **REQ-001** 이메일 회원가입·로그인·인증·마이페이지·비밀번호 찾기 · **REQ-002** 구매요청 · **REQ-005** 자동 환율 계산 · **REQ-007** 관리자/대시보드 · **REQ-016** 잔액 시스템(초기) · **REQ-017** 계좌이체·원장(Ledger) · 1:1 문의/답변(스토리지 DIP) · 모바일 푸시 초기 코드 · 다국어 방향 정립 |
-| **2026-04** | ☁️ 인프라·모바일 | **AWS** S3 업로드·RDS·설정 · **REQ-006** 안드로이드 초기 설정 + FCM 토큰 + **Kafka 푸시 구현** · **전체 스택 Docker 전환** · 잔액 포인트 차감·환불 |
-| **2026-05** | 🚀 고도화 (최다, 112커밋) | **REQ-009 실시간 채팅(STOMP)** · 관리자 알림 시스템(구매요청·입금·문의·채팅) · 채팅·구매상태·문의 **푸시 알림** · **REQ2 개선 시리즈**(자동로그인·JWT 7일, 구매요청 항목별 단가/수량, 입금 이미지 첨부, 운송장번호, 회원 검색, 수수료율, 환율 스왑) · **Android WebView 마감**(파일 선택·노치·런처 아이콘) · 다통화 환율(USD/CNY) · **전 페이지 서버사이드 페이지네이션** · 에스크로 제거·계좌이체 단순화 |
-| **2026-06** | 🌍 운영 배포 | 프론트·백엔드 **다국어 전면 마무리** · 기본 언어 러시아어 통일 · **운영 도메인(main-proxy.com) CORS·ALB 프록시 헤더·Nginx 업로드 제한** · 브랜딩(Main Proxy)·관리자 공지 |
-
-> 커밋 활동은 **2026년 5월에 집중**(전체의 65%)되었으며, 이 시기에 실시간 채팅·푸시 알림·REQ2 개선·페이지네이션 등 사용자 경험 핵심 기능이 완성되었습니다.
