@@ -23,9 +23,9 @@
 ## 프로젝트 미리보기
 ### 사용자 화면 (mobile)
 <p align="center">
-  <img width="33%" height="879" alt="홈화면1" src="https://github.com/user-attachments/assets/686f0baf-ef63-4555-a643-022e4778b31a" />
-  <img width="33%" height="857" alt="구매요청화면" src="https://github.com/user-attachments/assets/52a66720-4bb3-4044-bd74-c796373d3bfc" />
-  <img width="33%" height="857" alt="채팅화면" src="https://github.com/user-attachments/assets/fc70ae74-c266-4d32-ad62-8857fc2e5db0" />
+  <img width="30%" height="879" alt="홈화면1" src="https://github.com/user-attachments/assets/686f0baf-ef63-4555-a643-022e4778b31a" />
+  <img width="30%" height="857" alt="구매요청화면" src="https://github.com/user-attachments/assets/52a66720-4bb3-4044-bd74-c796373d3bfc" />
+  <img width="30%" height="857" alt="채팅화면" src="https://github.com/user-attachments/assets/fc70ae74-c266-4d32-ad62-8857fc2e5db0" />
 </p>
 
 ### 관리자 화면 (PC)
