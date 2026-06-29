@@ -8,6 +8,7 @@ import { Separator } from "../../components/ui/separator";
 import { api } from "../../utils/api";
 import { unwrap } from "../../utils/exception";
 import { useTranslation } from "../../hooks/useTranslation";
+import { renderTextWithLinks } from "../../utils/linkify";
 import type { Notice } from "../../types";
 
 export default function NoticeDetail() {
@@ -102,7 +103,7 @@ export default function NoticeDetail() {
           <Separator className="my-6" />
 
           <div className="whitespace-pre-wrap text-gray-800 leading-relaxed">
-            {notice.content}
+            {renderTextWithLinks(notice.content)}
           </div>
         </CardContent>
       </Card>

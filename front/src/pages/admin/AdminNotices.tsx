@@ -15,6 +15,7 @@ import { unwrap } from "../../utils/exception";
 import type { Notice, NoticeStatus, PageResponse } from "../../types";
 import { useTranslation } from "../../hooks/useTranslation";
 import { DEFAULT_PAGE_SIZE, PAGE_SIZE_OPTIONS } from "../../utils/constants";
+import { renderTextWithLinks } from "../../utils/linkify";
 
 const statusVariants: Record<NoticeStatus, "default" | "secondary" | "outline" | "destructive"> = {
   DRAFT: "outline",
@@ -292,7 +293,9 @@ export default function AdminNotices() {
                 )}
               </div>
               <div className="rounded-lg border bg-gray-50 p-4 max-h-[50vh] overflow-y-auto">
-                <p className="text-gray-800 whitespace-pre-wrap leading-relaxed">{detailNotice.content}</p>
+                <p className="text-gray-800 whitespace-pre-wrap leading-relaxed">
+                  {renderTextWithLinks(detailNotice.content)}
+                </p>
               </div>
             </div>
           )}
