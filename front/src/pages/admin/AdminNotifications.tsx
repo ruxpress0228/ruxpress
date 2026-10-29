@@ -29,7 +29,7 @@ function formatRelativeTime(iso: string, t: (key: string) => string): string {
 function typeIcon(type: AdminNotificationType) {
   switch (type) {
     case "NEW_PURCHASE_REQUEST":
-      return <ShoppingCart className="w-4 h-4 text-blue-600" />;
+      return <ShoppingCart className="w-4 h-4 text-foreground" />;
     case "NEW_DEPOSIT_REPORT":
       return <Banknote className="w-4 h-4 text-green-600" />;
     case "NEW_INQUIRY":
@@ -39,18 +39,18 @@ function typeIcon(type: AdminNotificationType) {
     case "NEGATIVE_WALLET_AFTER_REFUND":
       return <AlertTriangle className="w-4 h-4 text-red-600" />;
     default:
-      return <Bell className="w-4 h-4 text-gray-500" />;
+      return <Bell className="w-4 h-4 text-muted-foreground" />;
   }
 }
 
 function typeBgClass(type: AdminNotificationType): string {
   switch (type) {
-    case "NEW_PURCHASE_REQUEST": return "bg-blue-50";
+    case "NEW_PURCHASE_REQUEST": return "bg-muted";
     case "NEW_DEPOSIT_REPORT": return "bg-green-50";
     case "NEW_INQUIRY": return "bg-purple-50";
     case "NEW_CHAT_MESSAGE": return "bg-orange-50";
     case "NEGATIVE_WALLET_AFTER_REFUND": return "bg-red-50";
-    default: return "bg-gray-50";
+    default: return "bg-muted/60";
   }
 }
 
@@ -114,10 +114,10 @@ export default function AdminNotifications() {
     <div className="space-y-6">
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">
+          <h1 className="text-3xl font-bold text-foreground">
             {t("admin.notification.page.title")}
           </h1>
-          <p className="text-gray-600 mt-1">{t("admin.notification.page.subtitle")}</p>
+          <p className="text-muted-foreground mt-1">{t("admin.notification.page.subtitle")}</p>
         </div>
         {unreadCount > 0 && (
           <Button variant="outline" size="sm" onClick={handleMarkAllRead}>
@@ -131,15 +131,15 @@ export default function AdminNotifications() {
       <Card>
         <CardContent className="p-0">
           {loading ? (
-            <div className="py-16 text-center text-gray-500 text-sm">{t("admin.common.loading")}</div>
+            <div className="py-16 text-center text-muted-foreground text-sm">{t("admin.common.loading")}</div>
           ) : items.length === 0 ? (
-            <div className="py-16 flex flex-col items-center gap-3 text-gray-400">
+            <div className="py-16 flex flex-col items-center gap-3 text-muted-foreground/70">
               <Bell className="w-10 h-10" />
               <p className="text-sm">{t("admin.notification.empty")}</p>
             </div>
           ) : (
             <>
-              <ul className="divide-y divide-gray-100">
+              <ul className="divide-y divide-border">
                 {items.map((item) => {
                   const text = resolveAdminNotificationText(item, t);
                   return (
@@ -147,8 +147,8 @@ export default function AdminNotifications() {
                     <button
                       type="button"
                       onClick={() => handleClickItem(item)}
-                      className={`w-full text-left px-5 py-4 hover:bg-gray-50/80 transition-colors ${
-                        item.isRead ? "" : "bg-blue-50/30"
+                      className={`w-full text-left px-5 py-4 hover:bg-muted/60 transition-colors ${
+                        item.isRead ? "" : "bg-muted"
                       }`}
                     >
                       <div className="flex items-start gap-3">
@@ -157,16 +157,16 @@ export default function AdminNotifications() {
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2">
-                            <p className={`text-sm truncate ${item.isRead ? "text-gray-700" : "font-semibold text-gray-900"}`}>
+                            <p className={`text-sm truncate ${item.isRead ? "text-foreground/80" : "font-semibold text-foreground"}`}>
                               {text.title}
                             </p>
                             {!item.isRead && (
-                              <span className="w-2 h-2 rounded-full bg-blue-500 flex-shrink-0" />
+                              <span className="w-2 h-2 rounded-full bg-foreground flex-shrink-0" />
                             )}
                           </div>
-                          <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">{text.body}</p>
+                          <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{text.body}</p>
                         </div>
-                        <p className="text-[11px] text-gray-400 flex-shrink-0 pt-0.5">
+                        <p className="text-[11px] text-muted-foreground/70 flex-shrink-0 pt-0.5">
                           {formatRelativeTime(item.createdAt, t)}
                         </p>
                       </div>
@@ -177,7 +177,7 @@ export default function AdminNotifications() {
               </ul>
 
               <div className="flex items-center justify-between p-4 border-t">
-                <p className="text-xs text-gray-400">{t("admin.notification.totalCount", { n: totalElements })}</p>
+                <p className="text-xs text-muted-foreground/70">{t("admin.notification.totalCount", { n: totalElements })}</p>
                 <div className="flex items-center gap-2">
                   <Button
                     variant="outline"
@@ -187,7 +187,7 @@ export default function AdminNotifications() {
                   >
                     {t("admin.common.prev")}
                   </Button>
-                  <span className="text-sm text-gray-500 tabular-nums">
+                  <span className="text-sm text-muted-foreground tabular-nums">
                     {t("admin.common.pageOf", { page: page + 1, total: totalPages })}
                   </span>
                   <Button

@@ -80,8 +80,8 @@ export default function AdminAdmins() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">{t("admin.admin.title")}</h1>
-          <p className="text-gray-600 mt-1">{t("admin.admin.subtitle")}</p>
+          <h1 className="text-3xl font-bold text-foreground">{t("admin.admin.title")}</h1>
+          <p className="text-muted-foreground mt-1">{t("admin.admin.subtitle")}</p>
         </div>
         <Button onClick={openCreate}><Plus className="w-4 h-4 mr-2" />{t("admin.admin.add")}</Button>
       </div>
@@ -89,7 +89,7 @@ export default function AdminAdmins() {
       <Card>
         <CardContent className="p-0">
           {loading ? (
-            <div className="py-12 text-center text-gray-500">{t("admin.common.loading")}</div>
+            <div className="py-12 text-center text-muted-foreground">{t("admin.common.loading")}</div>
           ) : (
             <Table>
               <TableHeader>
@@ -104,7 +104,7 @@ export default function AdminAdmins() {
               </TableHeader>
               <TableBody>
                 {admins.length === 0 ? (
-                  <TableRow><TableCell colSpan={6} className="text-center text-gray-500 py-8">{t("admin.admin.empty")}</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-8">{t("admin.admin.empty")}</TableCell></TableRow>
                 ) : admins.map((a) => (
                   <TableRow key={a.id}>
                     <TableCell>{a.email}</TableCell>
@@ -119,7 +119,7 @@ export default function AdminAdmins() {
                         {t(adminStatusKey(a.status))}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-sm text-gray-500">
+                    <TableCell className="text-sm text-muted-foreground">
                       {a.lastLoginAt ? new Date(a.lastLoginAt).toLocaleDateString(dateLocale) : "-"}
                     </TableCell>
                     <TableCell>

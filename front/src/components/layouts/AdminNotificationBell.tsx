@@ -142,19 +142,19 @@ export default function AdminNotificationBell() {
       </Button>
 
       {open && (
-        <div className="absolute right-0 top-full mt-1 w-80 bg-white border border-gray-200 rounded-md shadow-lg overflow-hidden"
+        <div className="absolute right-0 top-full mt-1 w-80 bg-card border border-border rounded-md shadow-lg overflow-hidden"
           style={{ zIndex: 9999 }}
         >
           {/* 헤더 */}
-          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200">
-            <h3 className="text-sm font-semibold text-gray-900">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+            <h3 className="text-sm font-semibold text-foreground">
               {t("admin.notification.title")}
             </h3>
             {summary.unreadCount > 0 && (
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-7 text-xs text-blue-600 hover:text-blue-700"
+                className="h-7 text-xs text-foreground hover:text-foreground"
                 onClick={handleMarkAllRead}
               >
                 <Check className="w-3 h-3 mr-1" />
@@ -166,11 +166,11 @@ export default function AdminNotificationBell() {
           {/* 목록 */}
           <div className="max-h-96 overflow-y-auto">
             {summary.items.length === 0 ? (
-              <p className="text-sm text-gray-500 text-center py-8">
+              <p className="text-sm text-muted-foreground text-center py-8">
                 {t("admin.notification.empty")}
               </p>
             ) : (
-              <ul className="divide-y divide-gray-100">
+              <ul className="divide-y divide-border">
                 {summary.items.map((item) => {
                   const text = resolveAdminNotificationText(item, t);
                   return (
@@ -178,22 +178,22 @@ export default function AdminNotificationBell() {
                     <button
                       type="button"
                       onClick={() => handleClickItem(item)}
-                      className={`w-full text-left px-4 py-3 hover:bg-gray-50 transition-colors ${
-                        item.isRead ? "" : "bg-blue-50/40"
+                      className={`w-full text-left px-4 py-3 hover:bg-muted/60 transition-colors ${
+                        item.isRead ? "" : "bg-muted"
                       }`}
                     >
                       <div className="flex items-start gap-2">
                         {!item.isRead && (
-                          <span className="mt-1.5 w-2 h-2 rounded-full bg-blue-500 flex-shrink-0" />
+                          <span className="mt-1.5 w-2 h-2 rounded-full bg-foreground flex-shrink-0" />
                         )}
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-gray-900 truncate">
+                          <p className="text-sm font-medium text-foreground truncate">
                             {text.title}
                           </p>
-                          <p className="text-xs text-gray-600 mt-0.5 line-clamp-2">
+                          <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">
                             {text.body}
                           </p>
-                          <p className="text-[10px] text-gray-400 mt-1">
+                          <p className="text-[10px] text-muted-foreground/70 mt-1">
                             {formatRelativeTime(item.createdAt, t)}
                           </p>
                         </div>
@@ -207,11 +207,11 @@ export default function AdminNotificationBell() {
           </div>
 
           {/* 전체 보기 */}
-          <div className="border-t border-gray-200">
+          <div className="border-t border-border">
             <Link
               to="/admin/notifications"
               onClick={() => setOpen(false)}
-              className="flex items-center justify-center gap-1 w-full py-2.5 text-xs text-blue-600 hover:text-blue-700 hover:bg-gray-50 transition-colors"
+              className="flex items-center justify-center gap-1 w-full py-2.5 text-xs text-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
             >
               {t("admin.notification.viewAll")}
               <ChevronRight className="w-3 h-3" />

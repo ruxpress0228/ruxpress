@@ -22,6 +22,7 @@ import { useTranslation } from "../../hooks/useTranslation";
 import { LOCALES, STORAGE_KEYS } from "../../utils/constants";
 import { notifyUserAuthChange, readAuthValue } from "../../utils/api";
 import AdminNotificationBell from "./AdminNotificationBell";
+import { Mark, Wordmark } from "../brand/BrandMark";
 
 const ADMIN_STORAGE_KEY = "ruxpress_admin";
 
@@ -93,16 +94,14 @@ export default function AdminLayout() {
 
   return (
     <SidebarProvider>
-      <div className="min-h-screen flex w-full bg-gray-50">
+      <div className="min-h-screen flex w-full bg-muted/60">
         <Sidebar>
-          <SidebarHeader className="border-b border-gray-200 p-4">
-            <div className="flex items-center space-x-2">
-              <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-blue-400 rounded-lg flex items-center justify-center">
-                <span className="text-white text-xs font-bold tracking-tight">MP</span>
-              </div>
+          <SidebarHeader className="border-b border-border p-4">
+            <div className="flex items-center gap-3">
+              <Mark size="sm" />
               <div>
-                <h2 className="font-bold text-gray-900">Main Proxy</h2>
-                <p className="text-xs text-gray-500">{t("nav.admin.label")}</p>
+                <Wordmark size="sm" />
+                <p className="mt-1 text-xs text-muted-foreground">{t("nav.admin.label")}</p>
               </div>
             </div>
           </SidebarHeader>
@@ -122,10 +121,10 @@ export default function AdminLayout() {
                 );
               })}
             </SidebarMenu>
-            <div className="mt-auto p-4 border-t border-gray-200">
+            <div className="mt-auto p-4 border-t border-border">
               <Button
                 variant="ghost"
-                className="w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50"
+                className="w-full justify-start text-destructive hover:text-destructive hover:bg-destructive/10"
                 onClick={handleLogout}
               >
                 <LogOut className="w-4 h-4 mr-2" />
@@ -136,7 +135,7 @@ export default function AdminLayout() {
         </Sidebar>
 
         <div className="flex-1 flex flex-col">
-          <header className="bg-white border-b border-gray-200 h-16 flex items-center px-6 sticky top-0 z-40">
+          <header className="bg-card border-b border-border h-16 flex items-center px-6 sticky top-0 z-40">
             <SidebarTrigger>
               <Button variant="ghost" size="icon">
                 <Menu className="w-5 h-5" />
@@ -157,7 +156,7 @@ export default function AdminLayout() {
                 </Button>
                 {langOpen && (
                   <div
-                    className="absolute right-0 top-full mt-1 min-w-[10rem] rounded-md border border-gray-200 bg-white py-1 shadow-lg z-[100]"
+                    className="absolute right-0 top-full mt-1 min-w-[10rem] rounded-md border border-border bg-card py-1 shadow-lg z-[100]"
                     role="listbox"
                   >
                     {LOCALES.map((loc) => (
@@ -166,7 +165,7 @@ export default function AdminLayout() {
                         type="button"
                         role="option"
                         aria-selected={locale === loc}
-                        className={`block w-full px-3 py-2 text-left text-sm hover:bg-gray-100 ${locale === loc ? "bg-blue-50 text-blue-700 font-medium" : "text-gray-900"}`}
+                        className={`block w-full px-3 py-2 text-left text-sm hover:bg-muted ${locale === loc ? "bg-muted text-foreground font-medium" : "text-foreground"}`}
                         onClick={() => {
                           setLocale(loc);
                           setLangOpen(false);
@@ -180,8 +179,8 @@ export default function AdminLayout() {
               </div>
               <AdminNotificationBell />
               <div className="text-right">
-                <p className="text-sm font-medium text-gray-900">{admin.name}</p>
-                <p className="text-xs text-gray-500">{admin.email} ({roleLabel})</p>
+                <p className="text-sm font-medium text-foreground">{admin.name}</p>
+                <p className="text-xs text-muted-foreground">{admin.email} ({roleLabel})</p>
               </div>
             </div>
           </header>

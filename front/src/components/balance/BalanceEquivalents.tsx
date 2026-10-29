@@ -16,7 +16,7 @@ type Props = {
 export function BalanceEquivalents({
   balance,
   hintKey = "myPage.balanceEquivalentsHint",
-  className = "text-sm font-medium text-blue-700/90 mt-1",
+  className = "text-sm text-muted-foreground mt-1",
 }: Props) {
   const { t, locale } = useTranslation();
   const { getCurrentExchangeRates } = useExchangeRate();
@@ -61,7 +61,7 @@ export function BalanceEquivalents({
 
   if (!equivalents) {
     return (
-      <p className={`${className} text-gray-500`} title={t(hintKey)}>
+      <p className={`${className} text-muted-foreground`} title={t(hintKey)}>
         {t("balanceEquivalents.noRates")}
       </p>
     );

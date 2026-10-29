@@ -147,7 +147,7 @@ function AdminRowQuickMenu({
           type="button"
           variant="ghost"
           size="icon"
-          className="h-8 w-8 text-gray-600"
+          className="h-8 w-8 text-muted-foreground"
           aria-label={t("adminPurchase.list.quickActions")}
           onClick={(e) => e.stopPropagation()}
         >
@@ -390,9 +390,9 @@ export default function AdminPurchaseRequests() {
     <div className="space-y-4 md:space-y-5">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
-          <h1 className="text-2xl font-bold tracking-tight text-gray-900 md:text-3xl">{t("nav.admin.purchaseRequests")}</h1>
-          <p className="mt-0.5 text-sm text-gray-600 md:text-base">{t("adminPurchase.list.subtitle")}</p>
-          <p className="mt-1 text-xs text-gray-500">{fillTpl(t("adminPurchase.list.countLine"), { total: totalElements })}</p>
+          <h1 className="text-2xl font-bold tracking-tight text-foreground md:text-3xl">{t("nav.admin.purchaseRequests")}</h1>
+          <p className="mt-0.5 text-sm text-muted-foreground md:text-base">{t("adminPurchase.list.subtitle")}</p>
+          <p className="mt-1 text-xs text-muted-foreground">{fillTpl(t("adminPurchase.list.countLine"), { total: totalElements })}</p>
         </div>
         <div className="flex shrink-0 items-center gap-2 self-start sm:self-auto">
           <Button
@@ -411,10 +411,10 @@ export default function AdminPurchaseRequests() {
         </div>
       </div>
 
-      <div className="rounded-xl border border-gray-100 bg-white p-3 shadow-sm md:p-3.5">
+      <div className="rounded-xl border border-border bg-card p-3 md:p-3.5">
         <div className="mb-2 flex items-center justify-between gap-2">
-          <p className="text-xs font-semibold text-gray-700 md:text-sm">{t("adminPurchase.list.summaryTitle")}</p>
-          <Package className="h-4 w-4 text-gray-400" aria-hidden />
+          <p className="text-xs font-semibold text-foreground/80 md:text-sm">{t("adminPurchase.list.summaryTitle")}</p>
+          <Package className="h-4 w-4 text-muted-foreground/70" aria-hidden />
         </div>
         <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-6 sm:gap-2">
           {FILTER_CHIPS.map((chip) => {
@@ -429,18 +429,18 @@ export default function AdminPurchaseRequests() {
                 onClick={() => setStatusFilter(chip.value)}
                 className={cn(
                   "flex min-h-[52px] flex-col items-center justify-center rounded-lg border px-1 py-1.5 text-center transition-all sm:min-h-[56px]",
-                  active ? activeChip.shell : "border-transparent bg-gray-50/80 hover:bg-gray-100/90",
+                  active ? activeChip.shell : "border-transparent bg-muted/60 hover:bg-muted",
                 )}
               >
                 <span
                   className={cn(
                     "text-lg font-bold tabular-nums leading-none sm:text-xl",
-                    active ? activeChip.countClass : "text-gray-900",
+                    active ? activeChip.countClass : "text-foreground",
                   )}
                 >
                   {count == null ? "–" : count}
                 </span>
-                <span className="mt-0.5 line-clamp-2 text-[10px] font-medium text-gray-600 sm:text-xs">
+                <span className="mt-0.5 line-clamp-2 text-[10px] font-medium text-muted-foreground sm:text-xs">
                   {chip.value === "all"
                     ? t("adminPurchase.list.filterAll")
                     : t(`purchase.status.${chip.value}` as `purchase.status.${PurchaseRequestStatus}`)}
@@ -451,12 +451,12 @@ export default function AdminPurchaseRequests() {
         </div>
       </div>
 
-      <div className="flex flex-col gap-2 rounded-xl border border-gray-100 bg-white p-3 shadow-sm lg:flex-row lg:items-center lg:gap-3">
+      <div className="flex flex-col gap-2 rounded-xl border border-border bg-card p-3 lg:flex-row lg:items-center lg:gap-3">
         <div className="relative min-w-0 flex-1">
-          <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" aria-hidden />
+          <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground/70" aria-hidden />
           <Input
             placeholder={t("adminPurchase.list.searchClientPlaceholder")}
-            className="h-9 border-gray-200 pl-9 text-sm"
+            className="h-9 border-border pl-9 text-sm"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
@@ -464,12 +464,12 @@ export default function AdminPurchaseRequests() {
         <div className="relative min-w-0 flex-1 lg:max-w-xs">
           <Input
             placeholder={t("adminPurchase.list.userKeywordPlaceholder")}
-            className="h-9 border-gray-200 text-sm"
+            className="h-9 border-border text-sm"
             value={userKeyword}
             onChange={(e) => setUserKeyword(e.target.value)}
           />
         </div>
-        <div className="flex shrink-0 items-center gap-1 rounded-lg border border-gray-200 bg-gray-50/80 p-0.5">
+        <div className="flex shrink-0 items-center gap-1 rounded-lg border border-border bg-muted/60 p-0.5">
           <Button
             type="button"
             variant={sort === "createdAt,desc" ? "default" : "ghost"}
@@ -493,11 +493,11 @@ export default function AdminPurchaseRequests() {
 
       <div className="space-y-2 md:space-y-2.5">
         {loading ? (
-          <div className="rounded-lg border border-dashed border-gray-200 py-10 text-center text-sm text-gray-500">
+          <div className="rounded-lg border border-dashed border-border py-10 text-center text-sm text-muted-foreground">
             {t("adminPurchase.list.loading")}
           </div>
         ) : filtered.length === 0 ? (
-          <div className="rounded-lg border border-dashed border-gray-200 py-10 text-center text-sm text-gray-500">
+          <div className="rounded-lg border border-dashed border-border py-10 text-center text-sm text-muted-foreground">
             {t("adminPurchase.list.empty")}
           </div>
         ) : (
@@ -530,7 +530,7 @@ export default function AdminPurchaseRequests() {
                   }
                 }}
                 className={cn(
-                  "relative flex cursor-pointer rounded-lg border border-gray-100/90 border-l-4 bg-white py-2.5 pl-2 pr-2 shadow-sm outline-none transition-colors hover:border-gray-200 hover:bg-gray-50/40 md:py-3 md:pl-2.5 md:pr-3",
+                  "relative flex cursor-pointer rounded-lg border border-border border-l-4 bg-card py-2.5 pl-2 pr-2 outline-none transition-colors hover:border-border hover:bg-muted/60 md:py-3 md:pl-2.5 md:pr-3",
                   accent.bar,
                   accent.softBg,
                 )}
@@ -540,18 +540,18 @@ export default function AdminPurchaseRequests() {
                     <Badge variant="outline" className={cn("px-2 py-0 text-[11px] font-semibold md:text-xs", accent.badgeClass)}>
                       {t(`purchase.status.${request.status}` as `purchase.status.${PurchaseRequestStatus}`)}
                     </Badge>
-                    <span className="shrink-0 text-right text-base font-bold tabular-nums text-gray-900 md:hidden">
+                    <span className="shrink-0 text-right text-base font-bold tabular-nums text-foreground md:hidden">
                       ₩{total.toLocaleString(dateLocale)}
                     </span>
                   </div>
 
-                  <h2 className="line-clamp-2 text-[15px] font-semibold leading-snug text-gray-900 md:text-base">
+                  <h2 className="line-clamp-2 text-[15px] font-semibold leading-snug text-foreground md:text-base">
                     {request.requestName}
                   </h2>
 
-                  <p className="truncate text-xs text-gray-700 md:text-[13px]">
-                    <span className="font-medium text-gray-800">{request.requestNumber}</span>
-                    <span className="text-gray-300"> · </span>
+                  <p className="truncate text-xs text-foreground/80 md:text-[13px]">
+                    <span className="font-medium text-foreground">{request.requestNumber}</span>
+                    <span className="text-muted-foreground/40"> · </span>
                     <span title={request.userEmail ?? undefined}>
                       {request.userNickname ?? "—"}
                       {request.userEmail ? ` · ${request.userEmail}` : ` · #${request.userId}`}
@@ -561,32 +561,32 @@ export default function AdminPurchaseRequests() {
                   <p
                     className={cn(
                       "text-xs leading-snug md:text-[13px]",
-                      refundStyle ? "font-medium text-amber-800" : "text-gray-600",
+                      refundStyle ? "font-medium text-amber-800" : "text-muted-foreground",
                     )}
                   >
                     {t(progressKey)}
                   </p>
 
                   {shipLines ? (
-                    <div className="flex min-w-0 gap-1.5 text-[11px] text-gray-600 md:text-xs" title={shipTitle}>
-                      <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-blue-600" aria-hidden />
+                    <div className="flex min-w-0 gap-1.5 text-[11px] text-muted-foreground md:text-xs" title={shipTitle}>
+                      <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-foreground" aria-hidden />
                       <span className="min-w-0 truncate">{shipLines.title}</span>
-                      <span className="text-gray-300">·</span>
+                      <span className="text-muted-foreground/40">·</span>
                       <span className="min-w-0 truncate">{shipLines.subtitle}</span>
                     </div>
                   ) : (
-                    <p className="text-[11px] text-gray-400 md:text-xs">{t("adminPurchase.list.noShipping")}</p>
+                    <p className="text-[11px] text-muted-foreground/70 md:text-xs">{t("adminPurchase.list.noShipping")}</p>
                   )}
 
-                  <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] text-gray-500 md:text-xs">
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] text-muted-foreground md:text-xs">
                     <time dateTime={request.createdAt}>{formatShortDate(request.createdAt, dateLocale)}</time>
-                    <span className="text-gray-300" aria-hidden>
+                    <span className="text-muted-foreground/40" aria-hidden>
                       ·
                     </span>
                     <span>{fillTpl(t("adminPurchase.list.qtyTpl"), { n: request.quantity })}</span>
                     {charged != null ? (
                       <>
-                        <span className="text-gray-300" aria-hidden>
+                        <span className="text-muted-foreground/40" aria-hidden>
                           ·
                         </span>
                         <span>
@@ -597,8 +597,8 @@ export default function AdminPurchaseRequests() {
                   </div>
                 </div>
 
-                <div className="flex shrink-0 flex-col items-end gap-1 border-gray-100/80 md:border-l md:pl-3">
-                  <span className="hidden text-lg font-bold tabular-nums text-gray-900 md:inline">
+                <div className="flex shrink-0 flex-col items-end gap-1 border-border md:border-l md:pl-3">
+                  <span className="hidden text-lg font-bold tabular-nums text-foreground md:inline">
                     ₩{total.toLocaleString(dateLocale)}
                   </span>
                   <div className="absolute right-1.5 top-1.5 md:relative md:right-auto md:top-auto">
@@ -618,7 +618,7 @@ export default function AdminPurchaseRequests() {
 
       {(totalPages > 1 || rows.length > 0) && (
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="flex items-center gap-2 text-xs text-gray-500 md:text-sm">
+          <div className="flex items-center gap-2 text-xs text-muted-foreground md:text-sm">
             <span>{t("adminPurchase.list.perPage")}</span>
             <Select
               value={String(size)}
@@ -644,7 +644,7 @@ export default function AdminPurchaseRequests() {
             <Button type="button" variant="outline" size="sm" disabled={page <= 0} onClick={() => changePage(page - 1)}>
               {t("adminPurchase.list.prev")}
             </Button>
-            <span className="text-xs text-gray-500 md:text-sm">
+            <span className="text-xs text-muted-foreground md:text-sm">
               {page + 1} / {Math.max(1, totalPages)}
             </span>
             <Button
@@ -676,10 +676,10 @@ export default function AdminPurchaseRequests() {
               <div className="shrink-0 space-y-3 border-b bg-muted/20 px-5 pb-4 pt-5 pr-12 sm:px-6 sm:pr-14">
                 <div className="flex flex-wrap items-start justify-between gap-2">
                   <div className="min-w-0 flex-1 space-y-1">
-                    <DialogTitle className="line-clamp-2 text-left text-base font-semibold leading-snug text-gray-900 sm:text-lg">
+                    <DialogTitle className="line-clamp-2 text-left text-base font-semibold leading-snug text-foreground sm:text-lg">
                       {selected.requestName}
                     </DialogTitle>
-                    <DialogDescription className="text-left text-xs text-gray-500 sm:text-sm">
+                    <DialogDescription className="text-left text-xs text-muted-foreground sm:text-sm">
                       {selected.requestNumber}
                     </DialogDescription>
                   </div>
@@ -690,10 +690,10 @@ export default function AdminPurchaseRequests() {
                     {t(`purchase.status.${selected.status}` as `purchase.status.${PurchaseRequestStatus}`)}
                   </Badge>
                 </div>
-                <div className="flex flex-wrap items-center justify-between gap-2 text-sm text-gray-600">
+                <div className="flex flex-wrap items-center justify-between gap-2 text-sm text-muted-foreground">
                   <p className="min-w-0 truncate">
-                    <span className="text-gray-500">{t("adminPurchase.modal.member")}</span>{" "}
-                    <span className="font-medium text-gray-900">{selected.userNickname ?? `#${selected.userId}`}</span>
+                    <span className="text-muted-foreground">{t("adminPurchase.modal.member")}</span>{" "}
+                    <span className="font-medium text-foreground">{selected.userNickname ?? `#${selected.userId}`}</span>
                     {selected.userEmail ? (
                       <span className="hidden sm:inline"> · {selected.userEmail}</span>
                     ) : null}
@@ -702,7 +702,7 @@ export default function AdminPurchaseRequests() {
                     type="button"
                     variant="ghost"
                     size="sm"
-                    className="h-8 shrink-0 gap-1 text-xs text-gray-600 hover:text-gray-900"
+                    className="h-8 shrink-0 gap-1 text-xs text-muted-foreground hover:text-foreground"
                     onClick={() => navigate(`/admin/purchase-requests/${selected.id}`)}
                   >
                     {t("adminPurchase.modal.fullDetail")}
@@ -713,35 +713,35 @@ export default function AdminPurchaseRequests() {
 
               <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-4 sm:px-6">
                 <div className="mx-auto max-w-3xl space-y-4">
-                  <Card className="border-gray-200 shadow-none">
+                  <Card className="border-border shadow-none">
                     <CardHeader className="space-y-1 pb-2">
-                      <CardTitle className="text-sm font-semibold text-gray-900">{t("adminPurchase.modal.orderSummary")}</CardTitle>
+                      <CardTitle className="text-sm font-semibold text-foreground">{t("adminPurchase.modal.orderSummary")}</CardTitle>
                       <CardDescription className="text-xs">{t("adminPurchase.modal.orderSummaryDesc")}</CardDescription>
                     </CardHeader>
                     <CardContent className="grid gap-3 text-sm sm:grid-cols-2">
                       <div>
-                        <p className="text-xs font-medium uppercase tracking-wide text-gray-500">{t("adminPurchase.modal.quantity")}</p>
-                        <p className="mt-0.5 font-semibold text-gray-900">{t("adminPurchase.modal.quantityUnit", { n: selected.quantity })}</p>
+                        <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{t("adminPurchase.modal.quantity")}</p>
+                        <p className="mt-0.5 font-semibold text-foreground">{t("adminPurchase.modal.quantityUnit", { n: selected.quantity })}</p>
                       </div>
                       <div>
-                        <p className="text-xs font-medium uppercase tracking-wide text-gray-500">{t("adminPurchase.modal.totalKrw")}</p>
-                        <p className="mt-0.5 font-semibold text-gray-900">
+                        <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{t("adminPurchase.modal.totalKrw")}</p>
+                        <p className="mt-0.5 font-semibold text-foreground">
                           {selected.totalAmountKrw != null
                             ? `₩${formatNumber(selected.totalAmountKrw, locale, num0)}`
                             : "—"}
                         </p>
                       </div>
                       <div>
-                        <p className="text-xs font-medium uppercase tracking-wide text-gray-500">{t("adminPurchase.modal.charged")}</p>
-                        <p className="mt-0.5 font-semibold text-gray-900">
+                        <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{t("adminPurchase.modal.charged")}</p>
+                        <p className="mt-0.5 font-semibold text-foreground">
                           {selected.chargedAmountKrw != null
                             ? `₩${formatNumber(selected.chargedAmountKrw, locale, num0)}`
                             : "—"}
                         </p>
                       </div>
                       <div>
-                        <p className="text-xs font-medium uppercase tracking-wide text-gray-500">{t("adminPurchase.modal.createdAt")}</p>
-                        <p className="mt-0.5 text-gray-800">
+                        <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{t("adminPurchase.modal.createdAt")}</p>
+                        <p className="mt-0.5 text-foreground">
                           {new Date(selected.createdAt).toLocaleString(dateLocale, {
                             month: "short",
                             day: "numeric",
@@ -754,14 +754,14 @@ export default function AdminPurchaseRequests() {
                   </Card>
 
                   {hasShippingSnapshot(selected.shipping) && selected.shipping ? (
-                    <Accordion type="single" collapsible className="rounded-lg border border-gray-200 bg-white px-3">
+                    <Accordion type="single" collapsible className="rounded-lg border border-border bg-card px-3">
                       <AccordionItem value="shipping" className="border-0">
                         <AccordionTrigger className="py-3 text-sm hover:no-underline">
                           <span className="flex min-w-0 flex-1 items-start gap-2 text-left">
-                            <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-blue-600" aria-hidden />
+                            <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-foreground" aria-hidden />
                             <span className="min-w-0">
-                              <span className="block font-semibold text-gray-900">{t("adminPurchase.modal.shipping")}</span>
-                              <span className="mt-0.5 block truncate text-xs font-normal text-gray-600">
+                              <span className="block font-semibold text-foreground">{t("adminPurchase.modal.shipping")}</span>
+                              <span className="mt-0.5 block truncate text-xs font-normal text-muted-foreground">
                                 {shippingSummaryLines(selected.shipping, t).title} ·{" "}
                                 {shippingSummaryLines(selected.shipping, t).subtitle}
                               </span>
@@ -769,28 +769,28 @@ export default function AdminPurchaseRequests() {
                           </span>
                         </AccordionTrigger>
                         <AccordionContent className="pb-3 pt-0">
-                          <div className="space-y-2 rounded-md border border-blue-100 bg-blue-50/50 p-3 text-sm text-gray-800">
+                          <div className="space-y-2 rounded-md border border-border bg-muted p-3 text-sm text-foreground">
                             {selected.shipping.label ? (
                               <p>
-                                <span className="text-gray-500">{t("adminPurchase.modal.label")}</span> {selected.shipping.label}
+                                <span className="text-muted-foreground">{t("adminPurchase.modal.label")}</span> {selected.shipping.label}
                               </p>
                             ) : null}
                             {(selected.shipping.recipientName || selected.shipping.recipientPhone) && (
                               <p>
-                                <span className="text-gray-500">{t("adminPurchase.modal.recipient")}</span>{" "}
+                                <span className="text-muted-foreground">{t("adminPurchase.modal.recipient")}</span>{" "}
                                 {[selected.shipping.recipientName, selected.shipping.recipientPhone]
                                   .filter(Boolean)
                                   .join(" · ")}
                               </p>
                             )}
                             <p className="break-words leading-relaxed">
-                              <span className="text-gray-500">{t("adminPurchase.modal.address")}</span>{" "}
+                              <span className="text-muted-foreground">{t("adminPurchase.modal.address")}</span>{" "}
                               {selected.shipping.postalCode ? `(${selected.shipping.postalCode}) ` : null}
                               {selected.shipping.addressLine1}
                               {selected.shipping.addressLine2 ? ` ${selected.shipping.addressLine2}` : ""}
                             </p>
                             {selected.shipping.userAddressId != null && (
-                              <p className="text-xs text-gray-500">{t("adminPurchase.modal.userAddressId", { id: selected.shipping.userAddressId })}</p>
+                              <p className="text-xs text-muted-foreground">{t("adminPurchase.modal.userAddressId", { id: selected.shipping.userAddressId })}</p>
                             )}
                           </div>
                         </AccordionContent>
@@ -802,9 +802,9 @@ export default function AdminPurchaseRequests() {
                     </p>
                   )}
 
-                  <Card className="border-gray-900/10 shadow-sm ring-1 ring-gray-900/5">
+                  <Card className="border-foreground/10 ring-1 ring-gray-900/5">
                     <CardHeader className="pb-2">
-                      <CardTitle className="text-sm font-semibold text-gray-900">{t("adminPurchase.modal.process")}</CardTitle>
+                      <CardTitle className="text-sm font-semibold text-foreground">{t("adminPurchase.modal.process")}</CardTitle>
                       <CardDescription className="text-xs">{t("adminPurchase.modal.processDesc")}</CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-4">
@@ -850,11 +850,11 @@ export default function AdminPurchaseRequests() {
                   <Accordion type="multiple" className="space-y-2">
                     <AccordionItem
                       value="attachments"
-                      className="rounded-lg border border-gray-200 bg-white px-3 data-[state=open]:shadow-sm"
+                      className="rounded-lg border border-border bg-card px-3 data-[state=open]:shadow-sm"
                     >
                       <AccordionTrigger className="py-3 text-sm hover:no-underline">
-                        <span className="font-semibold text-gray-900">{t("adminPurchase.modal.adminPhotos")}</span>
-                        <span className="ml-2 text-xs font-normal text-gray-500">{t("adminPurchase.modal.adminPhotosHint")}</span>
+                        <span className="font-semibold text-foreground">{t("adminPurchase.modal.adminPhotos")}</span>
+                        <span className="ml-2 text-xs font-normal text-muted-foreground">{t("adminPurchase.modal.adminPhotosHint")}</span>
                       </AccordionTrigger>
                       <AccordionContent>
                         <div className="space-y-3 pb-1">
@@ -865,7 +865,7 @@ export default function AdminPurchaseRequests() {
                             onChange={(e) => setAdminFiles(Array.from(e.target.files || []))}
                           />
                           {adminFiles.length > 0 ? (
-                            <p className="text-xs text-gray-500">{t("adminPurchase.modal.filesSelected", { n: adminFiles.length })}</p>
+                            <p className="text-xs text-muted-foreground">{t("adminPurchase.modal.filesSelected", { n: adminFiles.length })}</p>
                           ) : null}
                           <Button
                             type="button"
@@ -892,9 +892,9 @@ export default function AdminPurchaseRequests() {
                         <AccordionContent>
                           <div className="space-y-3 pb-1">
                             <p className="text-sm font-semibold text-amber-950">{t("adminPurchase.walletCreditTitle")}</p>
-                            <div className="rounded-md border border-amber-200/90 bg-white px-3 py-2 text-sm">
-                              <span className="text-gray-600">{t("adminPurchase.modal.currentCharged")}</span>{" "}
-                              <span className="font-semibold text-gray-900">
+                            <div className="rounded-md border border-amber-200/90 bg-card px-3 py-2 text-sm">
+                              <span className="text-muted-foreground">{t("adminPurchase.modal.currentCharged")}</span>{" "}
+                              <span className="font-semibold text-foreground">
                                 {selected.chargedAmountKrw != null
                                   ? `₩${formatNumber(selected.chargedAmountKrw, locale, num0)}`
                                   : "—"}
@@ -903,7 +903,7 @@ export default function AdminPurchaseRequests() {
                             <p className="hidden text-xs text-amber-900/90">{t("adminPurchase.walletIdempotencyHint")}</p>
                             <div className="space-y-2">
                               <Label>{t("adminPurchase.walletAmount")}</Label>
-                              <p className="text-xs text-gray-600">
+                              <p className="text-xs text-muted-foreground">
                                 {t("adminPurchase.modal.walletRefundNote")}
                               </p>
                               <Input
@@ -916,7 +916,7 @@ export default function AdminPurchaseRequests() {
                             </div>
                             <div className="space-y-2">
                               <Label>{t("adminPurchase.walletSettled")}</Label>
-                              <p className="rounded-md border bg-white px-3 py-2 text-sm font-semibold text-gray-900">
+                              <p className="rounded-md border bg-card px-3 py-2 text-sm font-semibold text-foreground">
                                 {selected.chargedAmountKrw != null && walletAmount !== ""
                                   ? `₩${formatNumber(
                                       selected.chargedAmountKrw -
@@ -956,7 +956,7 @@ export default function AdminPurchaseRequests() {
               </div>
 
               <div className="flex shrink-0 flex-col gap-2 border-t bg-background/95 px-4 py-3 backdrop-blur-sm supports-[backdrop-filter]:bg-background/80 sm:flex-row sm:items-center sm:justify-between sm:px-6">
-                <p className="hidden text-[11px] text-gray-500 sm:block">
+                <p className="hidden text-[11px] text-muted-foreground sm:block">
                   {t("adminPurchase.modal.saveShortcut")}
                 </p>
                 <div className="flex w-full justify-end gap-2 sm:w-auto">

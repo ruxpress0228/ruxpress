@@ -47,7 +47,7 @@ export function ChatMessageBubble({ msg, mineType, otherLabel, fileLabel }: Chat
             href={attachmentUrl(att)}
             target="_blank"
             rel="noopener noreferrer"
-            className={`inline-flex items-center gap-1 underline mb-1 ${isMine ? 'text-primary-foreground' : 'text-blue-600'}`}
+            className={`inline-flex items-center gap-1 underline mb-1 ${isMine ? 'text-primary-foreground' : 'text-foreground'}`}
           >
             <Paperclip className="w-3 h-3 shrink-0" />
             {att.originalFilename}

@@ -170,7 +170,7 @@ export default function AdminExchangeRate() {
   if (loading && !currentRates) {
     return (
       <div className="flex items-center justify-center py-12">
-        <p className="text-gray-500">{t("admin.exchange.loading")}</p>
+        <p className="text-muted-foreground">{t("admin.exchange.loading")}</p>
       </div>
     );
   }
@@ -180,8 +180,8 @@ export default function AdminExchangeRate() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold text-gray-900">{t("admin.exchange.title")}</h1>
-        <p className="text-gray-600 mt-1">{t("admin.exchange.subtitle")}</p>
+        <h1 className="text-3xl font-bold text-foreground">{t("admin.exchange.title")}</h1>
+        <p className="text-muted-foreground mt-1">{t("admin.exchange.subtitle")}</p>
       </div>
 
       <Card>
@@ -189,7 +189,7 @@ export default function AdminExchangeRate() {
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <CardTitle className="flex items-center space-x-2">
-                <TrendingUp className="w-5 h-5 text-blue-600" />
+                <TrendingUp className="w-5 h-5 text-foreground" />
                 <span>{t("admin.exchange.quote.title")}</span>
               </CardTitle>
               <CardDescription>
@@ -227,12 +227,12 @@ export default function AdminExchangeRate() {
                     <p className="text-2xl font-bold tabular-nums">
                       {formatRateToKrwLine(currency, quote.rateToKrw)}
                     </p>
-                    <p className="text-sm text-gray-500 tabular-nums">
+                    <p className="text-sm text-muted-foreground tabular-nums">
                       {formatKrwBasisRate(currency, quote.rateToKrw, locale)}
                     </p>
                   </div>
                 ) : (
-                  <p className="text-gray-500 text-sm">{t("admin.exchange.noRate")}</p>
+                  <p className="text-muted-foreground text-sm">{t("admin.exchange.noRate")}</p>
                 )}
                 <div className="space-y-2">
                   <Label htmlFor={`manual-${currency}`}>
@@ -250,7 +250,7 @@ export default function AdminExchangeRate() {
                         setManualInputs((prev) => ({ ...prev, [currency]: e.target.value }))
                       }
                     />
-                    <span className="self-center text-sm text-gray-500 shrink-0">
+                    <span className="self-center text-sm text-muted-foreground shrink-0">
                       {t("admin.exchange.quote.unitKrw")}
                     </span>
                   </div>
@@ -292,11 +292,11 @@ export default function AdminExchangeRate() {
               {t("common.save")}
             </Button>
           </div>
-          <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-            <p className="text-sm text-blue-900">
+          <div className="p-4 bg-muted border border-border rounded-lg">
+            <p className="text-sm text-foreground">
               <strong>{t("admin.exchange.feeCard.current")}</strong> {feeRate}%
             </p>
-            <p className="text-sm text-blue-700 mt-1">
+            <p className="text-sm text-foreground mt-1">
               {t("admin.exchange.feeCard.example").replace(
                 "{{fee}}",
                 formatNumber(100000 * parseFloat(feeRate || "0") / 100, locale)
@@ -327,7 +327,7 @@ export default function AdminExchangeRate() {
               <TableBody>
                 {history.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center text-gray-500 py-8">
+                    <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
                       {t("admin.exchange.historyEmpty")}
                     </TableCell>
                   </TableRow>
@@ -352,10 +352,10 @@ export default function AdminExchangeRate() {
                           <Badge variant="outline">{t("admin.exchange.statusPrevious")}</Badge>
                         )}
                       </TableCell>
-                      <TableCell className="text-sm text-gray-500">
+                      <TableCell className="text-sm text-muted-foreground">
                         {rate.fetchedAt ? formatDate(rate.fetchedAt, locale, fetchedAtOptions) : "—"}
                       </TableCell>
-                      <TableCell className="text-sm text-gray-500">
+                      <TableCell className="text-sm text-muted-foreground">
                         {rate.createdAt ? formatDate(rate.createdAt, locale) : "—"}
                       </TableCell>
                     </TableRow>
@@ -364,7 +364,7 @@ export default function AdminExchangeRate() {
               </TableBody>
             </Table>
             <div className="flex items-center justify-between p-4 border-t flex-wrap gap-2">
-              <div className="flex items-center gap-2 text-sm text-gray-500">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <span>{t("admin.common.pageSize")}</span>
                 <Select
                   value={String(historySize)}
@@ -380,7 +380,7 @@ export default function AdminExchangeRate() {
               </div>
               <div className="flex items-center gap-2">
                 <Button variant="outline" size="sm" disabled={historyPage <= 0} onClick={() => { void refreshHistory(historyPage - 1, historySize); }}>{t("admin.common.prev")}</Button>
-                <span className="text-sm text-gray-500">{t("admin.common.pageOf", { page: historyPage + 1, total: Math.max(1, historyTotalPages) })}</span>
+                <span className="text-sm text-muted-foreground">{t("admin.common.pageOf", { page: historyPage + 1, total: Math.max(1, historyTotalPages) })}</span>
                 <Button variant="outline" size="sm" disabled={historyPage >= historyTotalPages - 1} onClick={() => { void refreshHistory(historyPage + 1, historySize); }}>{t("admin.common.next")}</Button>
               </div>
             </div>

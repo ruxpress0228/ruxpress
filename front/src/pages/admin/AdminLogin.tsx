@@ -6,6 +6,7 @@ import { Input } from "../../components/ui/input";
 import { Label } from "../../components/ui/label";
 import { Checkbox } from "../../components/ui/checkbox";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../components/ui/card";
+import { Mark } from "../../components/brand/BrandMark";
 import { toast } from "sonner";
 import { api, notifyUserAuthChange } from "../../utils/api";
 import { unwrap } from "../../utils/exception";
@@ -76,7 +77,7 @@ export default function AdminLogin() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 relative">
+    <div className="min-h-screen flex items-center justify-center bg-muted/60 relative">
       <div className="absolute top-4 right-4" ref={langRef}>
         <Button
           type="button"
@@ -91,7 +92,7 @@ export default function AdminLogin() {
         </Button>
         {langOpen && (
           <div
-            className="absolute right-0 top-full mt-1 min-w-[10rem] rounded-md border border-gray-200 bg-white py-1 shadow-lg z-10"
+            className="absolute right-0 top-full mt-1 min-w-[10rem] rounded-md border border-border bg-card py-1 shadow-lg z-10"
             role="listbox"
           >
             {LOCALES.map((loc) => (
@@ -100,7 +101,7 @@ export default function AdminLogin() {
                 type="button"
                 role="option"
                 aria-selected={locale === loc}
-                className={`block w-full px-3 py-2 text-left text-sm hover:bg-gray-100 ${locale === loc ? "bg-blue-50 text-blue-700 font-medium" : "text-gray-900"}`}
+                className={`block w-full px-3 py-2 text-left text-sm hover:bg-muted ${locale === loc ? "bg-muted text-foreground font-medium" : "text-foreground"}`}
                 onClick={() => {
                   setLocale(loc);
                   setLangOpen(false);
@@ -115,9 +116,7 @@ export default function AdminLogin() {
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1">
           <div className="flex items-center justify-center mb-4">
-            <div className="w-12 h-12 bg-gradient-to-br from-blue-600 to-blue-400 rounded-xl flex items-center justify-center">
-              <span className="text-white text-lg font-bold tracking-tight">MP</span>
-            </div>
+            <Mark size="lg" />
           </div>
           <CardTitle className="text-2xl text-center">{t("admin.login.title")}</CardTitle>
           <CardDescription className="text-center">

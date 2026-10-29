@@ -58,8 +58,8 @@ export default function WalletLedger() {
   return (
     <div className="max-w-5xl mx-auto space-y-6">
       <div>
-        <h1 className="text-3xl font-bold text-gray-900">{t("wallet.title")}</h1>
-        <p className="text-gray-600 mt-1">{t("wallet.subtitle")}</p>
+        <h1 className="text-3xl font-bold text-foreground">{t("wallet.title")}</h1>
+        <p className="text-muted-foreground mt-1">{t("wallet.subtitle")}</p>
       </div>
 
       <Card>
@@ -68,10 +68,10 @@ export default function WalletLedger() {
           <CardDescription>{t("wallet.balanceCard.desc")}</CardDescription>
         </CardHeader>
         <CardContent>
-          <p className="text-3xl font-bold text-blue-600">
+          <p className="text-3xl font-bold text-foreground">
             {balance == null ? "—" : `₩${formatNumber(balance, locale, numOpt)}`}
           </p>
-          <BalanceEquivalents balance={balance} hintKey="wallet.balanceEquivalentsHint" className="text-sm text-gray-500 mt-2" />
+          <BalanceEquivalents balance={balance} hintKey="wallet.balanceEquivalentsHint" className="text-sm text-muted-foreground mt-2" />
         </CardContent>
       </Card>
 
@@ -82,7 +82,7 @@ export default function WalletLedger() {
         </CardHeader>
         <CardContent className="p-0">
           {loading ? (
-            <p className="p-6 text-gray-500">{t("wallet.ledger.loading")}</p>
+            <p className="p-6 text-muted-foreground">{t("wallet.ledger.loading")}</p>
           ) : (
             <>
               <Table>
@@ -97,7 +97,7 @@ export default function WalletLedger() {
                 <TableBody>
                   {rows.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={4} className="text-center text-gray-500 py-10">
+                      <TableCell colSpan={4} className="text-center text-muted-foreground py-10">
                         {t("wallet.ledger.empty")}
                       </TableCell>
                     </TableRow>
@@ -112,7 +112,7 @@ export default function WalletLedger() {
                           {e.entryType === "DEBIT_PURCHASE" || e.entryType === "DEBIT_BANK_REFUND" ? "−" : "+"}
                           ₩{formatNumber(e.amount, locale, numOpt)}
                         </TableCell>
-                        <TableCell className="text-sm text-gray-600 max-w-[200px] truncate">
+                        <TableCell className="text-sm text-muted-foreground max-w-[200px] truncate">
                           {e.memo ?? (e.purchaseRequestId ? `#${e.purchaseRequestId}` : "")}
                         </TableCell>
                       </TableRow>
@@ -121,7 +121,7 @@ export default function WalletLedger() {
                 </TableBody>
               </Table>
               <div className="flex items-center justify-between p-4 border-t flex-wrap gap-2">
-                <div className="flex items-center gap-2 text-sm text-gray-500">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <span>페이지당</span>
                   <Select
                     value={String(size)}
@@ -139,7 +139,7 @@ export default function WalletLedger() {
                   <Button type="button" variant="outline" size="sm" disabled={page <= 0} onClick={() => void load(page - 1, size)}>
                     {t("wallet.ledger.prev")}
                   </Button>
-                  <span className="text-sm text-gray-500">
+                  <span className="text-sm text-muted-foreground">
                     {page + 1} / {Math.max(1, data?.totalPages ?? 1)}
                   </span>
                   <Button type="button" variant="outline" size="sm" disabled={data != null && page >= (data.totalPages ?? 1) - 1} onClick={() => void load(page + 1, size)}>

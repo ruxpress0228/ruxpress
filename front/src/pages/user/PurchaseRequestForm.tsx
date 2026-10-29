@@ -35,9 +35,9 @@ const ALLOWED_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 
 /** 옵션: 전형적인 입력 박스보다 덜 강조된 밑줄 스타일(상품 속성 메모 느낌) */
 const OPTION_FIELD_CLASS =
-  "h-9 min-w-0 w-full border-0 border-b border-gray-200 rounded-none bg-transparent px-1 py-1 shadow-none " +
-  "focus-visible:ring-0 focus-visible:border-gray-500 focus-visible:ring-offset-0 " +
-  "placeholder:text-gray-400 text-sm text-gray-900";
+  "h-9 min-w-0 w-full border-0 border-b border-border rounded-none bg-transparent px-1 py-1 shadow-none " +
+  "focus-visible:ring-0 focus-visible:border-input focus-visible:ring-offset-0 " +
+  "placeholder:text-muted-foreground/70 text-sm text-foreground";
 
 type LineOption = { name: string; value: string };
 type PurchaseLineItem = { urls: string[]; shop: string; priceKrw: number; quantity: number; options: LineOption[] };
@@ -381,8 +381,8 @@ export default function PurchaseRequestForm() {
   return (
     <div className="max-w-4xl mx-auto">
       <div className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-900">{t("purchase.title")}</h1>
-        <p className="text-gray-600 mt-2">{t("purchase.subtitle")}</p>
+        <h1 className="text-3xl font-bold text-foreground">{t("purchase.title")}</h1>
+        <p className="text-muted-foreground mt-2">{t("purchase.subtitle")}</p>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
@@ -428,7 +428,7 @@ export default function PurchaseRequestForm() {
                   </div>
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
-                      <Label className="text-xs text-gray-500">{t("purchase.itemUrlsLabel")}</Label>
+                      <Label className="text-xs text-muted-foreground">{t("purchase.itemUrlsLabel")}</Label>
                       <Button type="button" variant="outline" size="sm" onClick={() => addUrl(index)}>
                         <Plus className="w-3 h-3 mr-1" />
                         {t("purchase.addUrl")}
@@ -453,7 +453,7 @@ export default function PurchaseRequestForm() {
                   </div>
                   <div className="grid grid-cols-2 gap-2">
                     <div>
-                      <Label className="text-xs text-gray-500">단가 (KRW)</Label>
+                      <Label className="text-xs text-muted-foreground">단가 (KRW)</Label>
                       <Input
                         type="number"
                         min="0"
@@ -465,7 +465,7 @@ export default function PurchaseRequestForm() {
                       />
                     </div>
                     <div>
-                      <Label className="text-xs text-gray-500">수량</Label>
+                      <Label className="text-xs text-muted-foreground">수량</Label>
                       <Input
                         type="number"
                         min="1"
@@ -475,14 +475,14 @@ export default function PurchaseRequestForm() {
                       />
                     </div>
                   </div>
-                  <div className="space-y-2 pt-2 border-t border-gray-50">
+                  <div className="space-y-2 pt-2 border-t border-border">
                     <div className="flex items-center justify-between gap-2">
-                      <span className="text-sm font-medium text-gray-600">{t("purchase.optionHeading")}</span>
+                      <span className="text-sm font-medium text-muted-foreground">{t("purchase.optionHeading")}</span>
                       <Button
                         type="button"
                         variant="ghost"
                         size="sm"
-                        className="h-8 shrink-0 gap-1 text-xs text-gray-600 hover:text-gray-900"
+                        className="h-8 shrink-0 gap-1 text-xs text-muted-foreground hover:text-foreground"
                         onClick={() => addLineOption(index)}
                       >
                         <Plus className="h-3.5 w-3.5" />
@@ -493,7 +493,7 @@ export default function PurchaseRequestForm() {
                       <ul className="space-y-2 pl-0.5">
                         {item.options.map((option, optIdx) => (
                           <li key={optIdx} className="flex items-start gap-2">
-                            <span className="mt-2 shrink-0 text-gray-300 select-none" aria-hidden>
+                            <span className="mt-2 shrink-0 text-muted-foreground/40 select-none" aria-hidden>
                               -
                             </span>
                             <div className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row sm:items-center sm:gap-2">
@@ -504,7 +504,7 @@ export default function PurchaseRequestForm() {
                                 onChange={(e) => updateLineOption(index, optIdx, "name", e.target.value)}
                                 className={`${OPTION_FIELD_CLASS} sm:max-w-[40%]`}
                               />
-                              <span className="hidden shrink-0 text-gray-300 sm:inline" aria-hidden>
+                              <span className="hidden shrink-0 text-muted-foreground/40 sm:inline" aria-hidden>
                                 :
                               </span>
                               <Input
@@ -519,7 +519,7 @@ export default function PurchaseRequestForm() {
                               type="button"
                               variant="ghost"
                               size="icon"
-                              className="h-9 w-9 shrink-0 text-gray-400 hover:text-gray-700"
+                              className="h-9 w-9 shrink-0 text-muted-foreground/70 hover:text-foreground/80"
                               onClick={() => removeLineOption(index, optIdx)}
                               aria-label="옵션 줄 삭제"
                             >
@@ -529,15 +529,15 @@ export default function PurchaseRequestForm() {
                         ))}
                       </ul>
                     ) : null}
-                    <p className="text-xs text-gray-400">{t("purchase.itemOptionHint")}</p>
+                    <p className="text-xs text-muted-foreground/70">{t("purchase.itemOptionHint")}</p>
                   </div>
-                  <p className="text-xs text-gray-400">
+                  <p className="text-xs text-muted-foreground/70">
                     소계: ₩{formatNumber((item.priceKrw || 0) * (item.quantity || 0), locale, numOpt)}
                   </p>
                 </div>
               ))}
-              <p className="text-xs text-gray-500">{t("purchase.urlHint")}</p>
-              <p className="text-sm text-gray-700">
+              <p className="text-xs text-muted-foreground">{t("purchase.urlHint")}</p>
+              <p className="text-sm text-foreground/80">
                 전체 수량 합계: <span className="font-semibold">{totalQuantity}</span> 개 · 상품가 합계:{" "}
                 <span className="font-semibold">₩{formatNumber(aggregatedPriceKrw, locale, numOpt)}</span>
               </p>
@@ -552,10 +552,10 @@ export default function PurchaseRequestForm() {
           </CardHeader>
           <CardContent>
             {addressesLoading ? (
-              <p className="text-sm text-gray-500">{t("purchase.shipping.loading")}</p>
+              <p className="text-sm text-muted-foreground">{t("purchase.shipping.loading")}</p>
             ) : addresses.length === 0 ? (
               <div className="space-y-3">
-                <p className="text-sm text-gray-600">{t("purchase.shipping.empty")}</p>
+                <p className="text-sm text-muted-foreground">{t("purchase.shipping.empty")}</p>
                 <Button type="button" variant="outline" size="sm" asChild>
                   <Link to="/mypage">{t("purchase.shipping.manage")}</Link>
                 </Button>
@@ -570,13 +570,13 @@ export default function PurchaseRequestForm() {
                   <div
                     key={a.id}
                     className={`flex items-start gap-3 rounded-lg border p-3 transition-colors ${
-                      selectedShippingId === a.id ? "border-gray-900 bg-gray-50" : "border-gray-200"
+                      selectedShippingId === a.id ? "border-foreground bg-muted/60" : "border-border"
                     }`}
                   >
                     <RadioGroupItem value={String(a.id)} id={`ship-addr-${a.id}`} className="mt-1" />
                     <Label htmlFor={`ship-addr-${a.id}`} className="flex-1 cursor-pointer space-y-1 text-sm leading-relaxed">
                       <div className="flex flex-wrap items-center gap-2">
-                        <span className="font-medium text-gray-900">{a.label?.trim() || t("purchase.shipping.title")}</span>
+                        <span className="font-medium text-foreground">{a.label?.trim() || t("purchase.shipping.title")}</span>
                         {a.isDefault ? (
                           <Badge variant="secondary" className="text-xs">
                             {t("purchase.shipping.defaultBadge")}
@@ -584,12 +584,12 @@ export default function PurchaseRequestForm() {
                         ) : null}
                       </div>
                       {a.recipientName ? (
-                        <p className="text-gray-800">
+                        <p className="text-foreground">
                           {a.recipientName}
-                          {a.recipientPhone ? <span className="text-gray-500"> · {a.recipientPhone}</span> : null}
+                          {a.recipientPhone ? <span className="text-muted-foreground"> · {a.recipientPhone}</span> : null}
                         </p>
                       ) : null}
-                      <p className="text-gray-700 break-words">
+                      <p className="text-foreground/80 break-words">
                         {a.postalCode ? <span className="mr-1">({a.postalCode})</span> : null}
                         {a.addressLine1}
                         {a.addressLine2 ? ` ${a.addressLine2}` : ""}
@@ -611,7 +611,7 @@ export default function PurchaseRequestForm() {
             <div
               className={[
                 "border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors",
-                isDragOver ? "border-blue-500 bg-blue-50" : "border-gray-300 hover:border-blue-500",
+                isDragOver ? "border-foreground bg-muted" : "border-input hover:border-foreground",
               ].join(" ")}
               onClick={() => imageInputRef.current?.click()}
               onDragEnter={(e) => {
@@ -641,8 +641,8 @@ export default function PurchaseRequestForm() {
                 className="hidden"
                 onChange={handleImageChange}
               />
-              <Upload className="w-12 h-12 mx-auto text-gray-400 mb-2" />
-              <p className="text-sm text-gray-600">{t("purchase.image.upload")}</p>
+              <Upload className="w-12 h-12 mx-auto text-muted-foreground/70 mb-2" />
+              <p className="text-sm text-muted-foreground">{t("purchase.image.upload")}</p>
             </div>
             {imagePreviews.length > 0 && (
               <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
@@ -653,12 +653,12 @@ export default function PurchaseRequestForm() {
                       type="button"
                       variant="ghost"
                       size="icon"
-                      className="absolute top-1 right-1 h-8 w-8 bg-white/80 hover:bg-white"
+                      className="absolute top-1 right-1 h-8 w-8 bg-white/80 hover:bg-card"
                       onClick={() => removeImage(index)}
                     >
                       <X className="h-4 w-4" />
                     </Button>
-                    <div className="mt-1 text-xs text-gray-600 truncate">{p.file.name}</div>
+                    <div className="mt-1 text-xs text-muted-foreground truncate">{p.file.name}</div>
                   </div>
                 ))}
               </div>
@@ -686,7 +686,7 @@ export default function PurchaseRequestForm() {
             <CardTitle>{t("purchase.summary.title")}</CardTitle>
             <CardDescription>
               <div className="space-y-3">
-                <p className="text-sm text-gray-500 mb-2">{t("purchase.summary.quoteCurrency")}</p>
+                <p className="text-sm text-muted-foreground mb-2">{t("purchase.summary.quoteCurrency")}</p>
                 <Tabs value={quoteCurrency} onValueChange={(v) => setQuoteCurrency(v as QuoteCurrency)}>
                   <TabsList className="grid w-full grid-cols-4">
                     {QUOTE_CURRENCIES.map((c) => (
@@ -709,11 +709,11 @@ export default function PurchaseRequestForm() {
                     </span>
                   </div>
                 ) : quoteCurrency === "KRW" ? (
-                  <span className="text-xs text-gray-600">
+                  <span className="text-xs text-muted-foreground">
                     {t("purchase.summary.paymentNote").replace("{{currency}}", "KRW")}
                   </span>
                 ) : (
-                  <span className="text-gray-500">{t("purchase.summary.loading")}</span>
+                  <span className="text-muted-foreground">{t("purchase.summary.loading")}</span>
                 )}
               </div>
             </CardDescription>
@@ -723,24 +723,24 @@ export default function PurchaseRequestForm() {
               {t("purchase.summary.adminWalletNote")}
             </p>
             <div className="flex justify-between text-sm">
-              <span className="text-gray-600">{t("purchase.summary.productPrice")}</span>
+              <span className="text-muted-foreground">{t("purchase.summary.productPrice")}</span>
               <div className="flex flex-col items-end gap-0.5">
                 <span className="font-medium">{formatNumber(totals.priceKrw, locale, numOpt)}원</span>
                 {quoteCurrency !== "KRW" && (
-                  <span className="text-xs text-gray-500">
+                  <span className="text-xs text-muted-foreground">
                     ~ {formatNumber(totals.priceQuote, locale, numOpt)} {quoteCurrency}
                   </span>
                 )}
               </div>
             </div>
             <div className="flex justify-between text-sm">
-              <span className="text-gray-600">
+              <span className="text-muted-foreground">
                 {t("purchase.summary.feeLabel").replace("{{percent}}", String(feeRatePercent))}
               </span>
               <div className="flex flex-col items-end gap-0.5">
                 <span className="font-medium">{formatNumber(totals.feeKrw, locale, numOpt)}원</span>
                 {quoteCurrency !== "KRW" && (
-                  <span className="text-xs text-gray-500">
+                  <span className="text-xs text-muted-foreground">
                     ~ {formatNumber(totals.feeQuote, locale, numOpt)} {quoteCurrency}
                   </span>
                 )}
@@ -749,17 +749,17 @@ export default function PurchaseRequestForm() {
             <div className="border-t pt-3 flex justify-between">
               <span className="font-semibold text-lg">{t("purchase.summary.total")}</span>
               <div className="flex flex-col items-end gap-0.5">
-                <span className="font-bold text-xl text-blue-600">
+                <span className="font-bold text-xl text-foreground">
                   {formatNumber(totals.totalKrw, locale, numOpt)}원
                 </span>
                 {quoteCurrency !== "KRW" && (
-                  <span className="text-xs font-normal text-gray-500">
+                  <span className="text-xs font-normal text-muted-foreground">
                     ~ {formatNumber(totals.totalQuote, locale, numOpt)} {quoteCurrency}
                   </span>
                 )}
               </div>
             </div>
-            <p className="text-xs text-gray-500">{t("purchase.summary.disclaimer")}</p>
+            <p className="text-xs text-muted-foreground">{t("purchase.summary.disclaimer")}</p>
           </CardContent>
         </Card>
 

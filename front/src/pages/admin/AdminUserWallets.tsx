@@ -152,8 +152,8 @@ export default function AdminUserWallets() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold text-gray-900">{t("admin.wallets.title")}</h1>
-        <p className="text-gray-600 mt-1">{t("admin.wallets.subtitle")}</p>
+        <h1 className="text-3xl font-bold text-foreground">{t("admin.wallets.title")}</h1>
+        <p className="text-muted-foreground mt-1">{t("admin.wallets.subtitle")}</p>
       </div>
 
       <Card>
@@ -190,16 +190,16 @@ export default function AdminUserWallets() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Coins className="w-5 h-5 text-blue-600" />
+            <Coins className="w-5 h-5 text-foreground" />
             {t("admin.wallets.listTitle")}
           </CardTitle>
           <CardDescription>{t("admin.wallets.listDesc")}</CardDescription>
         </CardHeader>
         <CardContent>
           {loading ? (
-            <p className="text-sm text-gray-500">{t("admin.bank.loading")}</p>
+            <p className="text-sm text-muted-foreground">{t("admin.bank.loading")}</p>
           ) : rows.length === 0 ? (
-            <p className="text-sm text-gray-500">{t("admin.wallets.empty")}</p>
+            <p className="text-sm text-muted-foreground">{t("admin.wallets.empty")}</p>
           ) : (
             <Table>
               <TableHeader>
@@ -242,7 +242,7 @@ export default function AdminUserWallets() {
             </Table>
           )}
           <div className="flex items-center justify-between p-4 border-t flex-wrap gap-2">
-            <div className="flex items-center gap-2 text-sm text-gray-500">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <span>{t("admin.wallets.pageSize")}</span>
               <Select
                 value={String(size)}
@@ -269,7 +269,7 @@ export default function AdminUserWallets() {
               <Button variant="outline" size="sm" disabled={page <= 0} onClick={() => load(page - 1, size)}>
                 {t("admin.wallets.prev")}
               </Button>
-              <span className="text-sm text-gray-500">
+              <span className="text-sm text-muted-foreground">
                 {page + 1} / {Math.max(1, totalPages)}
               </span>
               <Button
@@ -328,7 +328,7 @@ export default function AdminUserWallets() {
                 {t("admin.wallets.debit")}
               </Button>
             </div>
-            <p className="text-xs text-gray-500">{t("admin.wallets.debitHint")}</p>
+            <p className="text-xs text-muted-foreground">{t("admin.wallets.debitHint")}</p>
           </div>
         </DialogContent>
       </Dialog>
@@ -344,9 +344,9 @@ export default function AdminUserWallets() {
             </DialogDescription>
           </DialogHeader>
           {ledgerLoading ? (
-            <p className="text-sm text-gray-500 py-4">{t("admin.bank.loading")}</p>
+            <p className="text-sm text-muted-foreground py-4">{t("admin.bank.loading")}</p>
           ) : ledgerRows.length === 0 ? (
-            <p className="text-sm text-gray-500 py-4">{t("admin.wallets.ledgerEmpty")}</p>
+            <p className="text-sm text-muted-foreground py-4">{t("admin.wallets.ledgerEmpty")}</p>
           ) : (
             <Table>
               <TableHeader>
@@ -364,7 +364,7 @@ export default function AdminUserWallets() {
                     <TableCell className="text-right tabular-nums">
                       ₩{formatNumber(row.amount, locale, numOpt)}
                     </TableCell>
-                    <TableCell className="text-sm text-gray-600 max-w-[180px] truncate" title={row.memo ?? ""}>
+                    <TableCell className="text-sm text-muted-foreground max-w-[180px] truncate" title={row.memo ?? ""}>
                       {row.memo ?? "—"}
                     </TableCell>
                     <TableCell className="text-sm">{formatDate(row.createdAt, locale)}</TableCell>
@@ -383,7 +383,7 @@ export default function AdminUserWallets() {
               >
                 {t("admin.wallets.prev")}
               </Button>
-              <span className="text-sm text-gray-500 self-center">
+              <span className="text-sm text-muted-foreground self-center">
                 {ledgerPage + 1} / {ledgerTotalPages}
               </span>
               <Button

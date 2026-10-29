@@ -4,7 +4,7 @@ import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import { Label } from "../../components/ui/label";
 import { Checkbox } from "../../components/ui/checkbox";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../components/ui/card";
+import { Mark } from "../../components/brand/BrandMark";
 import { toast } from "sonner";
 import { api, notifyUserAuthChange } from "../../utils/api";
 import { STORAGE_KEYS } from "../../utils/constants";
@@ -84,67 +84,75 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-[80vh] flex items-center justify-center">
-      <Card className="w-full max-w-md">
-        <CardHeader className="space-y-1">
-          <div className="flex items-center justify-center mb-4">
-            <div className="w-12 h-12 bg-gradient-to-br from-blue-600 to-blue-400 rounded-xl flex items-center justify-center">
-              <span className="text-white text-lg font-bold tracking-tight">MP</span>
-            </div>
-          </div>
-          <CardTitle className="text-2xl text-center">{t("login.title")}</CardTitle>
-          <CardDescription className="text-center">{t("login.description")}</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <form onSubmit={handleLogin} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="email">{t("login.email")}</Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="email@example.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="password">{t("login.password")}</Label>
-                <Button variant="link" className="px-0 h-auto text-sm" asChild>
-                  <Link to="/forgot-password">{t("login.forgotPassword")}</Link>
-                </Button>
-              </div>
-              <Input
-                id="password"
-                type="password"
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              />
-            </div>
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="remember-me"
-                checked={rememberMe}
-                onCheckedChange={(v) => setRememberMe(v === true)}
-              />
-              <Label htmlFor="remember-me" className="text-sm font-normal cursor-pointer">
-                {t("login.rememberMe")}
-              </Label>
-            </div>
-            <Button type="submit" className="w-full" size="lg" disabled={loading}>
-              {loading ? t("login.submitting") : t("login.submit")}
-            </Button>
-          </form>
+    <div className="grid gap-12 py-4 md:min-h-[68vh] md:grid-cols-2 md:items-center md:gap-16 md:py-10">
+      <section className="max-w-md">
+        <Mark size="md" />
+        <h1 className="mt-8 text-4xl leading-[1.08] md:text-5xl">{t("home.hero.title")}</h1>
+        <p className="mt-5 max-w-sm text-base leading-relaxed text-muted-foreground">
+          {t("home.hero.subtitle")}
+        </p>
+      </section>
 
-          <div className="text-center text-sm text-gray-600">
-            {t("login.noAccount")}{" "}
-            <Link to="/signup" className="text-blue-600 hover:underline font-medium">
-              {t("login.signupLink")}
-            </Link>
+      <section className="w-full max-w-md border border-border p-6 md:justify-self-end md:p-8">
+        <h2>{t("login.title")}</h2>
+        <p className="mt-1 text-sm text-muted-foreground">{t("login.description")}</p>
+
+        <form onSubmit={handleLogin} className="mt-8 space-y-5">
+          <div className="space-y-2">
+            <Label htmlFor="email">{t("login.email")}</Label>
+            <Input
+              id="email"
+              type="email"
+              autoComplete="email"
+              placeholder="email@example.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
           </div>
-        </CardContent>
-      </Card>
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <Label htmlFor="password">{t("login.password")}</Label>
+              <Link
+                to="/forgot-password"
+                className="text-xs text-muted-foreground underline-offset-4 transition-colors hover:text-foreground hover:underline"
+              >
+                {t("login.forgotPassword")}
+              </Link>
+            </div>
+            <Input
+              id="password"
+              type="password"
+              autoComplete="current-password"
+              placeholder="••••••••"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
+          </div>
+          <div className="flex items-center gap-2">
+            <Checkbox
+              id="remember-me"
+              checked={rememberMe}
+              onCheckedChange={(v) => setRememberMe(v === true)}
+            />
+            <Label htmlFor="remember-me" className="cursor-pointer text-sm font-normal">
+              {t("login.rememberMe")}
+            </Label>
+          </div>
+          <Button type="submit" className="w-full" size="lg" disabled={loading}>
+            {loading ? t("login.submitting") : t("login.submit")}
+          </Button>
+        </form>
+
+        <p className="mt-6 text-sm text-muted-foreground">
+          {t("login.noAccount")}{" "}
+          <Link
+            to="/signup"
+            className="font-medium text-foreground underline underline-offset-4 decoration-foreground/30 transition-colors hover:decoration-foreground"
+          >
+            {t("login.signupLink")}
+          </Link>
+        </p>
+      </section>
     </div>
   );
 }

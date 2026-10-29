@@ -39,14 +39,14 @@ export default function NoticeDetail() {
 
   if (loading) {
     return (
-      <div className="text-center py-12 text-gray-500">{t("notice.loading")}</div>
+      <div className="text-center py-12 text-muted-foreground">{t("notice.loading")}</div>
     );
   }
 
   if (!notice) {
     return (
       <div className="text-center py-12">
-        <p className="text-gray-500">{t("notice.detail.notFound")}</p>
+        <p className="text-muted-foreground">{t("notice.detail.notFound")}</p>
         <Button variant="outline" className="mt-4" onClick={() => navigate("/notice")}>
           {t("notice.detail.backToList")}
         </Button>
@@ -79,11 +79,11 @@ export default function NoticeDetail() {
               )}
             </div>
 
-            <h1 className="text-3xl font-bold text-gray-900 mb-4">
+            <h1 className="text-3xl font-bold text-foreground mb-4">
               {notice.title}
             </h1>
 
-            <div className="flex items-center space-x-4 text-sm text-gray-500">
+            <div className="flex items-center space-x-4 text-sm text-muted-foreground">
               <span>
                 {new Date(dateRaw).toLocaleDateString(dateLocale, {
                   year: "numeric",
@@ -102,7 +102,7 @@ export default function NoticeDetail() {
 
           <Separator className="my-6" />
 
-          <div className="whitespace-pre-wrap text-gray-800 leading-relaxed">
+          <div className="whitespace-pre-wrap text-foreground leading-relaxed">
             {renderTextWithLinks(notice.content)}
           </div>
         </CardContent>

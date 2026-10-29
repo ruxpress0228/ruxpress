@@ -4,11 +4,11 @@ import { Button } from "../components/ui/button";
 
 export default function NotFound() {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
+    <div className="min-h-screen flex items-center justify-center bg-background">
       <div className="text-center">
-        <h1 className="text-9xl font-bold text-gray-200">404</h1>
-        <h2 className="text-3xl font-bold text-gray-900 mt-4">페이지를 찾을 수 없습니다</h2>
-        <p className="text-gray-600 mt-2 mb-8">
+        <h1 className="text-9xl font-bold text-muted-foreground/30">404</h1>
+        <h2 className="text-3xl font-bold text-foreground mt-4">페이지를 찾을 수 없습니다</h2>
+        <p className="text-muted-foreground mt-2 mb-8">
           요청하신 페이지가 존재하지 않거나 이동되었습니다
         </p>
         <div className="flex items-center justify-center space-x-4">

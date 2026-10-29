@@ -183,8 +183,8 @@ export default function AdminSettlementAccounts() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">{t("admin.bank.settlement.title")}</h1>
-          <p className="text-gray-600 text-sm">{t("admin.bank.settlement.subtitle")}</p>
+          <h1 className="text-2xl font-bold text-foreground">{t("admin.bank.settlement.title")}</h1>
+          <p className="text-muted-foreground text-sm">{t("admin.bank.settlement.subtitle")}</p>
         </div>
         <Dialog open={open} onOpenChange={setOpen}>
           <Button onClick={openCreate}>
@@ -239,7 +239,7 @@ export default function AdminSettlementAccounts() {
         </CardHeader>
         <CardContent>
           {loading ? (
-            <p className="text-sm text-gray-500">{t("admin.bank.loading")}</p>
+            <p className="text-sm text-muted-foreground">{t("admin.bank.loading")}</p>
           ) : (
             <Table>
               <TableHeader>
@@ -255,7 +255,7 @@ export default function AdminSettlementAccounts() {
               <TableBody>
                 {rows.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center text-gray-500">
+                    <TableCell colSpan={6} className="text-center text-muted-foreground">
                       {t("admin.bank.settlement.empty")}
                     </TableCell>
                   </TableRow>
@@ -289,7 +289,7 @@ export default function AdminSettlementAccounts() {
           <div className="flex items-center justify-between gap-2">
             <div>
               <CardTitle className="flex items-center gap-2">
-                <ImageIcon className="w-5 h-5 text-blue-600" />
+                <ImageIcon className="w-5 h-5 text-foreground" />
                 {t("admin.settlement.noticeImages.title")}
               </CardTitle>
               <CardDescription>
@@ -318,9 +318,9 @@ export default function AdminSettlementAccounts() {
         </CardHeader>
         <CardContent>
           {noticeLoading ? (
-            <p className="text-sm text-gray-500">{t("admin.common.loading")}</p>
+            <p className="text-sm text-muted-foreground">{t("admin.common.loading")}</p>
           ) : noticeImages.length === 0 ? (
-            <p className="text-sm text-gray-500">{t("admin.settlement.noticeImages.empty")}</p>
+            <p className="text-sm text-muted-foreground">{t("admin.settlement.noticeImages.empty")}</p>
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
               {noticeImages.map((img) => {
@@ -345,7 +345,7 @@ export default function AdminSettlementAccounts() {
                     >
                       <X className="w-4 h-4" />
                     </Button>
-                    <p className="text-xs text-gray-600 truncate px-2 py-1 bg-white">{img.originalFilename}</p>
+                    <p className="text-xs text-muted-foreground truncate px-2 py-1 bg-card">{img.originalFilename}</p>
                   </div>
                 );
               })}

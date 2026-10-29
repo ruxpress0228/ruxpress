@@ -161,7 +161,7 @@ export default function InquiryDetail() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <p className="text-gray-500">{t("inquiry.detail.loading")}</p>
+        <p className="text-muted-foreground">{t("inquiry.detail.loading")}</p>
       </div>
     );
   }
@@ -169,7 +169,7 @@ export default function InquiryDetail() {
   if (!inquiry) {
     return (
       <div className="text-center py-12">
-        <p className="text-gray-500">{t("inquiry.detail.notFound")}</p>
+        <p className="text-muted-foreground">{t("inquiry.detail.notFound")}</p>
         <Button variant="link" className="mt-2" onClick={() => navigate("/inquiry")}>
           {t("inquiry.detail.backToList")}
         </Button>
@@ -204,7 +204,7 @@ export default function InquiryDetail() {
                 {statusInfo.label}
               </Badge>
             </div>
-            <p className="text-sm text-gray-500">
+            <p className="text-sm text-muted-foreground">
               {new Date(inquiry.createdAt).toLocaleDateString(dateLocale, {
                 year: 'numeric',
                 month: 'long',
@@ -215,21 +215,21 @@ export default function InquiryDetail() {
             </p>
           </div>
 
-          <h1 className="text-2xl font-bold text-gray-900 mb-4">
+          <h1 className="text-2xl font-bold text-foreground mb-4">
             {inquiry.title}
           </h1>
 
           <div className="prose max-w-none">
-            <p className="text-gray-700 whitespace-pre-wrap">
+            <p className="text-foreground/80 whitespace-pre-wrap">
               {inquiry.content}
             </p>
           </div>
 
           {attachments.length > 0 && (
-            <div className="mt-4 pt-4 border-t border-gray-200">
+            <div className="mt-4 pt-4 border-t border-border">
               <div className="flex items-center space-x-2 mb-3">
-                <Paperclip className="w-4 h-4 text-gray-500" />
-                <span className="text-sm font-medium text-gray-700">{t("inquiry.detail.attachments")}</span>
+                <Paperclip className="w-4 h-4 text-muted-foreground" />
+                <span className="text-sm font-medium text-foreground/80">{t("inquiry.detail.attachments")}</span>
               </div>
               {imageAttachments.length > 0 && (
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 mb-3">
@@ -258,7 +258,7 @@ export default function InquiryDetail() {
                     <li key={att.id}>
                       <Button
                         variant="link"
-                        className="h-auto p-0 text-blue-600"
+                        className="h-auto p-0 text-foreground"
                         onClick={() => handleDownload(att.id, att.originalFilename)}
                       >
                         {att.originalFilename} ({(att.fileSize / 1024).toFixed(1)} KB)
@@ -275,26 +275,26 @@ export default function InquiryDetail() {
       {inquiry.replies && inquiry.replies.length > 0 && (
         <div className="space-y-4">
           <div className="flex items-center space-x-2">
-            <MessageSquare className="w-5 h-5 text-blue-600" />
-            <h2 className="text-xl font-bold text-gray-900">
+            <MessageSquare className="w-5 h-5 text-foreground" />
+            <h2 className="text-xl font-bold text-foreground">
               {t("inquiry.detail.replies")} ({inquiry.replies.length})
             </h2>
           </div>
 
           {inquiry.replies.map((reply) => (
-            <Card key={reply.id} className="bg-blue-50 border-blue-200">
+            <Card key={reply.id} className="bg-muted border-border">
               <CardContent className="p-6">
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center space-x-2">
-                    <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
+                    <div className="w-8 h-8 bg-foreground rounded-full flex items-center justify-center">
                       <span className="text-white text-xs font-bold tracking-tight">MP</span>
                     </div>
                     <div>
-                      <p className="font-semibold text-gray-900">{t("inquiry.detail.admin")}</p>
-                      <p className="text-xs text-gray-500">{t("inquiry.detail.supportTeam")}</p>
+                      <p className="font-semibold text-foreground">{t("inquiry.detail.admin")}</p>
+                      <p className="text-xs text-muted-foreground">{t("inquiry.detail.supportTeam")}</p>
                     </div>
                   </div>
-                  <p className="text-sm text-gray-500">
+                  <p className="text-sm text-muted-foreground">
                     {new Date(reply.createdAt).toLocaleDateString(dateLocale, {
                       year: 'numeric',
                       month: 'long',
@@ -305,10 +305,10 @@ export default function InquiryDetail() {
                   </p>
                 </div>
 
-                <Separator className="my-3 bg-blue-200" />
+                <Separator className="my-3 bg-border" />
 
                 <div className="prose max-w-none">
-                  <p className="text-gray-700 whitespace-pre-wrap">
+                  <p className="text-foreground/80 whitespace-pre-wrap">
                     {reply.content}
                   </p>
                 </div>
@@ -321,11 +321,11 @@ export default function InquiryDetail() {
       {inquiry.status === 'PENDING' && (
         <Card className="mt-6">
           <CardContent className="p-6 text-center">
-            <MessageSquare className="w-12 h-12 mx-auto text-gray-400 mb-3" />
-            <p className="text-gray-600">
+            <MessageSquare className="w-12 h-12 mx-auto text-muted-foreground/70 mb-3" />
+            <p className="text-muted-foreground">
               {t("inquiry.detail.pendingMessage")}
             </p>
-            <p className="text-sm text-gray-500 mt-2">
+            <p className="text-sm text-muted-foreground mt-2">
               {t("inquiry.detail.pendingNote")}
             </p>
           </CardContent>

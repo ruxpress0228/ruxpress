@@ -61,7 +61,7 @@ export default function NoticeList() {
 
   if (loading) {
     return (
-      <div className="py-12 text-center text-gray-500">{t("notice.loading")}</div>
+      <div className="py-12 text-center text-muted-foreground">{t("notice.loading")}</div>
     );
   }
 
@@ -76,8 +76,8 @@ export default function NoticeList() {
   return (
     <div>
       <div className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-900">{t("notice.list.title")}</h1>
-        <p className="text-gray-600 mt-1">{t("notice.list.subtitle")}</p>
+        <h1 className="text-3xl font-bold text-foreground">{t("notice.list.title")}</h1>
+        <p className="text-muted-foreground mt-1">{t("notice.list.subtitle")}</p>
       </div>
 
       <div className="space-y-3">
@@ -91,10 +91,10 @@ export default function NoticeList() {
                       <Pin className="w-4 h-4 text-yellow-600" />
                       <Badge variant="destructive">{t("notice.important")}</Badge>
                     </div>
-                    <h3 className="text-lg font-semibold text-gray-900 mb-1">
+                    <h3 className="text-lg font-semibold text-foreground mb-1">
                       {notice.title}
                     </h3>
-                    <div className="flex items-center space-x-4 text-sm text-gray-500">
+                    <div className="flex items-center space-x-4 text-sm text-muted-foreground">
                       <span>{formatDate(notice)}</span>
                       <div className="flex items-center">
                         <Eye className="w-4 h-4 mr-1" />
@@ -114,10 +114,10 @@ export default function NoticeList() {
               <CardContent className="p-5">
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
-                    <h3 className="text-lg font-semibold text-gray-900 mb-1">
+                    <h3 className="text-lg font-semibold text-foreground mb-1">
                       {notice.title}
                     </h3>
-                    <div className="flex items-center space-x-4 text-sm text-gray-500">
+                    <div className="flex items-center space-x-4 text-sm text-muted-foreground">
                       <span>{formatDate(notice)}</span>
                       <div className="flex items-center">
                         <Eye className="w-4 h-4 mr-1" />
@@ -135,13 +135,13 @@ export default function NoticeList() {
       {notices.length === 0 && (
         <Card className="p-12">
           <div className="text-center">
-            <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Eye className="w-8 h-8 text-gray-400" />
+            <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
+              <Eye className="w-8 h-8 text-muted-foreground/70" />
             </div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">
+            <h3 className="text-lg font-semibold text-foreground mb-2">
               {t("notice.list.emptyTitle")}
             </h3>
-            <p className="text-gray-500">
+            <p className="text-muted-foreground">
               {t("notice.list.emptyDesc")}
             </p>
           </div>
@@ -150,7 +150,7 @@ export default function NoticeList() {
 
       {totalPages > 0 && (
         <div className="flex items-center justify-between mt-4 flex-wrap gap-2">
-          <div className="flex items-center gap-2 text-sm text-gray-500">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <span>{t("purchase.list.perPage")}</span>
             <Select value={String(size)} onValueChange={(v) => handleSizeChange(Number(v))}>
               <SelectTrigger className="w-[80px] h-8 text-xs"><SelectValue /></SelectTrigger>
@@ -163,7 +163,7 @@ export default function NoticeList() {
           </div>
           <div className="flex items-center gap-2">
             <Button variant="outline" size="sm" disabled={page <= 0} onClick={() => setPage((p) => p - 1)}>{t("purchase.list.prev")}</Button>
-            <span className="text-sm text-gray-500">{page + 1} / {Math.max(1, totalPages)}</span>
+            <span className="text-sm text-muted-foreground">{page + 1} / {Math.max(1, totalPages)}</span>
             <Button variant="outline" size="sm" disabled={page >= totalPages - 1} onClick={() => setPage((p) => p + 1)}>{t("purchase.list.next")}</Button>
           </div>
         </div>

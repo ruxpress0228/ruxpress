@@ -173,11 +173,11 @@ export default function BankTransfer() {
   return (
     <div className="space-y-10">
       <div>
-        <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-2">
-          <Landmark className="w-8 h-8 text-blue-600" />
+        <h1 className="text-3xl font-bold text-foreground flex items-center gap-2">
+          <Landmark className="w-8 h-8 text-foreground" />
           {t("bankTransfer.title")}
         </h1>
-        <p className="text-gray-600 mt-1">{t("bankTransfer.subtitle")}</p>
+        <p className="text-muted-foreground mt-1">{t("bankTransfer.subtitle")}</p>
       </div>
 
       <div className="grid gap-8 lg:grid-cols-2">
@@ -188,23 +188,23 @@ export default function BankTransfer() {
           </CardHeader>
           <CardContent className="space-y-4">
             {loading ? (
-              <p className="text-sm text-gray-500">{t("bankTransfer.loading")}</p>
+              <p className="text-sm text-muted-foreground">{t("bankTransfer.loading")}</p>
             ) : accounts.length === 0 ? (
-              <p className="text-sm text-gray-500">{t("bankTransfer.noAccounts")}</p>
+              <p className="text-sm text-muted-foreground">{t("bankTransfer.noAccounts")}</p>
             ) : (
               accounts.map((a) => (
-                <div key={a.id} className="rounded-lg border border-gray-200 p-4 bg-gray-50">
-                  <p className="font-semibold text-gray-900">{a.bankName}</p>
+                <div key={a.id} className="rounded-lg border border-border p-4 bg-muted/60">
+                  <p className="font-semibold text-foreground">{a.bankName}</p>
                   <p className="text-lg font-mono tracking-tight mt-1">{a.accountNumber}</p>
-                  <p className="text-sm text-gray-700">{a.accountHolder}</p>
-                  {a.displayMemo ? <p className="text-sm text-blue-800 mt-2">{a.displayMemo}</p> : null}
+                  <p className="text-sm text-foreground/80">{a.accountHolder}</p>
+                  {a.displayMemo ? <p className="text-sm text-foreground mt-2">{a.displayMemo}</p> : null}
                 </div>
               ))
             )}
 
             {noticeImages.length > 0 && (
               <div className="pt-2 border-t space-y-2">
-                <p className="text-sm font-semibold text-gray-800">{t("bankTransfer.guideImages")}</p>
+                <p className="text-sm font-semibold text-foreground">{t("bankTransfer.guideImages")}</p>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                   {noticeImages.map((img) => {
                     const src = img.viewUrl || img.storedUrl;
@@ -282,7 +282,7 @@ export default function BankTransfer() {
               <div className="space-y-2">
                 <Label>{t("bankTransfer.proofPhotoOptional")}</Label>
                 <div
-                  className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center cursor-pointer hover:border-blue-500"
+                  className="border-2 border-dashed border-input rounded-lg p-4 text-center cursor-pointer hover:border-foreground"
                   onClick={() => imageInputRef.current?.click()}
                   role="button"
                   tabIndex={0}
@@ -298,8 +298,8 @@ export default function BankTransfer() {
                     className="hidden"
                     onChange={onImageInput}
                   />
-                  <Upload className="w-8 h-8 mx-auto text-gray-400 mb-1" />
-                  <p className="text-xs text-gray-600">
+                  <Upload className="w-8 h-8 mx-auto text-muted-foreground/70 mb-1" />
+                  <p className="text-xs text-muted-foreground">
                     {t("bankTransfer.proofPhotoHint")}
                   </p>
                 </div>
@@ -316,7 +316,7 @@ export default function BankTransfer() {
                           type="button"
                           variant="ghost"
                           size="icon"
-                          className="absolute top-0 right-0 h-6 w-6 bg-white/80 hover:bg-white"
+                          className="absolute top-0 right-0 h-6 w-6 bg-white/80 hover:bg-card"
                           onClick={() => removeImage(idx)}
                         >
                           <X className="h-3 w-3" />
@@ -355,7 +355,7 @@ export default function BankTransfer() {
             <TableBody>
               {entries.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center text-gray-500 py-8">
+                  <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
                     {t("bankTransfer.empty")}
                   </TableCell>
                 </TableRow>
@@ -380,7 +380,7 @@ export default function BankTransfer() {
                           </Link>
                         </Button>
                       ) : (
-                        <span className="text-gray-400 text-sm">—</span>
+                        <span className="text-muted-foreground/70 text-sm">—</span>
                       )}
                     </TableCell>
                   </TableRow>
@@ -389,7 +389,7 @@ export default function BankTransfer() {
             </TableBody>
           </Table>
           <div className="flex items-center justify-between p-4 border-t flex-wrap gap-2">
-            <div className="flex items-center gap-2 text-sm text-gray-500">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <span>{t("purchase.list.perPage")}</span>
               <Select
                 value={String(entriesSize)}
@@ -405,7 +405,7 @@ export default function BankTransfer() {
             </div>
             <div className="flex items-center gap-2">
               <Button variant="outline" size="sm" disabled={entriesPage <= 0} onClick={() => setEntriesPage((p) => p - 1)}>{t("purchase.list.prev")}</Button>
-              <span className="text-sm text-gray-500">{entriesPage + 1} / {Math.max(1, entriesTotalPages)}</span>
+              <span className="text-sm text-muted-foreground">{entriesPage + 1} / {Math.max(1, entriesTotalPages)}</span>
               <Button variant="outline" size="sm" disabled={entriesPage >= entriesTotalPages - 1} onClick={() => setEntriesPage((p) => p + 1)}>{t("purchase.list.next")}</Button>
             </div>
           </div>

@@ -263,15 +263,15 @@ export default function AdminBankTransfers() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">{t("admin.bank.ledger.title")}</h1>
-        <p className="text-gray-600 text-sm">{t("admin.bank.ledger.subtitle")}</p>
-        <p className="mt-1 text-xs text-gray-500">{t("admin.bank.ledger.totalLine", { n: totalElements.toLocaleString(locale === "en" ? "en-US" : locale === "ru" ? "ru-RU" : "ko-KR") })}</p>
+        <h1 className="text-2xl font-bold text-foreground">{t("admin.bank.ledger.title")}</h1>
+        <p className="text-muted-foreground text-sm">{t("admin.bank.ledger.subtitle")}</p>
+        <p className="mt-1 text-xs text-muted-foreground">{t("admin.bank.ledger.totalLine", { n: totalElements.toLocaleString(locale === "en" ? "en-US" : locale === "ru" ? "ru-RU" : "ko-KR") })}</p>
       </div>
 
-      <div className="rounded-xl border border-gray-100 bg-white p-3 shadow-sm md:p-3.5">
+      <div className="rounded-xl border border-border bg-card p-3 md:p-3.5">
         <div className="mb-2 flex items-center justify-between gap-2">
-          <p className="text-xs font-semibold text-gray-700 md:text-sm">{t("admin.bank.ledger.summaryTitle")}</p>
-          <Landmark className="h-4 w-4 text-gray-400" aria-hidden />
+          <p className="text-xs font-semibold text-foreground/80 md:text-sm">{t("admin.bank.ledger.summaryTitle")}</p>
+          <Landmark className="h-4 w-4 text-muted-foreground/70" aria-hidden />
         </div>
         <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-4 sm:gap-2">
           {filterChips.map((chip) => {
@@ -286,19 +286,19 @@ export default function AdminBankTransfers() {
                 className={cn(
                   "flex min-h-[52px] flex-col items-center justify-center rounded-lg border px-1 py-1.5 text-center transition-all sm:min-h-[56px]",
                   active
-                    ? "border-blue-300 bg-blue-50/90 ring-2 ring-blue-400/35"
-                    : "border-transparent bg-gray-50/80 hover:bg-gray-100/90",
+                    ? "border-foreground/40 bg-muted ring-2 ring-border"
+                    : "border-transparent bg-muted/60 hover:bg-muted",
                 )}
               >
                 <span
                   className={cn(
                     "text-lg font-bold tabular-nums leading-none sm:text-xl",
-                    active ? "text-blue-900" : "text-gray-900",
+                    active ? "text-foreground" : "text-foreground",
                   )}
                 >
                   {count == null ? "–" : count}
                 </span>
-                <span className="mt-0.5 line-clamp-2 text-[10px] font-medium text-gray-600 sm:text-xs">
+                <span className="mt-0.5 line-clamp-2 text-[10px] font-medium text-muted-foreground sm:text-xs">
                   {chip.label}
                 </span>
               </button>
@@ -386,9 +386,9 @@ export default function AdminBankTransfers() {
         </CardHeader>
         <CardContent>
           {loading ? (
-            <p className="text-sm text-gray-500">{t("admin.bank.loading")}</p>
+            <p className="text-sm text-muted-foreground">{t("admin.bank.loading")}</p>
           ) : rows.length === 0 ? (
-            <p className="text-sm text-gray-500">{t("admin.bank.ledger.empty")}</p>
+            <p className="text-sm text-muted-foreground">{t("admin.bank.ledger.empty")}</p>
           ) : (
             <Table>
               <TableHeader>
@@ -418,7 +418,7 @@ export default function AdminBankTransfers() {
                           {r.amount.toLocaleString(locale === "en" ? "en-US" : "ko-KR")} {r.currency}
                         </span>
                         {isRootDeposit(r) && r.status === "CONFIRMED" && r.remainingSettleOrRefundAmount != null ? (
-                          <span className="text-xs text-gray-500">
+                          <span className="text-xs text-muted-foreground">
                             {t("admin.bank.ledger.remaining")}:{" "}
                             {Math.max(0, r.remainingSettleOrRefundAmount).toLocaleString(
                               locale === "en" ? "en-US" : "ko-KR",
@@ -431,7 +431,7 @@ export default function AdminBankTransfers() {
                       <div className="flex flex-wrap items-center gap-1">
                         <Badge variant={r.status === "CONFIRMED" ? "default" : "secondary"}>{r.status}</Badge>
                         {isFullyProcessedRoot(r) ? (
-                          <Badge variant="outline" className="text-gray-600">
+                          <Badge variant="outline" className="text-muted-foreground">
                             {t("admin.bank.ledger.processed")}
                           </Badge>
                         ) : null}
@@ -481,9 +481,9 @@ export default function AdminBankTransfers() {
                           </Button>
                         </>
                       ) : isFullyProcessedRoot(r) ? (
-                        <span className="text-xs text-gray-500 px-1 py-2">{t("admin.bank.ledger.processed")}</span>
+                        <span className="text-xs text-muted-foreground px-1 py-2">{t("admin.bank.ledger.processed")}</span>
                       ) : !isRootDeposit(r) ? (
-                        <span className="text-xs text-gray-400 px-1 py-2">{t("admin.bank.ledger.childRecord")}</span>
+                        <span className="text-xs text-muted-foreground/70 px-1 py-2">{t("admin.bank.ledger.childRecord")}</span>
                       ) : null}
                       </div>
                     </TableCell>
@@ -493,7 +493,7 @@ export default function AdminBankTransfers() {
             </Table>
           )}
           <div className="flex items-center justify-between p-4 border-t flex-wrap gap-2">
-            <div className="flex items-center gap-2 text-sm text-gray-500">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <span>{t("admin.common.pageSize")}</span>
               <Select
                 value={String(size)}
@@ -509,7 +509,7 @@ export default function AdminBankTransfers() {
             </div>
             <div className="flex items-center gap-2">
               <Button variant="outline" size="sm" disabled={page <= 0} onClick={() => load(page - 1, size)}>{t("admin.common.prev")}</Button>
-              <span className="text-sm text-gray-500">{t("admin.common.pageOf", { page: page + 1, total: Math.max(1, totalPages) })}</span>
+              <span className="text-sm text-muted-foreground">{t("admin.common.pageOf", { page: page + 1, total: Math.max(1, totalPages) })}</span>
               <Button variant="outline" size="sm" disabled={page >= totalPages - 1} onClick={() => load(page + 1, size)}>{t("admin.common.next")}</Button>
             </div>
           </div>
@@ -522,20 +522,20 @@ export default function AdminBankTransfers() {
             <DialogTitle>{t("admin.bank.ledger.detailTitle", { id: detail ? `#${detail.id}` : "" })}</DialogTitle>
           </DialogHeader>
           {detailLoading || !detail ? (
-            <p className="text-sm text-gray-500 py-4">{t("admin.common.loading")}</p>
+            <p className="text-sm text-muted-foreground py-4">{t("admin.common.loading")}</p>
           ) : (
             <div className="space-y-4 text-sm">
               <div className="grid grid-cols-2 gap-x-4 gap-y-2">
                 <div>
-                  <p className="text-gray-500">{t("admin.bank.ledger.detail.user")}</p>
+                  <p className="text-muted-foreground">{t("admin.bank.ledger.detail.user")}</p>
                   <p className="font-medium">{detail.userEmail ?? `#${detail.userId}`}</p>
                 </div>
                 <div>
-                  <p className="text-gray-500">{t("admin.bank.ledger.detail.type")}</p>
+                  <p className="text-muted-foreground">{t("admin.bank.ledger.detail.type")}</p>
                   <p className="font-medium">{detail.entryType}</p>
                 </div>
                 <div>
-                  <p className="text-gray-500">{t("admin.bank.ledger.detail.amount")}</p>
+                  <p className="text-muted-foreground">{t("admin.bank.ledger.detail.amount")}</p>
                   <p className="font-medium">
                     {detail.amount.toLocaleString(locale === "en" ? "en-US" : "ko-KR")} {detail.currency}
                   </p>
@@ -550,41 +550,41 @@ export default function AdminBankTransfers() {
                   ) : null}
                 </div>
                 <div>
-                  <p className="text-gray-500">{t("admin.bank.ledger.detail.status")}</p>
+                  <p className="text-muted-foreground">{t("admin.bank.ledger.detail.status")}</p>
                   <Badge variant={detail.status === "CONFIRMED" ? "default" : "secondary"}>{detail.status}</Badge>
                 </div>
                 <div>
-                  <p className="text-gray-500">{t("admin.bank.ledger.detail.settlementAccount")}</p>
+                  <p className="text-muted-foreground">{t("admin.bank.ledger.detail.settlementAccount")}</p>
                   <p className="font-medium">
                     {detail.settlementAccount?.bankName} · {detail.settlementAccount?.accountNumber}
                   </p>
                 </div>
                 <div>
-                  <p className="text-gray-500">{t("admin.bank.ledger.detail.parentId")}</p>
+                  <p className="text-muted-foreground">{t("admin.bank.ledger.detail.parentId")}</p>
                   <p className="font-medium">{detail.parentEntryId ?? "—"}</p>
                 </div>
                 <div>
-                  <p className="text-gray-500">{t("admin.bank.ledger.detail.depositorName")}</p>
+                  <p className="text-muted-foreground">{t("admin.bank.ledger.detail.depositorName")}</p>
                   <p className="font-medium">{detail.depositorName ?? "—"}</p>
                 </div>
                 <div>
-                  <p className="text-gray-500">{t("admin.bank.ledger.detail.depositMemo")}</p>
+                  <p className="text-muted-foreground">{t("admin.bank.ledger.detail.depositMemo")}</p>
                   <p className="font-medium break-words">{detail.depositorMemo ?? "—"}</p>
                 </div>
                 <div>
-                  <p className="text-gray-500">{t("admin.bank.ledger.detail.adminMemo")}</p>
+                  <p className="text-muted-foreground">{t("admin.bank.ledger.detail.adminMemo")}</p>
                   <p className="font-medium break-words">{detail.adminMemo ?? "—"}</p>
                 </div>
                 <div>
-                  <p className="text-gray-500">{t("admin.bank.ledger.detail.createdAt")}</p>
+                  <p className="text-muted-foreground">{t("admin.bank.ledger.detail.createdAt")}</p>
                   <p className="font-medium">{formatDate(detail.createdAt, locale)}</p>
                 </div>
                 <div>
-                  <p className="text-gray-500">{t("admin.bank.ledger.detail.confirmedAt")}</p>
+                  <p className="text-muted-foreground">{t("admin.bank.ledger.detail.confirmedAt")}</p>
                   <p className="font-medium">{detail.confirmedAt ? formatDate(detail.confirmedAt, locale) : "—"}</p>
                 </div>
                 <div>
-                  <p className="text-gray-500">{t("admin.bank.ledger.detail.confirmedAdminId")}</p>
+                  <p className="text-muted-foreground">{t("admin.bank.ledger.detail.confirmedAdminId")}</p>
                   <p className="font-medium">{detail.confirmedByAdminId ?? "—"}</p>
                 </div>
               </div>
@@ -592,7 +592,7 @@ export default function AdminBankTransfers() {
               <div className="pt-2 border-t">
                 <p className="font-semibold mb-2">{t("admin.bank.ledger.detail.evidence")}</p>
                 {!detail.attachments || detail.attachments.length === 0 ? (
-                  <div className="flex items-center gap-2 text-gray-500 py-3">
+                  <div className="flex items-center gap-2 text-muted-foreground py-3">
                     <ImageOff className="w-4 h-4" />
                     <span>{t("admin.bank.ledger.detail.noEvidence")}</span>
                   </div>
@@ -615,7 +615,7 @@ export default function AdminBankTransfers() {
                             className="h-32 w-full object-cover rounded border group-hover:opacity-90"
                             loading="lazy"
                           />
-                          <p className="text-xs text-gray-600 mt-1 truncate">{att.originalFilename}</p>
+                          <p className="text-xs text-muted-foreground mt-1 truncate">{att.originalFilename}</p>
                         </a>
                       );
                     })}

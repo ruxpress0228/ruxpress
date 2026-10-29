@@ -118,8 +118,8 @@ export default function AdminUsers() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold text-gray-900">{t("admin.user.title")}</h1>
-        <p className="text-gray-600 mt-1">{t("admin.user.subtitle")}</p>
+        <h1 className="text-3xl font-bold text-foreground">{t("admin.user.title")}</h1>
+        <p className="text-muted-foreground mt-1">{t("admin.user.subtitle")}</p>
       </div>
 
       {stats && (
@@ -127,7 +127,7 @@ export default function AdminUsers() {
           {statCards.map((s) => (
             <Card key={s.key}>
               <CardContent className="pt-4 pb-4 text-center">
-                <p className="text-sm text-gray-500">{t(`admin.user.stats.${s.key}` as "admin.user.stats.total")}</p>
+                <p className="text-sm text-muted-foreground">{t(`admin.user.stats.${s.key}` as "admin.user.stats.total")}</p>
                 <p className="text-2xl font-bold">{s.value}</p>
               </CardContent>
             </Card>
@@ -139,7 +139,7 @@ export default function AdminUsers() {
         <CardContent className="pt-6">
           <div className="flex gap-4">
             <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground/70" />
               <Input
                 placeholder={t("admin.user.searchPlaceholder")}
                 className="pl-10"
@@ -165,7 +165,7 @@ export default function AdminUsers() {
       <Card>
         <CardContent className="p-0">
           {loading ? (
-            <div className="py-12 text-center text-gray-500">{t("admin.common.loading")}</div>
+            <div className="py-12 text-center text-muted-foreground">{t("admin.common.loading")}</div>
           ) : (
             <>
             <Table>
@@ -183,23 +183,23 @@ export default function AdminUsers() {
               <TableBody>
                 {users.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center text-gray-500 py-8">
+                    <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
                       {t("admin.user.empty")}
                     </TableCell>
                   </TableRow>
                 ) : (
                   users.map((user) => (
                     <TableRow key={user.id}>
-                      <TableCell className="text-sm text-gray-500">#{user.id}</TableCell>
+                      <TableCell className="text-sm text-muted-foreground">#{user.id}</TableCell>
                       <TableCell>{user.email}</TableCell>
                       <TableCell className="font-medium">{user.nickname}</TableCell>
-                      <TableCell className="text-sm text-gray-500">{user.signupType}</TableCell>
+                      <TableCell className="text-sm text-muted-foreground">{user.signupType}</TableCell>
                       <TableCell>
                         <Badge variant={userStatusVariants[user.status]}>
                           {t(userStatusKey(user.status))}
                         </Badge>
                       </TableCell>
-                      <TableCell className="text-sm text-gray-500">
+                      <TableCell className="text-sm text-muted-foreground">
                         {new Date(user.createdAt).toLocaleDateString(dateLocale)}
                       </TableCell>
                       <TableCell>
@@ -213,7 +213,7 @@ export default function AdminUsers() {
               </TableBody>
             </Table>
             <div className="flex items-center justify-between p-4 border-t flex-wrap gap-2">
-              <div className="flex items-center gap-2 text-sm text-gray-500">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <span>{t("admin.common.pageSize")}</span>
                 <Select value={String(size)} onValueChange={(v) => { setSize(Number(v)); setPage(0); }}>
                   <SelectTrigger className="w-[80px] h-8 text-xs"><SelectValue /></SelectTrigger>
@@ -226,7 +226,7 @@ export default function AdminUsers() {
               </div>
               <div className="flex items-center gap-2">
                 <Button variant="outline" size="sm" disabled={page <= 0} onClick={() => setPage((p) => p - 1)}>{t("admin.common.prev")}</Button>
-                <span className="text-sm text-gray-500">{t("admin.common.pageOf", { page: page + 1, total: Math.max(1, totalPages) })}</span>
+                <span className="text-sm text-muted-foreground">{t("admin.common.pageOf", { page: page + 1, total: Math.max(1, totalPages) })}</span>
                 <Button variant="outline" size="sm" disabled={page >= totalPages - 1} onClick={() => setPage((p) => p + 1)}>{t("admin.common.next")}</Button>
               </div>
             </div>
@@ -244,19 +244,19 @@ export default function AdminUsers() {
           {selectedUser && (
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-3 text-sm">
-                <div><span className="text-gray-500">{t("admin.user.label.id")}</span> #{selectedUser.id}</div>
-                <div><span className="text-gray-500">{t("admin.user.label.email")}</span> {selectedUser.email || "-"}</div>
-                <div><span className="text-gray-500">{t("admin.user.label.nickname")}</span> {selectedUser.nickname}</div>
-                <div><span className="text-gray-500">{t("admin.user.label.signupType")}</span> {selectedUser.signupType}</div>
-                <div><span className="text-gray-500">{t("admin.user.label.status")}</span>{" "}
+                <div><span className="text-muted-foreground">{t("admin.user.label.id")}</span> #{selectedUser.id}</div>
+                <div><span className="text-muted-foreground">{t("admin.user.label.email")}</span> {selectedUser.email || "-"}</div>
+                <div><span className="text-muted-foreground">{t("admin.user.label.nickname")}</span> {selectedUser.nickname}</div>
+                <div><span className="text-muted-foreground">{t("admin.user.label.signupType")}</span> {selectedUser.signupType}</div>
+                <div><span className="text-muted-foreground">{t("admin.user.label.status")}</span>{" "}
                   <Badge variant={userStatusVariants[selectedUser.status]}>
                     {t(userStatusKey(selectedUser.status))}
                   </Badge>
                 </div>
-                <div><span className="text-gray-500">{t("admin.user.label.signupDate")}</span>{" "}
+                <div><span className="text-muted-foreground">{t("admin.user.label.signupDate")}</span>{" "}
                   {new Date(selectedUser.createdAt).toLocaleDateString(dateLocale)}
                 </div>
-                <div><span className="text-gray-500">{t("admin.user.label.lastLogin")}</span>{" "}
+                <div><span className="text-muted-foreground">{t("admin.user.label.lastLogin")}</span>{" "}
                   {selectedUser.lastLoginAt ? new Date(selectedUser.lastLoginAt).toLocaleString(dateLocale) : "-"}
                 </div>
               </div>

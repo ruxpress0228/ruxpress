@@ -1,12 +1,9 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, type ReactNode } from "react";
 import { Link } from "react-router";
-import { ShoppingCart, TrendingUp, ArrowRight, Package, Truck, CheckCircle2, Ban, Wallet } from "lucide-react";
+import { ShoppingCart, Package, Truck, CheckCircle2, Ban, type LucideIcon } from "lucide-react";
 import { Button } from "../../components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../components/ui/card";
 import { Badge } from "../../components/ui/badge";
-import { Input } from "../../components/ui/input";
 import { Label } from "../../components/ui/label";
-import { Tabs, TabsList, TabsTrigger } from "../../components/ui/tabs";
 import { cn } from "../../components/ui/utils";
 import { purchaseStatusBadgeClass } from "../../utils/purchaseStatusStyle";
 import { api, readAuthValue } from "../../utils/api";
@@ -23,7 +20,6 @@ import type { PurchaseRequestListItem } from "../../types/purchase";
 import type { PurchaseRequestStatus } from "../../types";
 import {
   type QuoteCurrency,
-  RUB_PAIR_TARGETS,
   type CurrentExchangeRates,
   QUOTE_CURRENCIES,
   buildRateMap,
@@ -62,6 +58,44 @@ function formatKrwLine(amount: unknown, localeTag: string): string {
   const n = typeof amount === "number" ? amount : Number(amount);
   const v = Number.isFinite(n) ? n : 0;
   return `₩${v.toLocaleString(localeTag, { maximumFractionDigits: 0 })}`;
+}
+
+/** Section header: letter-spaced title on a black rule, optional link on the right. */
+function SectionHeading({
+  id,
+  title,
+  action,
+  inverted = false,
+}: {
+  id?: string;
+  title: string;
+  action?: ReactNode;
+  inverted?: boolean;
+}) {
+  return (
+    <div
+      className={cn(
+        "flex items-baseline justify-between gap-4 border-b pb-3",
+        inverted ? "border-background/30" : "border-foreground",
+      )}
+    >
+      <h2 id={id} className="text-sm font-medium uppercase tracking-[0.18em]">
+        {title}
+      </h2>
+      {action}
+    </div>
+  );
+}
+
+function ViewAllLink({ to, children }: { to: string; children: ReactNode }) {
+  return (
+    <Link
+      to={to}
+      className="text-xs text-muted-foreground underline-offset-4 transition-colors hover:text-foreground hover:underline"
+    >
+      {children}
+    </Link>
+  );
 }
 
 export default function Home() {
@@ -147,14 +181,13 @@ export default function Home() {
       ? formatCrossRateLine("RUB", "KRW", rateMap, locale, 1) ?? t("home.exchange.rateUnavailable")
       : null;
 
-  const rubPairLines = useMemo(
-    () =>
-      RUB_PAIR_TARGETS.map((target) => ({
-        target,
-        line: formatCrossRateLine("RUB", target, rateMap, locale, 1),
-      })),
-    [rateMap, locale]
-  );
+  /** "1 RUB = 15.42 KRW" → ["1 RUB", "15.42 KRW"] so the converted side can be set large. */
+  const [headlineBase, headlineValue] = useMemo(() => {
+    if (!krwRubSummary) return [null, null] as const;
+    const idx = krwRubSummary.indexOf(" = ");
+    if (idx < 0) return [null, krwRubSummary] as const;
+    return [krwRubSummary.slice(0, idx), krwRubSummary.slice(idx + 3)] as const;
+  }, [krwRubSummary]);
 
   const statusHint = (status: PurchaseRequestStatus) => t(`home.recentRequests.hint.${status}`);
 
@@ -170,9 +203,7 @@ export default function Home() {
           desc: t("home.dashboard.desc.inProgress"),
           to: "/purchase?bucket=progress",
           icon: Package,
-          highlight: false as const,
-          className:
-            "border border-gray-100/90 border-l-4 border-l-slate-500 bg-slate-50/90",
+          highlight: false,
         },
         {
           key: "shipping",
@@ -181,9 +212,7 @@ export default function Home() {
           desc: t("home.dashboard.desc.shipping"),
           to: "/purchase?status=SHIPPING",
           icon: Truck,
-          highlight: true as const,
-          className:
-            "border border-gray-100/90 border-l-4 border-l-blue-700 bg-blue-50/70",
+          highlight: true,
         },
         {
           key: "completed",
@@ -192,9 +221,7 @@ export default function Home() {
           desc: t("home.dashboard.desc.completed"),
           to: "/purchase?status=COMPLETED",
           icon: CheckCircle2,
-          highlight: false as const,
-          className:
-            "border border-gray-100/90 border-l-4 border-l-cyan-700 bg-cyan-50/50",
+          highlight: false,
         },
         {
           key: "cancelled",
@@ -203,354 +230,267 @@ export default function Home() {
           desc: t("home.dashboard.desc.cancelled"),
           to: "/purchase?status=CANCELLED",
           icon: Ban,
-          highlight: false as const,
-          className:
-            "border border-gray-100/90 border-l-4 border-l-rose-600 bg-rose-50/50",
+          highlight: false,
         },
-      ] as const,
+      ] satisfies { key: string; count: number; title: string; desc: string; to: string; icon: LucideIcon; highlight: boolean }[],
     [t, inProgressCount, shippingCount, completedCount, cancelledCount],
   );
 
   return (
-    <div className="space-y-5 md:space-y-6">
-      <div className="overflow-hidden rounded-xl border border-gray-200 bg-white px-4 py-5 text-gray-900 shadow-sm md:px-6 md:py-6">
-        <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between md:gap-8">
-          <div className="min-w-0 flex-1">
-            <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-500">
-              {t("home.hero.contextLabel")}
-            </p>
-            <h1 className="mt-1 text-xl font-bold leading-tight text-gray-900 md:text-2xl">
-              {fillTpl(t("home.hero.welcomeTitle"), { name: displayName })}
-            </h1>
-            <p className="mt-1.5 text-sm text-gray-700 md:text-[15px]">
-              {fillTpl(t("home.hero.welcomeSubtitle"), {
-                inProgress: inProgressCount,
-                shipping: shippingCount,
-                total: totalActiveHint ?? 0,
-              })}
-            </p>
-            <div className="mt-4 flex flex-wrap items-center gap-2">
-              <Link to="/purchase/new">
-                <Button size="default" variant="default" className="font-semibold">
-                  {t("home.hero.cta")}
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Button>
-              </Link>
-              <Link to="/purchase">
-                <Button size="default" variant="outline" className="border-gray-300 text-gray-900">
-                  {t("home.hero.ctaSecondary")}
-                </Button>
-              </Link>
-            </div>
-          </div>
-          <div className="flex shrink-0 flex-col items-stretch sm:items-center md:min-w-[200px] md:items-center">
-            <div className="relative w-full max-w-sm rounded-2xl border border-gray-200 bg-gray-50 px-5 py-5 text-center shadow-inner sm:max-w-none">
-              <div className="pointer-events-none absolute -right-8 -top-10 h-28 w-28 rounded-full bg-blue-100/40 blur-2xl" />
-              <div className="pointer-events-none absolute -bottom-8 -left-6 h-24 w-24 rounded-full bg-gray-200/40 blur-2xl" />
-              <Package
-                className="relative z-10 mx-auto h-14 w-14 text-gray-900 md:h-[4.5rem] md:w-[4.5rem]"
-                strokeWidth={1.15}
-                aria-hidden
-              />
-              <div className="relative z-10 mt-3 flex items-center justify-center gap-2 text-xs font-medium text-gray-800">
-                <Truck className="h-4 w-4 shrink-0 text-gray-700" aria-hidden />
-                <span>{t("home.hero.visualDelivery")}</span>
-              </div>
-              <div className="relative z-10 mt-4 flex flex-wrap justify-center gap-2">
-                <span className="inline-flex items-center rounded-md border border-gray-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-gray-900 shadow-sm">
-                  {t("home.dashboard.inProgress")} · {inProgressCount}
-                </span>
-                <span className="inline-flex items-center rounded-md border border-blue-200 bg-blue-50 px-2.5 py-1 text-[11px] font-semibold text-gray-900 shadow-sm">
-                  {t("home.dashboard.shipping")} · {shippingCount}
-                </span>
-              </div>
-            </div>
+    <div className="space-y-14 md:space-y-20">
+      {/* Greeting + wallet */}
+      <section className="grid gap-8 md:grid-cols-[minmax(0,1fr)_minmax(16rem,20rem)] md:items-end md:gap-12">
+        <div className="min-w-0">
+          <p className="text-sm text-muted-foreground">{t("home.hero.contextLabel")}</p>
+          <h1 className="mt-3 text-4xl leading-[1.08] md:text-5xl">
+            {fillTpl(t("home.hero.welcomeTitle"), { name: displayName })}
+          </h1>
+          <p className="mt-4 text-base text-muted-foreground figure">
+            {fillTpl(t("home.hero.welcomeSubtitle"), {
+              inProgress: inProgressCount,
+              shipping: shippingCount,
+              total: totalActiveHint ?? 0,
+            })}
+          </p>
+          <div className="mt-7 flex flex-wrap items-center gap-2">
+            <Button asChild>
+              <Link to="/purchase/new">{t("home.hero.cta")}</Link>
+            </Button>
+            <Button asChild variant="outline">
+              <Link to="/purchase">{t("home.hero.ctaSecondary")}</Link>
+            </Button>
           </div>
         </div>
-      </div>
 
-      {isLoggedIn ? (
-        <Link
-          to="/wallet"
-          className="block overflow-hidden rounded-xl border border-blue-100 bg-gradient-to-r from-blue-50/90 to-white px-4 py-4 shadow-sm transition-colors hover:border-blue-200 md:px-6"
-        >
-          <div className="flex items-start gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-blue-600 text-white">
-              <Wallet className="h-5 w-5" aria-hidden />
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="text-xs font-semibold uppercase tracking-wide text-blue-800/80">
-                {t("home.walletBalance.label")}
-              </p>
-              <p className="mt-0.5 text-2xl font-bold text-blue-900">
-                {balance == null
-                  ? "—"
-                  : `₩${formatNumber(balance, locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
-              </p>
-              <BalanceEquivalents
-                balance={balance}
-                hintKey="wallet.balanceEquivalentsHint"
-                className="text-sm font-medium text-blue-800/90 mt-1"
-              />
-              <p className="mt-2 text-xs text-blue-700/80">{t("home.walletBalance.link")} →</p>
-            </div>
-          </div>
-        </Link>
-      ) : null}
+        {isLoggedIn ? (
+          <Link
+            to="/wallet"
+            className="block border border-border p-5 transition-colors hover:bg-muted/60 md:p-6"
+          >
+            <p className="text-xs text-muted-foreground">{t("home.walletBalance.label")}</p>
+            <p className="mt-3 text-3xl font-medium figure md:text-4xl">
+              {balance == null
+                ? "—"
+                : `₩${formatNumber(balance, locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+            </p>
+            <BalanceEquivalents
+              balance={balance}
+              hintKey="wallet.balanceEquivalentsHint"
+              className="mt-1 text-sm text-muted-foreground figure"
+            />
+            <p className="mt-5 text-xs underline underline-offset-4 decoration-foreground/30">
+              {t("home.walletBalance.link")}
+            </p>
+          </Link>
+        ) : null}
+      </section>
 
+      {/* Order status strip */}
       <section aria-labelledby="home-dashboard-heading">
-        <div className="mb-2 space-y-1">
-          <h2 id="home-dashboard-heading" className="text-base font-semibold text-gray-900 md:text-lg">
-            {t("home.dashboard.title")}
-          </h2>
-          <p className="text-xs text-gray-600 md:text-sm">{t("home.dashboard.subtitle")}</p>
+        <div className="flex flex-col gap-1 md:flex-row md:items-baseline md:justify-between">
+          <h2 id="home-dashboard-heading">{t("home.dashboard.title")}</h2>
+          <p className="text-sm text-muted-foreground">{t("home.dashboard.subtitle")}</p>
         </div>
-        <div className="grid grid-cols-2 gap-2 md:grid-cols-4 md:gap-3">
-          {dashboardCards.map(({ key, count, title, desc, to, icon: Icon, highlight, className }) => (
-            <Link key={key} to={to} className="block min-h-0">
-              <Card
-                className={cn(
-                  "h-full shadow-sm",
-                  className,
-                  highlight &&
-                    "relative z-0 shadow-[0_0_22px_rgba(30,64,175,0.28)] ring-2 ring-blue-300/55",
-                )}
-              >
+        <div className="mt-5 grid grid-cols-2 border-l border-t border-border md:grid-cols-4">
+          {dashboardCards.map(({ key, count, title, desc, to, icon: Icon, highlight }) => (
+            <Link
+              key={key}
+              to={to}
+              className="group border-b border-r border-border p-4 transition-colors hover:bg-muted/60 md:p-5"
+            >
+              <div className="flex items-center gap-2 text-sm">
+                <Icon className="size-4 shrink-0" strokeWidth={1.5} aria-hidden />
+                <span className="font-medium">{title}</span>
                 {highlight ? (
-                  <span
-                    className="absolute right-2.5 top-2.5 inline-flex h-2.5 w-2.5 rounded-full bg-blue-700 ring-2 ring-white md:right-3 md:top-3"
-                    aria-hidden
-                  />
+                  <span className="ml-auto size-1.5 rounded-full bg-foreground" aria-hidden />
                 ) : null}
-                <CardContent className={cn("flex flex-col gap-1.5 p-3 md:gap-2 md:p-4", highlight && "pr-8")}>
-                  <div className="flex items-start justify-between gap-2">
-                    <Icon
-                      className={cn(
-                        "h-5 w-5 shrink-0 md:h-6 md:w-6",
-                        highlight ? "text-blue-800" : key === "completed" ? "text-cyan-800" : "text-gray-700",
-                      )}
-                      aria-hidden
-                    />
-                  </div>
-                  <p
-                    className={cn(
-                      "text-xs font-semibold md:text-sm",
-                      highlight ? "text-blue-950" : key === "completed" ? "text-cyan-950" : "text-gray-800",
-                    )}
-                  >
-                    {title}
-                  </p>
-                  <p className="text-2xl font-bold tabular-nums leading-none text-gray-900 md:text-3xl">{count}</p>
-                  <p className="text-[11px] leading-snug text-gray-600 md:text-xs">{desc}</p>
-                </CardContent>
-              </Card>
+              </div>
+              <p className="mt-5 text-4xl font-light figure md:text-5xl">{count}</p>
+              <p className="mt-3 text-xs leading-snug text-muted-foreground">{desc}</p>
             </Link>
           ))}
         </div>
       </section>
 
-      <Card>
-        <CardHeader className="space-y-0 border-b border-gray-200 pb-4">
-          <div className="flex items-center justify-between gap-2">
-            <div>
-              <CardTitle className="text-base md:text-lg">{t("home.recentRequests.title")}</CardTitle>
-              <p className="mt-0.5 text-xs text-gray-500 md:text-sm">{t("home.recentRequests.subtitle")}</p>
-            </div>
-            <Link to="/purchase">
-              <Button variant="ghost" size="sm" className="h-8 shrink-0 text-xs md:text-sm">
-                {t("home.recentRequests.viewAll")}
-                <ArrowRight className="ml-1 h-3.5 w-3.5" />
-              </Button>
-            </Link>
-          </div>
-        </CardHeader>
-        <CardContent className="pt-4">
-          {myRequests.length > 0 ? (
-            <div className="divide-y divide-gray-100 rounded-lg border border-gray-100 bg-white">
-              {myRequests.map((request) => (
-                <Link
-                  key={request.id}
-                  to={`/purchase/${request.id}`}
-                  className={cn(
-                    "flex flex-col gap-1 px-3 py-2 text-left",
-                    "md:flex-row md:items-center md:justify-between md:gap-4 md:py-2",
-                  )}
-                >
-                  <div className="flex min-w-0 items-center gap-2 md:w-[35%] md:min-w-0 md:shrink-0">
-                    <Badge
-                      variant="outline"
-                      className={cn(
-                        "shrink-0 px-2 py-0.5 text-[10px] font-semibold md:text-xs",
-                        purchaseStatusBadgeClass(request.status),
-                      )}
+      {/* Activity + exchange */}
+      <div className="grid gap-14 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] lg:gap-12">
+        <div className="min-w-0 space-y-14">
+          <section aria-labelledby="home-recent-heading">
+            <SectionHeading
+              id="home-recent-heading"
+              title={t("home.recentRequests.title")}
+              action={<ViewAllLink to="/purchase">{t("home.recentRequests.viewAll")}</ViewAllLink>}
+            />
+            {myRequests.length > 0 ? (
+              <ul>
+                {myRequests.map((request) => (
+                  <li key={request.id}>
+                    <Link
+                      to={`/purchase/${request.id}`}
+                      className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 border-b border-border py-3.5 transition-colors hover:bg-muted/60 md:grid-cols-[auto_minmax(0,1.2fr)_minmax(0,1fr)_auto]"
                     >
-                      {t(`purchase.status.${request.status}` as `purchase.status.${PurchaseRequestStatus}`)}
-                    </Badge>
-                    <span className="min-w-0 flex-1 truncate text-sm font-semibold text-gray-900 md:text-[15px]">
-                      {request.requestName}
-                    </span>
-                  </div>
-                  <p className="text-xs leading-snug text-gray-500 line-clamp-2 md:w-[40%] md:min-w-0 md:shrink md:line-clamp-1">
-                    {statusHint(request.status)}
-                  </p>
-                  <span className="text-right text-base font-bold tabular-nums text-gray-900 md:w-[20%] md:shrink-0 md:text-base">
-                    {formatKrwLine(request.totalAmountKrw, dateLocale)}
-                  </span>
-                </Link>
-              ))}
-            </div>
-          ) : (
-            <div className="flex flex-col items-center gap-2 rounded-lg border border-dashed border-gray-200 py-6 text-center text-gray-500">
-              <ShoppingCart className="h-8 w-8 text-gray-300" aria-hidden />
-              <p className="text-sm">{t("home.recentRequests.empty")}</p>
-              <Link to="/purchase/new">
-                <Button size="sm" variant="outline">
-                  {t("home.hero.cta")}
-                </Button>
-              </Link>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader className="border-b border-gray-200 pb-4">
-          <div className="flex items-center justify-between gap-2">
-            <CardTitle className="text-base md:text-lg">{t("home.recentNotices.title")}</CardTitle>
-            <Link to="/notice">
-              <Button variant="ghost" size="sm" className="h-8 shrink-0 text-xs md:text-sm">
-                {t("home.recentNotices.viewAll")}
-                <ArrowRight className="ml-1 h-3.5 w-3.5" />
-              </Button>
-            </Link>
-          </div>
-        </CardHeader>
-        <CardContent className="pt-4">
-          {recentNotices.length > 0 ? (
-            <div className="divide-y divide-gray-100 rounded-lg border border-gray-100 bg-white">
-              {recentNotices.map((notice) => (
-                <Link
-                  key={notice.id}
-                  to={`/notice/${notice.id}`}
-                  className={cn(
-                    "flex flex-col gap-1.5 px-3 py-2 text-left transition-colors hover:bg-gray-50/80",
-                    "md:flex-row md:items-center md:justify-between md:gap-4 md:py-2",
-                  )}
-                >
-                  <div className="flex min-w-0 items-center gap-2 md:min-w-0 md:flex-1">
-                    {notice.isPinned ? (
-                      <Badge variant="secondary" className="shrink-0 px-1.5 py-0 text-[10px] font-semibold md:text-xs">
-                        {t("home.notice.pinned")}
+                      <Badge
+                        variant="outline"
+                        className={cn("px-2 py-0.5 text-[10px] font-medium", purchaseStatusBadgeClass(request.status))}
+                      >
+                        {t(`purchase.status.${request.status}` as `purchase.status.${PurchaseRequestStatus}`)}
                       </Badge>
-                    ) : null}
-                    <span className="min-w-0 flex-1 truncate text-sm font-medium text-gray-900">{notice.title}</span>
-                  </div>
-                  <time
-                    dateTime={notice.createdAt}
-                    className="shrink-0 text-xs tabular-nums text-gray-500 md:text-right"
-                  >
-                    {formatHomeNoticeMetaLine(notice.createdAt, notice.viewCount, t("home.recentNotices.viewsTpl"))}
-                  </time>
-                </Link>
-              ))}
-            </div>
-          ) : (
-            <p className="rounded-md border border-dashed border-gray-200 bg-gray-50/50 px-3 py-4 text-center text-sm text-gray-500">
-              {t("home.recentNotices.empty")}
-            </p>
-          )}
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader className="space-y-2 border-b border-gray-200 pb-4">
-          <div className="flex flex-wrap items-start justify-between gap-2">
-            <div className="flex items-center gap-2">
-              <TrendingUp className="h-5 w-5 shrink-0 text-blue-600" />
-              <CardTitle className="text-base md:text-lg">{t("home.exchange.title")}</CardTitle>
-            </div>
-            {ratesData?.fetchedAt ? (
-              <Badge variant="secondary" className="text-[10px] font-normal md:text-xs">
-                {formatDate(ratesData.fetchedAt, locale)} {t("home.exchange.asOf")}
-              </Badge>
-            ) : null}
-          </div>
-          {ratesData && ratesData.quotes.length > 0 ? (
-            <div className="space-y-3">
-              <p className="text-sm font-medium tabular-nums text-gray-900">{krwRubSummary}</p>
-              <div>
-                <p className="mb-2 text-xs font-medium text-gray-600">{t("home.exchange.rubPairsTitle")}</p>
-                <ul className="space-y-1 text-sm tabular-nums text-gray-800">
-                  {rubPairLines.map(({ target, line }) => (
-                    <li key={target} className="flex flex-wrap justify-between gap-2">
-                      <span className="text-gray-500">{currencyLabel(target)}</span>
-                      <span>{line ?? t("home.exchange.rateUnavailable")}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </div>
-          ) : (
-            <p className="text-sm text-gray-500">{t("home.exchange.loading")}</p>
-          )}
-          <CardDescription className="text-xs text-gray-500">{t("home.exchange.autoUpdate")}</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4 pt-4">
-          {quotes.length > 0 ? (
-            <div className="space-y-4">
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div>
-                  <p className="mb-2 text-sm text-gray-500">{t("home.exchange.baseCurrency")}</p>
-                  <Tabs value={baseCurrency} onValueChange={(v) => setBaseCurrency(v as QuoteCurrency)}>
-                    <TabsList className="grid w-full grid-cols-3 sm:grid-cols-6">
-                      {QUOTE_CURRENCIES.map((c) => (
-                        <TabsTrigger key={c} value={c} className="text-xs sm:text-sm">
-                          {c}
-                        </TabsTrigger>
-                      ))}
-                    </TabsList>
-                  </Tabs>
-                </div>
-                <div>
-                  <Label htmlFor="exchange-base-amount" className="text-sm text-gray-500">
-                    {t("home.exchange.baseAmount")}
-                  </Label>
-                  <Input
-                    id="exchange-base-amount"
-                    type="number"
-                    min="0"
-                    step="any"
-                    className="mt-2"
-                    value={baseAmountInput}
-                    onChange={(e) => setBaseAmountInput(e.target.value)}
-                    onBlur={() => {
-                      const normalized = normalizeBaseAmount(baseAmountInput);
-                      setBaseAmountInput(String(normalized));
-                    }}
-                  />
-                  <p className="mt-1 text-xs text-gray-400">
-                    {t("home.exchange.baseAmountHint").replace("{{currency}}", baseCurrency)}
-                  </p>
-                </div>
-              </div>
-              <ul className="space-y-3 rounded-lg border bg-muted/30 p-4">
-                {otherCurrencies(baseCurrency).map((target) => {
-                  const line = formatCrossRateLine(baseCurrency, target, rateMap, locale, baseAmount);
-                  return (
-                    <li
-                      key={target}
-                      className="flex flex-wrap items-baseline justify-between gap-2 text-lg font-semibold text-gray-900"
-                    >
-                      <span className="text-sm font-normal text-gray-500">{currencyLabel(target)}</span>
-                      <span className="tabular-nums">{line ?? t("home.exchange.rateUnavailable")}</span>
-                    </li>
-                  );
-                })}
+                      <span className="min-w-0 truncate text-sm font-medium">{request.requestName}</span>
+                      <span className="hidden min-w-0 truncate text-xs text-muted-foreground md:inline">
+                        {statusHint(request.status)}
+                      </span>
+                      <span className="text-sm font-medium figure">
+                        {formatKrwLine(request.totalAmountKrw, dateLocale)}
+                      </span>
+                    </Link>
+                  </li>
+                ))}
               </ul>
-            </div>
-          ) : null}
-        </CardContent>
-      </Card>
+            ) : (
+              <div className="flex flex-col items-start gap-3 border-b border-border py-8">
+                <ShoppingCart className="size-6 text-muted-foreground" strokeWidth={1.25} aria-hidden />
+                <p className="text-sm text-muted-foreground">{t("home.recentRequests.empty")}</p>
+                <Button asChild size="sm" variant="outline">
+                  <Link to="/purchase/new">{t("home.hero.cta")}</Link>
+                </Button>
+              </div>
+            )}
+          </section>
+
+          <section aria-labelledby="home-notices-heading">
+            <SectionHeading
+              id="home-notices-heading"
+              title={t("home.recentNotices.title")}
+              action={<ViewAllLink to="/notice">{t("home.recentNotices.viewAll")}</ViewAllLink>}
+            />
+            {recentNotices.length > 0 ? (
+              <ul>
+                {recentNotices.map((notice) => (
+                  <li key={notice.id}>
+                    <Link
+                      to={`/notice/${notice.id}`}
+                      className="flex items-center justify-between gap-4 border-b border-border py-3.5 transition-colors hover:bg-muted/60"
+                    >
+                      <span className="flex min-w-0 items-center gap-2">
+                        {notice.isPinned ? (
+                          <Badge className="px-1.5 py-0 text-[10px] font-medium">{t("home.notice.pinned")}</Badge>
+                        ) : null}
+                        <span className="min-w-0 truncate text-sm">{notice.title}</span>
+                      </span>
+                      <time
+                        dateTime={notice.createdAt}
+                        className="shrink-0 text-xs text-muted-foreground figure"
+                      >
+                        {formatHomeNoticeMetaLine(notice.createdAt, notice.viewCount, t("home.recentNotices.viewsTpl"))}
+                      </time>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="border-b border-border py-8 text-sm text-muted-foreground">
+                {t("home.recentNotices.empty")}
+              </p>
+            )}
+          </section>
+        </div>
+
+        {/* Exchange panel: the one dark block on the page */}
+        <section
+          aria-labelledby="home-exchange-heading"
+          className="bg-foreground p-5 text-background md:p-7"
+        >
+          <SectionHeading
+            id="home-exchange-heading"
+            title={t("home.exchange.title")}
+            inverted
+            action={
+              ratesData?.fetchedAt ? (
+                <span className="text-xs text-background/60 figure">
+                  {formatDate(ratesData.fetchedAt, locale)} {t("home.exchange.asOf")}
+                </span>
+              ) : null
+            }
+          />
+
+          {ratesData && ratesData.quotes.length > 0 ? (
+            <>
+              <div className="mt-7">
+                {headlineBase ? <p className="text-sm text-background/60 figure">{headlineBase}</p> : null}
+                <p className="mt-1 text-4xl font-light leading-none figure md:text-5xl">{headlineValue}</p>
+              </div>
+
+              {quotes.length > 0 ? (
+                <div className="mt-8">
+                  <p className="text-xs text-background/60">{t("home.exchange.baseCurrency")}</p>
+                  <div className="mt-2 flex flex-wrap gap-1.5" role="group" aria-label={t("home.exchange.baseCurrency")}>
+                    {QUOTE_CURRENCIES.map((c) => {
+                      const active = baseCurrency === c;
+                      return (
+                        <button
+                          key={c}
+                          type="button"
+                          aria-pressed={active}
+                          onClick={() => setBaseCurrency(c)}
+                          className={cn(
+                            "border px-2.5 py-1 text-xs tracking-[0.08em] transition-colors",
+                            active
+                              ? "border-background bg-background text-foreground"
+                              : "border-background/30 text-background/80 hover:border-background",
+                          )}
+                        >
+                          {c}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  <div className="mt-5">
+                    <Label htmlFor="exchange-base-amount" className="text-xs font-normal text-background/60">
+                      {t("home.exchange.baseAmount")}
+                    </Label>
+                    <input
+                      id="exchange-base-amount"
+                      type="number"
+                      inputMode="decimal"
+                      min="0"
+                      step="any"
+                      className="mt-1 w-full border-b border-background/40 bg-transparent py-1 text-2xl font-light text-background outline-none figure transition-colors placeholder:text-background/40 focus:border-background"
+                      value={baseAmountInput}
+                      onChange={(e) => setBaseAmountInput(e.target.value)}
+                      onBlur={() => {
+                        const normalized = normalizeBaseAmount(baseAmountInput);
+                        setBaseAmountInput(String(normalized));
+                      }}
+                    />
+                    <p className="mt-2 text-[11px] text-background/50">
+                      {t("home.exchange.baseAmountHint").replace("{{currency}}", baseCurrency)}
+                    </p>
+                  </div>
+
+                  <ul className="mt-5 border-t border-background/20">
+                    {otherCurrencies(baseCurrency).map((target) => {
+                      const line = formatCrossRateLine(baseCurrency, target, rateMap, locale, baseAmount);
+                      return (
+                        <li
+                          key={target}
+                          className="flex flex-wrap items-baseline justify-between gap-2 border-b border-background/20 py-2.5"
+                        >
+                          <span className="text-sm text-background/60">{currencyLabel(target)}</span>
+                          <span className="text-base figure">{line ?? t("home.exchange.rateUnavailable")}</span>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                  <p className="mt-3 text-[11px] text-background/50">{t("home.exchange.autoUpdate")}</p>
+                </div>
+              ) : null}
+            </>
+          ) : (
+            <p className="mt-7 text-sm text-background/60">{t("home.exchange.loading")}</p>
+          )}
+        </section>
+      </div>
     </div>
   );
 }

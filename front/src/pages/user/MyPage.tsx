@@ -329,8 +329,8 @@ export default function MyPage() {
   if (loading && !profile) {
     return (
       <div className="max-w-4xl mx-auto">
-        <h1 className="text-3xl font-bold text-gray-900 mb-6">{t("myPage.title")}</h1>
-        <p className="text-gray-600">{t("myPage.profileLoading")}</p>
+        <h1 className="text-3xl font-bold text-foreground mb-6">{t("myPage.title")}</h1>
+        <p className="text-muted-foreground">{t("myPage.profileLoading")}</p>
       </div>
     );
   }
@@ -338,8 +338,8 @@ export default function MyPage() {
   if (!profile) {
     return (
       <div className="max-w-4xl mx-auto">
-        <h1 className="text-3xl font-bold text-gray-900 mb-6">{t("myPage.title")}</h1>
-        <p className="text-gray-600 mb-4">{t("myPage.noProfile")}</p>
+        <h1 className="text-3xl font-bold text-foreground mb-6">{t("myPage.title")}</h1>
+        <p className="text-muted-foreground mb-4">{t("myPage.noProfile")}</p>
         <Button asChild variant="outline">
           <Link to="/login">{t("nav.login")}</Link>
         </Button>
@@ -349,7 +349,7 @@ export default function MyPage() {
 
   return (
     <div className="max-w-4xl mx-auto">
-      <h1 className="text-3xl font-bold text-gray-900 mb-6">{t("myPage.title")}</h1>
+      <h1 className="text-3xl font-bold text-foreground mb-6">{t("myPage.title")}</h1>
 
       <div className="space-y-6">
         <Card>
@@ -359,11 +359,11 @@ export default function MyPage() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex items-center space-x-4">
-              <div className="w-20 h-20 bg-gradient-to-br from-blue-600 to-blue-400 rounded-full flex items-center justify-center">
+              <div className="w-20 h-20 bg-foreground rounded-full flex items-center justify-center">
                 <User className="w-10 h-10 text-white" />
               </div>
               <div className="flex-1">
-                <h3 className="text-xl font-semibold text-gray-900">{profile.nickname}</h3>
+                <h3 className="text-xl font-semibold text-foreground">{profile.nickname}</h3>
                 <div className="flex items-center space-x-2 mt-1 flex-wrap gap-1">
                   <Badge variant={profile.status === "ACTIVE" ? "default" : "outline"}>
                     {profile.status === "ACTIVE" ? t("myPage.status.active") : profile.status}
@@ -380,10 +380,10 @@ export default function MyPage() {
 
             <div className="space-y-3">
               <div className="flex items-center">
-                <Wallet className="w-5 h-5 text-gray-400 mr-3 shrink-0" />
+                <Wallet className="w-5 h-5 text-muted-foreground/70 mr-3 shrink-0" />
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm text-gray-500">{t("myPage.currentBalance")}</p>
-                  <p className="font-semibold text-blue-700">
+                  <p className="text-sm text-muted-foreground">{t("myPage.currentBalance")}</p>
+                  <p className="font-semibold text-foreground">
                     ₩{(balance ?? 0).toLocaleString("ko-KR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </p>
                   <BalanceEquivalents balance={balance} />
@@ -394,39 +394,39 @@ export default function MyPage() {
               </div>
 
               <div className="flex items-center">
-                <Mail className="w-5 h-5 text-gray-400 mr-3 shrink-0" />
+                <Mail className="w-5 h-5 text-muted-foreground/70 mr-3 shrink-0" />
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm text-gray-500">{t("myPage.email")}</p>
-                  <p className="font-medium text-gray-900 break-all">{profile.email}</p>
+                  <p className="text-sm text-muted-foreground">{t("myPage.email")}</p>
+                  <p className="font-medium text-foreground break-all">{profile.email}</p>
                 </div>
                 {profile.emailVerified && <Badge className="bg-green-500 shrink-0">{t("myPage.verified")}</Badge>}
               </div>
 
               {profile.phone && (
                 <div className="flex items-center">
-                  <Phone className="w-5 h-5 text-gray-400 mr-3 shrink-0" />
+                  <Phone className="w-5 h-5 text-muted-foreground/70 mr-3 shrink-0" />
                   <div className="flex-1">
-                    <p className="text-sm text-gray-500">{t("myPage.phone")}</p>
-                    <p className="font-medium text-gray-900">{profile.phone}</p>
+                    <p className="text-sm text-muted-foreground">{t("myPage.phone")}</p>
+                    <p className="font-medium text-foreground">{profile.phone}</p>
                   </div>
                   {profile.phoneVerified && <Badge className="bg-green-500">{t("myPage.verified")}</Badge>}
                 </div>
               )}
 
               <div className="flex items-center">
-                <User className="w-5 h-5 text-gray-400 mr-3 shrink-0" />
+                <User className="w-5 h-5 text-muted-foreground/70 mr-3 shrink-0" />
                 <div className="flex-1">
-                  <p className="text-sm text-gray-500">{t("myPage.joinedAt")}</p>
-                  <p className="font-medium text-gray-900">{formatDate(profile.createdAt, dateLocale)}</p>
+                  <p className="text-sm text-muted-foreground">{t("myPage.joinedAt")}</p>
+                  <p className="font-medium text-foreground">{formatDate(profile.createdAt, dateLocale)}</p>
                 </div>
               </div>
 
               {profile.lastLoginAt && (
                 <div className="flex items-center">
-                  <Shield className="w-5 h-5 text-gray-400 mr-3 shrink-0" />
+                  <Shield className="w-5 h-5 text-muted-foreground/70 mr-3 shrink-0" />
                   <div className="flex-1">
-                    <p className="text-sm text-gray-500">{t("myPage.lastLogin")}</p>
-                    <p className="font-medium text-gray-900">{formatDateTime(profile.lastLoginAt, dateLocale)}</p>
+                    <p className="text-sm text-muted-foreground">{t("myPage.lastLogin")}</p>
+                    <p className="font-medium text-foreground">{formatDateTime(profile.lastLoginAt, dateLocale)}</p>
                   </div>
                 </div>
               )}
@@ -438,7 +438,7 @@ export default function MyPage() {
           <CardHeader>
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-2">
-                <MapPin className="w-5 h-5 text-blue-600" />
+                <MapPin className="w-5 h-5 text-foreground" />
                 <CardTitle>{t("myPage.addressMgmt")}</CardTitle>
               </div>
               <Button type="button" size="sm" variant="outline" onClick={openAddressCreate}>
@@ -450,34 +450,34 @@ export default function MyPage() {
           </CardHeader>
           <CardContent className="space-y-3">
             {addressesLoading && addresses.length === 0 ? (
-              <p className="text-sm text-gray-500">{t("myPage.loading")}</p>
+              <p className="text-sm text-muted-foreground">{t("myPage.loading")}</p>
             ) : addresses.length === 0 ? (
-              <p className="text-sm text-gray-500">{t("myPage.noAddresses")}</p>
+              <p className="text-sm text-muted-foreground">{t("myPage.noAddresses")}</p>
             ) : (
               addresses.map((a) => (
                 <div key={a.id} className="border rounded-lg p-3 flex items-start justify-between gap-3">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-medium text-gray-900">{a.label || t("myPage.addressFallback")}</span>
+                      <span className="font-medium text-foreground">{a.label || t("myPage.addressFallback")}</span>
                       {a.isDefault && (
-                        <Badge className="bg-blue-500 hover:bg-blue-500">
+                        <Badge className="bg-foreground hover:bg-foreground">
                           <Star className="w-3 h-3 mr-1" />
                           {t("myPage.default")}
                         </Badge>
                       )}
                     </div>
                     {(a.recipientName || a.recipientPhone) && (
-                      <p className="text-sm text-gray-600 mt-1">
+                      <p className="text-sm text-muted-foreground mt-1">
                         {[a.recipientName, a.recipientPhone].filter(Boolean).join(" / ")}
                       </p>
                     )}
-                    <p className="text-sm text-gray-700 mt-1 break-words">
+                    <p className="text-sm text-foreground/80 mt-1 break-words">
                       {[a.postalCode, a.addressLine1, a.addressLine2].filter(Boolean).join(" ")}
                     </p>
                   </div>
                   <div className="flex flex-col gap-1 shrink-0">
                     {!a.isDefault && (
-                      <Button type="button" size="sm" variant="ghost" className="text-blue-600" onClick={() => void markAsDefault(a)}>
+                      <Button type="button" size="sm" variant="ghost" className="text-foreground" onClick={() => void markAsDefault(a)}>
                         {t("myPage.setDefault")}
                       </Button>
                     )}
@@ -499,14 +499,14 @@ export default function MyPage() {
         <Card className="hidden">
           <CardHeader>
             <div className="flex items-center space-x-2">
-              <Bell className="w-5 h-5 text-blue-600" />
+              <Bell className="w-5 h-5 text-foreground" />
               <CardTitle>{t("myPage.notif.title")}</CardTitle>
             </div>
             <CardDescription>{t("myPage.notif.desc")}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
             <div>
-              <h4 className="font-semibold text-gray-900 mb-3">{t("myPage.notif.push")}</h4>
+              <h4 className="font-semibold text-foreground mb-3">{t("myPage.notif.push")}</h4>
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <Label htmlFor="push-inquiry" className="cursor-pointer">
@@ -538,7 +538,7 @@ export default function MyPage() {
             <Separator />
 
             <div>
-              <h4 className="font-semibold text-gray-900 mb-3">{t("myPage.notif.email")}</h4>
+              <h4 className="font-semibold text-foreground mb-3">{t("myPage.notif.email")}</h4>
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <Label htmlFor="email-inquiry" className="cursor-pointer">
@@ -570,7 +570,7 @@ export default function MyPage() {
             <Separator />
 
             <div>
-              <h4 className="font-semibold text-gray-900 mb-3">{t("myPage.notif.sms")}</h4>
+              <h4 className="font-semibold text-foreground mb-3">{t("myPage.notif.sms")}</h4>
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <Label htmlFor="sms-inquiry" className="cursor-pointer">
@@ -610,7 +610,7 @@ export default function MyPage() {
               <Shield className="w-4 h-4 mr-2" />
               {t("myPage.changePassword")}
             </Button>
-            <Button type="button" variant="outline" className="w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50" onClick={handleLogout}>
+            <Button type="button" variant="outline" className="w-full justify-start text-destructive hover:text-destructive hover:bg-destructive/10" onClick={handleLogout}>
               <LogOut className="w-4 h-4 mr-2" />
               {t("myPage.logout")}
             </Button>
@@ -683,7 +683,7 @@ export default function MyPage() {
                 <input
                   id="addr-default"
                   type="checkbox"
-                  className="h-4 w-4 rounded border-gray-300"
+                  className="h-4 w-4 rounded border-input"
                   checked={addrIsDefault}
                   onChange={(e) => setAddrIsDefault(e.target.checked)}
                 />

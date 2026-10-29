@@ -49,14 +49,14 @@ export function LegalConsentSection({
     <div className="space-y-4">
       <div className="space-y-3">
         <div>
-          <h3 className="text-sm font-semibold text-gray-900">{t("signup.terms.dialogTitle")}</h3>
+          <h3 className="text-sm font-semibold text-foreground">{t("signup.terms.dialogTitle")}</h3>
           {t("signup.terms.dialogDescription") ? (
-            <p className="text-xs text-gray-500 mt-0.5">{t("signup.terms.dialogDescription")}</p>
+            <p className="text-xs text-muted-foreground mt-0.5">{t("signup.terms.dialogDescription")}</p>
           ) : null}
           {inline ? (
             <div
               ref={termsRef}
-              className="mt-2 max-h-56 overflow-y-auto rounded-md border bg-gray-50 p-3 whitespace-pre-wrap text-xs text-gray-700"
+              className="mt-2 max-h-56 overflow-y-auto rounded-md border bg-muted/60 p-3 whitespace-pre-wrap text-xs text-foreground/80"
               onScroll={(e) => {
                 const el = e.currentTarget;
                 if (el.scrollTop + el.clientHeight >= el.scrollHeight - 8) onTermsViewed();
@@ -69,7 +69,7 @@ export function LegalConsentSection({
             href={t("signup.terms.telegramUrl")}
             target="_blank"
             rel="noopener noreferrer"
-            className="mt-2 inline-flex items-center gap-1 text-xs text-blue-600 hover:underline"
+            className="mt-2 inline-flex items-center gap-1 text-xs text-foreground hover:underline"
           >
             <ExternalLink className="h-3 w-3" />
             {t("signup.terms.telegramLabel")}
@@ -82,14 +82,14 @@ export function LegalConsentSection({
         <Separator />
 
         <div>
-          <h3 className="text-sm font-semibold text-gray-900">{t("signup.privacy.dialogTitle")}</h3>
+          <h3 className="text-sm font-semibold text-foreground">{t("signup.privacy.dialogTitle")}</h3>
           {t("signup.privacy.dialogDescription") ? (
-            <p className="text-xs text-gray-500 mt-0.5">{t("signup.privacy.dialogDescription")}</p>
+            <p className="text-xs text-muted-foreground mt-0.5">{t("signup.privacy.dialogDescription")}</p>
           ) : null}
           {inline ? (
             <div
               ref={privacyRef}
-              className="mt-2 max-h-56 overflow-y-auto rounded-md border bg-gray-50 p-3 whitespace-pre-wrap text-xs text-gray-700"
+              className="mt-2 max-h-56 overflow-y-auto rounded-md border bg-muted/60 p-3 whitespace-pre-wrap text-xs text-foreground/80"
               onScroll={(e) => {
                 const el = e.currentTarget;
                 if (el.scrollTop + el.clientHeight >= el.scrollHeight - 8) onPrivacyViewed();
@@ -114,7 +114,7 @@ export function LegalConsentSection({
           />
           <Label
             htmlFor="agree-all"
-            className={`text-sm font-medium ${canAgreeAll ? "cursor-pointer" : "cursor-not-allowed text-gray-400"}`}
+            className={`text-sm font-medium ${canAgreeAll ? "cursor-pointer" : "cursor-not-allowed text-muted-foreground/70"}`}
           >
             {t("signup.agreeAll")}
           </Label>
@@ -128,7 +128,7 @@ export function LegalConsentSection({
           />
           <Label
             htmlFor="agree-terms"
-            className={`text-sm ${termsViewed ? "cursor-pointer" : "cursor-not-allowed text-gray-400"}`}
+            className={`text-sm ${termsViewed ? "cursor-pointer" : "cursor-not-allowed text-muted-foreground/70"}`}
           >
             <span className="text-red-500">{t("signup.required")}</span> {t("signup.agreeTerms")}
           </Label>
@@ -142,7 +142,7 @@ export function LegalConsentSection({
           />
           <Label
             htmlFor="agree-privacy"
-            className={`text-sm ${privacyViewed ? "cursor-pointer" : "cursor-not-allowed text-gray-400"}`}
+            className={`text-sm ${privacyViewed ? "cursor-pointer" : "cursor-not-allowed text-muted-foreground/70"}`}
           >
             <span className="text-red-500">{t("signup.required")}</span> {t("signup.agreePrivacy")}
           </Label>

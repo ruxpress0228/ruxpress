@@ -46,15 +46,15 @@ function optionRecordEntries(opt: unknown): [string, string][] {
 function OptionAttributesReadonlyList({ entries }: { entries: [string, string][] }) {
   if (entries.length === 0) return null;
   return (
-    <ul className="mt-1 space-y-0.5 text-sm leading-relaxed text-gray-800">
+    <ul className="mt-1 space-y-0.5 text-sm leading-relaxed text-foreground">
       {entries.map(([name, value], i) => (
         <li key={`${name}-${i}`} className="pl-0.5">
-          <span className="text-gray-400 select-none" aria-hidden>
+          <span className="text-muted-foreground/70 select-none" aria-hidden>
             -{" "}
           </span>
-          <span className="text-gray-600">{name}</span>
-          <span className="text-gray-400">: </span>
-          <span className="text-gray-900">{value}</span>
+          <span className="text-muted-foreground">{name}</span>
+          <span className="text-muted-foreground/70">: </span>
+          <span className="text-foreground">{value}</span>
         </li>
       ))}
     </ul>
@@ -158,7 +158,7 @@ export default function AdminPurchaseRequestDetail() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <p className="text-gray-500">{t("adminPurchase.detail.loading")}</p>
+        <p className="text-muted-foreground">{t("adminPurchase.detail.loading")}</p>
       </div>
     );
   }
@@ -166,7 +166,7 @@ export default function AdminPurchaseRequestDetail() {
   if (!data) {
     return (
       <div className="text-center py-12">
-        <p className="text-gray-500">{t("adminPurchase.detail.notFound")}</p>
+        <p className="text-muted-foreground">{t("adminPurchase.detail.notFound")}</p>
         <Button variant="link" className="mt-2" onClick={() => navigate("/admin/purchase-requests")}>
           {t("adminPurchase.detail.backToList")}
         </Button>
@@ -202,13 +202,13 @@ export default function AdminPurchaseRequestDetail() {
           <div className="flex items-start justify-between gap-4">
             <div className="min-w-0">
               <CardTitle className="text-2xl">{data.requestName}</CardTitle>
-              <p className="text-sm text-gray-500 mt-1">{t("adminPurchase.detail.requestNumber", { n: data.requestNumber })}</p>
+              <p className="text-sm text-muted-foreground mt-1">{t("adminPurchase.detail.requestNumber", { n: data.requestNumber })}</p>
               {(data.userNickname || data.userEmail) && (
-                <p className="text-sm text-gray-600 mt-2">
-                  <span className="text-gray-500">{t("adminPurchase.detail.member")}</span>{" "}
-                  <span className="font-medium text-gray-900">{data.userNickname ?? "—"}</span>
+                <p className="text-sm text-muted-foreground mt-2">
+                  <span className="text-muted-foreground">{t("adminPurchase.detail.member")}</span>{" "}
+                  <span className="font-medium text-foreground">{data.userNickname ?? "—"}</span>
                   {data.userEmail ? (
-                    <span className="text-gray-600"> · {data.userEmail}</span>
+                    <span className="text-muted-foreground"> · {data.userEmail}</span>
                   ) : null}
                 </p>
               )}
@@ -222,19 +222,19 @@ export default function AdminPurchaseRequestDetail() {
         <CardContent className="space-y-5">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <p className="text-sm text-gray-500">{t("adminPurchase.detail.quantity")}</p>
+              <p className="text-sm text-muted-foreground">{t("adminPurchase.detail.quantity")}</p>
               <p className="font-semibold">{t("adminPurchase.detail.quantityUnit", { n: data.quantity })}</p>
             </div>
             <div>
-              <p className="text-sm text-gray-500">{t("adminPurchase.detail.totalKrw")}</p>
+              <p className="text-sm text-muted-foreground">{t("adminPurchase.detail.totalKrw")}</p>
               <p className="font-semibold">₩{(data.totalAmountKrw ?? 0).toLocaleString()}</p>
             </div>
             <div>
-              <p className="text-sm text-gray-500">{t("adminPurchase.detail.createdAt")}</p>
+              <p className="text-sm text-muted-foreground">{t("adminPurchase.detail.createdAt")}</p>
               <p className="font-semibold">{new Date(data.createdAt).toLocaleString(dateLocale)}</p>
             </div>
             <div>
-              <p className="text-sm text-gray-500">{t("adminPurchase.detail.updatedAt")}</p>
+              <p className="text-sm text-muted-foreground">{t("adminPurchase.detail.updatedAt")}</p>
               <p className="font-semibold">{new Date(data.updatedAt).toLocaleString(dateLocale)}</p>
             </div>
           </div>
@@ -254,7 +254,7 @@ export default function AdminPurchaseRequestDetail() {
                         <ul className="space-y-1">
                           {urls.map((u, uIdx) => (
                             <li key={`${u}-${uIdx}`}>
-                              <a className="text-blue-600 underline break-all" href={u} target="_blank" rel="noreferrer">
+                              <a className="text-foreground underline break-all" href={u} target="_blank" rel="noreferrer">
                                 {it.shop ? `[${it.shop}] ` : ""}
                                 {urls.length > 1 ? `${uIdx + 1}. ` : ""}
                                 {u}
@@ -263,15 +263,15 @@ export default function AdminPurchaseRequestDetail() {
                           ))}
                         </ul>
                       ) : null}
-                      <div className="text-sm text-gray-700 pt-1 border-t border-gray-100">
+                      <div className="text-sm text-foreground/80 pt-1 border-t border-border">
                         {t("adminPurchase.detail.unitPrice", { price: (it.priceKrw ?? 0).toLocaleString(dateLocale), qty: it.quantity ?? 0 })}
                         <span className="font-semibold ml-1">
                           ₩{((it.priceKrw ?? 0) * (it.quantity ?? 0)).toLocaleString()}
                         </span>
                       </div>
                       {itemOptions.length > 0 ? (
-                        <div className="pt-2 border-t border-gray-50">
-                          <p className="text-sm font-medium text-gray-600 mb-1">{t("adminPurchase.detail.options")}</p>
+                        <div className="pt-2 border-t border-border">
+                          <p className="text-sm font-medium text-muted-foreground mb-1">{t("adminPurchase.detail.options")}</p>
                           <OptionAttributesReadonlyList entries={itemOptions} />
                         </div>
                       ) : null}
@@ -283,25 +283,25 @@ export default function AdminPurchaseRequestDetail() {
               <ul className="space-y-1">
                 {data.urls.map((u, idx) => (
                   <li key={`${u}-${idx}`}>
-                    <a className="text-blue-600 underline break-all" href={u} target="_blank" rel="noreferrer">{u}</a>
+                    <a className="text-foreground underline break-all" href={u} target="_blank" rel="noreferrer">{u}</a>
                   </li>
                 ))}
               </ul>
             ) : (
-              <p className="text-sm text-gray-500">{t("adminPurchase.detail.noItems")}</p>
+              <p className="text-sm text-muted-foreground">{t("adminPurchase.detail.noItems")}</p>
             )}
           </div>
 
           {legacyOptionsEntries.length > 0 && (
             <div className="space-y-1">
-              <p className="text-sm font-medium text-gray-600">{t("adminPurchase.detail.commonOptions")}</p>
+              <p className="text-sm font-medium text-muted-foreground">{t("adminPurchase.detail.commonOptions")}</p>
               <OptionAttributesReadonlyList entries={legacyOptionsEntries} />
             </div>
           )}
 
-          <div className="rounded-lg border border-slate-200 bg-gradient-to-b from-slate-50/90 to-white p-4 space-y-4 shadow-sm">
-            <div className="flex items-center gap-2 text-base font-semibold text-gray-900">
-              <MapPin className="h-5 w-5 text-blue-600 shrink-0" aria-hidden />
+          <div className="rounded-lg border border-slate-200 bg-gradient-to-b from-slate-50/90 to-white p-4 space-y-4">
+            <div className="flex items-center gap-2 text-base font-semibold text-foreground">
+              <MapPin className="h-5 w-5 text-foreground shrink-0" aria-hidden />
               {t("adminPurchase.detail.shippingInfo")}
             </div>
 
@@ -309,35 +309,35 @@ export default function AdminPurchaseRequestDetail() {
               <dl className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
                 {data.shipping.label ? (
                   <div className="sm:col-span-2">
-                    <dt className="text-xs font-medium uppercase tracking-wide text-gray-500">{t("adminPurchase.detail.shippingLabel")}</dt>
-                    <dd className="mt-0.5 font-medium text-gray-900">{data.shipping.label}</dd>
+                    <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{t("adminPurchase.detail.shippingLabel")}</dt>
+                    <dd className="mt-0.5 font-medium text-foreground">{data.shipping.label}</dd>
                   </div>
                 ) : null}
                 <div>
-                  <dt className="text-xs font-medium uppercase tracking-wide text-gray-500">{t("adminPurchase.detail.recipient")}</dt>
-                  <dd className="mt-0.5 text-gray-900">{data.shipping.recipientName ?? "—"}</dd>
+                  <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{t("adminPurchase.detail.recipient")}</dt>
+                  <dd className="mt-0.5 text-foreground">{data.shipping.recipientName ?? "—"}</dd>
                 </div>
                 <div>
-                  <dt className="text-xs font-medium uppercase tracking-wide text-gray-500">{t("adminPurchase.detail.phone")}</dt>
-                  <dd className="mt-0.5 text-gray-900">{data.shipping.recipientPhone ?? "—"}</dd>
+                  <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{t("adminPurchase.detail.phone")}</dt>
+                  <dd className="mt-0.5 text-foreground">{data.shipping.recipientPhone ?? "—"}</dd>
                 </div>
                 <div className="sm:col-span-2">
-                  <dt className="text-xs font-medium uppercase tracking-wide text-gray-500">{t("adminPurchase.detail.address")}</dt>
-                  <dd className="mt-0.5 break-words leading-relaxed text-gray-900">
-                    {data.shipping.postalCode ? <span className="text-gray-600">({data.shipping.postalCode}) </span> : null}
+                  <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{t("adminPurchase.detail.address")}</dt>
+                  <dd className="mt-0.5 break-words leading-relaxed text-foreground">
+                    {data.shipping.postalCode ? <span className="text-muted-foreground">({data.shipping.postalCode}) </span> : null}
                     {data.shipping.addressLine1}
                     {data.shipping.addressLine2 ? (
                       <>
                         <br />
-                        <span className="text-gray-800">{data.shipping.addressLine2}</span>
+                        <span className="text-foreground">{data.shipping.addressLine2}</span>
                       </>
                     ) : null}
                   </dd>
                 </div>
                 {data.shipping.userAddressId != null && (
                   <div className="sm:col-span-2">
-                    <dt className="text-xs font-medium uppercase tracking-wide text-gray-500">{t("adminPurchase.detail.userAddressId")}</dt>
-                    <dd className="mt-0.5 font-mono text-xs text-gray-600">{data.shipping.userAddressId}</dd>
+                    <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{t("adminPurchase.detail.userAddressId")}</dt>
+                    <dd className="mt-0.5 font-mono text-xs text-muted-foreground">{data.shipping.userAddressId}</dd>
                   </div>
                 )}
               </dl>
@@ -348,14 +348,14 @@ export default function AdminPurchaseRequestDetail() {
             )}
 
             <div className="border-t border-slate-200 pt-3">
-              <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-gray-500">
+              <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                 <Truck className="h-3.5 w-3.5" aria-hidden />
                 {t("adminPurchase.detail.tracking")}
               </div>
               {data.trackingNumber ? (
-                <p className="mt-1 font-mono text-sm font-semibold text-gray-900">{data.trackingNumber}</p>
+                <p className="mt-1 font-mono text-sm font-semibold text-foreground">{data.trackingNumber}</p>
               ) : (
-                <p className="mt-1 text-sm text-gray-500">{t("adminPurchase.detail.noTracking")}</p>
+                <p className="mt-1 text-sm text-muted-foreground">{t("adminPurchase.detail.noTracking")}</p>
               )}
             </div>
           </div>
@@ -363,7 +363,7 @@ export default function AdminPurchaseRequestDetail() {
           {data.memo && (
             <div className="space-y-2">
               <p className="font-semibold">{t("adminPurchase.detail.customerMemo")}</p>
-              <p className="text-sm text-gray-700 whitespace-pre-wrap">{data.memo}</p>
+              <p className="text-sm text-foreground/80 whitespace-pre-wrap">{data.memo}</p>
             </div>
           )}
 
@@ -371,20 +371,20 @@ export default function AdminPurchaseRequestDetail() {
             <div className="rounded-lg border border-slate-200 bg-slate-50/80 p-4 space-y-4">
               {data.adminMemo?.trim() ? (
                 <div className="space-y-1">
-                  <p className="text-sm font-semibold text-gray-900">{t("adminPurchase.detail.internalMemo")}</p>
-                  <p className="text-sm text-gray-800 whitespace-pre-wrap leading-relaxed">{data.adminMemo}</p>
+                  <p className="text-sm font-semibold text-foreground">{t("adminPurchase.detail.internalMemo")}</p>
+                  <p className="text-sm text-foreground whitespace-pre-wrap leading-relaxed">{data.adminMemo}</p>
                 </div>
               ) : null}
               {adminImageAttachments.length > 0 ? (
                 <div className={data.adminMemo?.trim() ? "space-y-2 border-t border-slate-200 pt-4" : "space-y-2"}>
-                  <p className="text-sm font-semibold text-gray-900">{t("adminPurchase.detail.adminPhotos")}</p>
+                  <p className="text-sm font-semibold text-foreground">{t("adminPurchase.detail.adminPhotos")}</p>
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
                     {adminImageAttachments.map((att) => {
                       const idx = imageAttachments.findIndex((a) => a.id === att.id);
                       return (
                         <div
                           key={att.id}
-                          className="relative group cursor-pointer rounded overflow-hidden border bg-white"
+                          className="relative group cursor-pointer rounded overflow-hidden border bg-card"
                           onClick={() => setLightboxIndex(idx)}
                         >
                           <img
@@ -403,8 +403,8 @@ export default function AdminPurchaseRequestDetail() {
           )}
 
           {(userImageAttachments.length > 0 || userOtherAttachments.length > 0) && (
-            <div className="pt-4 border-t border-gray-200 space-y-3">
-              <p className="text-sm font-medium text-gray-700">{t("adminPurchase.detail.customerAttachments")}</p>
+            <div className="pt-4 border-t border-border space-y-3">
+              <p className="text-sm font-medium text-foreground/80">{t("adminPurchase.detail.customerAttachments")}</p>
               {userImageAttachments.length > 0 ? (
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
                   {userImageAttachments.map((att) => {
@@ -434,11 +434,11 @@ export default function AdminPurchaseRequestDetail() {
                         href={att.viewUrl ?? att.storedUrl}
                         target="_blank"
                         rel="noreferrer"
-                        className="text-blue-600 underline break-all"
+                        className="text-foreground underline break-all"
                       >
                         {att.originalFilename}
                       </a>
-                      <span className="text-gray-400"> ({att.mimeType})</span>
+                      <span className="text-muted-foreground/70"> ({att.mimeType})</span>
                     </li>
                   ))}
                 </ul>

@@ -60,8 +60,8 @@ export default function ForgotPassword() {
             <Button type="submit" className="w-full" size="lg" disabled={loading}>
               {loading ? t("forgotPassword.submitting") : t("forgotPassword.submit")}
             </Button>
-            <div className="text-center text-sm text-gray-600">
-              <Link to="/login" className="text-blue-600 hover:underline font-medium">
+            <div className="text-center text-sm text-muted-foreground">
+              <Link to="/login" className="text-foreground hover:underline font-medium">
                 {t("forgotPassword.backToLogin")}
               </Link>
             </div>

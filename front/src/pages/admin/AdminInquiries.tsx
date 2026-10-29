@@ -144,14 +144,14 @@ export default function AdminInquiries() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold text-gray-900">{t("admin.inquiries.title")}</h1>
-        <p className="text-gray-600 mt-1">{t("admin.inquiries.subtitle")}</p>
+        <h1 className="text-3xl font-bold text-foreground">{t("admin.inquiries.title")}</h1>
+        <p className="text-muted-foreground mt-1">{t("admin.inquiries.subtitle")}</p>
       </div>
 
       <Card>
         <CardContent className="pt-6">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground/70" />
             <Input placeholder={t("admin.inquiries.searchPlaceholder")} className="pl-10" value={search} onChange={(e) => setSearch(e.target.value)} />
           </div>
         </CardContent>
@@ -160,7 +160,7 @@ export default function AdminInquiries() {
       <Card>
         <CardContent className="p-0">
           {loading ? (
-            <div className="py-12 text-center text-gray-500">{t("admin.common.loading")}</div>
+            <div className="py-12 text-center text-muted-foreground">{t("admin.common.loading")}</div>
           ) : (
             <>
               <Table>
@@ -176,17 +176,17 @@ export default function AdminInquiries() {
                 </TableHeader>
                 <TableBody>
                   {filtered.length === 0 ? (
-                    <TableRow><TableCell colSpan={6} className="text-center text-gray-500 py-8">{t("admin.inquiries.empty")}</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-8">{t("admin.inquiries.empty")}</TableCell></TableRow>
                   ) : filtered.map((inq) => (
                     <TableRow key={inq.id}>
                       <TableCell><Badge variant="outline">{t(inquiryCategoryKey(inq.category))}</Badge></TableCell>
                       <TableCell className="font-medium max-w-xs truncate">{inq.title}</TableCell>
-                      <TableCell className="text-sm text-gray-500">
+                      <TableCell className="text-sm text-muted-foreground">
                         {inq.nickname ?? t("admin.common.memberHash", { id: inq.userId })}
-                        {inq.email && <span className="block text-xs text-gray-400">{inq.email}</span>}
+                        {inq.email && <span className="block text-xs text-muted-foreground/70">{inq.email}</span>}
                       </TableCell>
                       <TableCell><Badge variant={statusVariants[inq.status]}>{t(inquiryStatusKey(inq.status))}</Badge></TableCell>
-                      <TableCell className="text-sm text-gray-500">{new Date(inq.createdAt).toLocaleDateString(dateLocale)}</TableCell>
+                      <TableCell className="text-sm text-muted-foreground">{new Date(inq.createdAt).toLocaleDateString(dateLocale)}</TableCell>
                       <TableCell>
                         <Button variant="outline" size="sm" onClick={() => openDetail(inq.id)}>
                           {inq.status === "PENDING" ? t("admin.common.reply") : t("admin.common.view")}
@@ -197,7 +197,7 @@ export default function AdminInquiries() {
                 </TableBody>
               </Table>
               <div className="flex items-center justify-between p-4 border-t flex-wrap gap-2">
-                <div className="flex items-center gap-2 text-sm text-gray-500">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <span>{t("admin.common.pageSize")}</span>
                   <Select value={String(size)} onValueChange={(v) => { setSize(Number(v)); setPage(0); }}>
                     <SelectTrigger className="w-[80px] h-8 text-xs"><SelectValue /></SelectTrigger>
@@ -210,7 +210,7 @@ export default function AdminInquiries() {
                 </div>
                 <div className="flex items-center gap-2">
                   <Button variant="outline" size="sm" disabled={page <= 0} onClick={() => setPage((p) => p - 1)}>{t("admin.common.prev")}</Button>
-                  <span className="text-sm text-gray-500">{t("admin.common.pageOf", { page: page + 1, total: Math.max(1, totalPages) })}</span>
+                  <span className="text-sm text-muted-foreground">{t("admin.common.pageOf", { page: page + 1, total: Math.max(1, totalPages) })}</span>
                   <Button variant="outline" size="sm" disabled={page >= totalPages - 1} onClick={() => setPage((p) => p + 1)}>{t("admin.common.next")}</Button>
                 </div>
               </div>
@@ -227,14 +227,14 @@ export default function AdminInquiries() {
               {detail && new Date(detail.createdAt).toLocaleDateString(dateLocale, { year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit" })}
             </DialogDescription>
           </DialogHeader>
-          {detailLoading && <div className="py-8 text-center text-gray-500">{t("admin.common.loading")}</div>}
+          {detailLoading && <div className="py-8 text-center text-muted-foreground">{t("admin.common.loading")}</div>}
           {!detailLoading && detail && (
             <div className="space-y-4">
-              <div className="p-4 bg-gray-50 rounded-lg">
+              <div className="p-4 bg-muted/60 rounded-lg">
                 <div className="flex items-center space-x-2 mb-3">
                   <Badge variant="outline">{t(inquiryCategoryKey(detail.category))}</Badge>
                   <Badge variant={statusVariants[detail.status]}>{t(inquiryStatusKey(detail.status))}</Badge>
-                  <span className="text-sm text-gray-500">
+                  <span className="text-sm text-muted-foreground">
                     {detail.nickname ?? t("admin.common.memberHash", { id: detail.userId })}
                     {detail.email && ` (${detail.email})`}
                   </span>
@@ -250,23 +250,23 @@ export default function AdminInquiries() {
                   </div>
                 </div>
                 <h3 className="font-semibold text-lg mb-2">{detail.title}</h3>
-                <p className="text-gray-700 whitespace-pre-wrap">{detail.content}</p>
+                <p className="text-foreground/80 whitespace-pre-wrap">{detail.content}</p>
               </div>
 
               {detail.replies && detail.replies.length > 0 && (
                 <div className="space-y-3">
                   <h4 className="font-semibold">{t("admin.inquiries.repliesTitle")}</h4>
                   {detail.replies.map((reply) => (
-                    <div key={reply.id} className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                    <div key={reply.id} className="p-4 bg-muted border border-border rounded-lg">
                       <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center space-x-2">
-                          <div className="w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center">
+                          <div className="w-6 h-6 bg-foreground rounded-full flex items-center justify-center">
                             <span className="text-white text-[10px] font-bold tracking-tight">MP</span>
                           </div>
                           <span className="font-medium text-sm">{t("admin.common.adminLabel")}</span>
                         </div>
                         <div className="flex items-center space-x-2">
-                          <span className="text-xs text-gray-500">
+                          <span className="text-xs text-muted-foreground">
                             {new Date(reply.createdAt).toLocaleDateString(dateLocale, { year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit" })}
                           </span>
                           <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => { setEditingReplyId(reply.id); setEditContent(reply.content); }}>
@@ -277,7 +277,7 @@ export default function AdminInquiries() {
                           </Button>
                         </div>
                       </div>
-                      <Separator className="my-2 bg-blue-200" />
+                      <Separator className="my-2 bg-border" />
                       {editingReplyId === reply.id ? (
                         <div className="space-y-2">
                           <Textarea value={editContent} onChange={(e) => setEditContent(e.target.value)} rows={4} />
@@ -287,7 +287,7 @@ export default function AdminInquiries() {
                           </div>
                         </div>
                       ) : (
-                        <p className="text-gray-700 text-sm whitespace-pre-wrap">{reply.content}</p>
+                        <p className="text-foreground/80 text-sm whitespace-pre-wrap">{reply.content}</p>
                       )}
                     </div>
                   ))}

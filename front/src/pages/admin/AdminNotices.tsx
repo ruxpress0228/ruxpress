@@ -183,8 +183,8 @@ export default function AdminNotices() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">{t("admin.notices.title")}</h1>
-          <p className="text-gray-600 mt-1">{t("admin.notices.subtitle")}</p>
+          <h1 className="text-3xl font-bold text-foreground">{t("admin.notices.title")}</h1>
+          <p className="text-muted-foreground mt-1">{t("admin.notices.subtitle")}</p>
         </div>
         <Button onClick={openCreate}><Plus className="w-4 h-4 mr-2" />{t("admin.notices.create")}</Button>
       </div>
@@ -192,7 +192,7 @@ export default function AdminNotices() {
       <Card>
         <CardContent className="p-0">
           {loading ? (
-            <div className="py-12 text-center text-gray-500">{t("admin.common.loading")}</div>
+            <div className="py-12 text-center text-muted-foreground">{t("admin.common.loading")}</div>
           ) : (
             <>
             <Table>
@@ -208,18 +208,18 @@ export default function AdminNotices() {
               </TableHeader>
               <TableBody>
                 {notices.length === 0 ? (
-                  <TableRow><TableCell colSpan={6} className="text-center text-gray-500 py-8">{t("admin.notices.empty")}</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-8">{t("admin.notices.empty")}</TableCell></TableRow>
                 ) : notices.map((n) => (
                   <TableRow
                     key={n.id}
-                    className="cursor-pointer hover:bg-gray-50"
+                    className="cursor-pointer hover:bg-muted/60"
                     onClick={() => openDetailView(n)}
                   >
-                    <TableCell>{n.isPinned && <Pin className="w-4 h-4 text-blue-500" />}</TableCell>
-                    <TableCell className="font-medium max-w-md truncate text-blue-700">{n.title}</TableCell>
+                    <TableCell>{n.isPinned && <Pin className="w-4 h-4 text-foreground" />}</TableCell>
+                    <TableCell className="font-medium max-w-md truncate text-foreground">{n.title}</TableCell>
                     <TableCell><Badge variant={statusVariants[n.status]}>{t(noticeStatusKey(n.status))}</Badge></TableCell>
-                    <TableCell className="text-sm text-gray-500">{n.viewCount}</TableCell>
-                    <TableCell className="text-sm text-gray-500">{new Date(n.createdAt).toLocaleDateString(dateLocale)}</TableCell>
+                    <TableCell className="text-sm text-muted-foreground">{n.viewCount}</TableCell>
+                    <TableCell className="text-sm text-muted-foreground">{new Date(n.createdAt).toLocaleDateString(dateLocale)}</TableCell>
                     <TableCell>
                       <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
                         <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => togglePin(n.id)} title={n.isPinned ? t("admin.common.unpin") : t("admin.common.pin")}>
@@ -238,7 +238,7 @@ export default function AdminNotices() {
               </TableBody>
             </Table>
             <div className="flex items-center justify-between p-4 border-t flex-wrap gap-2">
-              <div className="flex items-center gap-2 text-sm text-gray-500">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <span>{t("admin.common.pageSize")}</span>
                 <Select value={String(size)} onValueChange={(v) => { setSize(Number(v)); setPage(0); }}>
                   <SelectTrigger className="w-[80px] h-8 text-xs"><SelectValue /></SelectTrigger>
@@ -251,7 +251,7 @@ export default function AdminNotices() {
               </div>
               <div className="flex items-center gap-2">
                 <Button variant="outline" size="sm" disabled={page <= 0} onClick={() => setPage((p) => p - 1)}>{t("admin.common.prev")}</Button>
-                <span className="text-sm text-gray-500">{t("admin.common.pageOf", { page: page + 1, total: Math.max(1, totalPages) })}</span>
+                <span className="text-sm text-muted-foreground">{t("admin.common.pageOf", { page: page + 1, total: Math.max(1, totalPages) })}</span>
                 <Button variant="outline" size="sm" disabled={page >= totalPages - 1} onClick={() => setPage((p) => p + 1)}>{t("admin.common.next")}</Button>
               </div>
             </div>
@@ -282,18 +282,18 @@ export default function AdminNotices() {
                   </Badge>
                 )}
                 <Badge variant={statusVariants[detailNotice.status]}>{t(noticeStatusKey(detailNotice.status))}</Badge>
-                <span className="text-sm text-gray-500">
+                <span className="text-sm text-muted-foreground">
                   {t("admin.common.col.views")}: {detailNotice.viewCount}
                 </span>
               </div>
-              <div className="text-xs text-gray-500 space-y-1">
+              <div className="text-xs text-muted-foreground space-y-1">
                 <p>{t("admin.common.col.createdAt")}: {formatDateTime(detailNotice.createdAt, dateLocale)}</p>
                 {detailNotice.publishedAt && (
                   <p>{t("admin.notices.publishedAtLabel")}: {formatDateTime(detailNotice.publishedAt, dateLocale)}</p>
                 )}
               </div>
-              <div className="rounded-lg border bg-gray-50 p-4 max-h-[50vh] overflow-y-auto">
-                <p className="text-gray-800 whitespace-pre-wrap leading-relaxed">
+              <div className="rounded-lg border bg-muted/60 p-4 max-h-[50vh] overflow-y-auto">
+                <p className="text-foreground whitespace-pre-wrap leading-relaxed">
                   {renderTextWithLinks(detailNotice.content)}
                 </p>
               </div>

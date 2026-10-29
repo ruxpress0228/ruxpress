@@ -123,8 +123,8 @@ export default function InquiryForm() {
   return (
     <div className="max-w-3xl mx-auto">
       <div className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-900">{t("inquiry.form.title")}</h1>
-        <p className="text-gray-600 mt-2">
+        <h1 className="text-3xl font-bold text-foreground">{t("inquiry.form.title")}</h1>
+        <p className="text-muted-foreground mt-2">
           {t("inquiry.form.subtitle")}
         </p>
       </div>
@@ -190,7 +190,7 @@ export default function InquiryForm() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div
-              className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-blue-500 cursor-pointer transition-colors"
+              className="border-2 border-dashed border-input rounded-lg p-8 text-center hover:border-foreground cursor-pointer transition-colors"
               onClick={() => fileInputRef.current?.click()}
             >
               <input
@@ -200,11 +200,11 @@ export default function InquiryForm() {
                 className="hidden"
                 onChange={handleFileChange}
               />
-              <Upload className="w-12 h-12 mx-auto text-gray-400 mb-2" />
-              <p className="text-sm text-gray-600">
+              <Upload className="w-12 h-12 mx-auto text-muted-foreground/70 mb-2" />
+              <p className="text-sm text-muted-foreground">
                 {t("inquiry.form.uploadHint")}
               </p>
-              <p className="text-xs text-gray-500 mt-1">
+              <p className="text-xs text-muted-foreground mt-1">
                 {t("inquiry.form.uploadHintDetail")}
               </p>
             </div>
@@ -221,12 +221,12 @@ export default function InquiryForm() {
                       type="button"
                       variant="ghost"
                       size="icon"
-                      className="absolute top-1 right-1 h-8 w-8 bg-white/80 hover:bg-white"
+                      className="absolute top-1 right-1 h-8 w-8 bg-white/80 hover:bg-card"
                       onClick={() => removeFile(p.index)}
                     >
                       <X className="h-4 w-4" />
                     </Button>
-                    <div className="mt-1 text-xs text-gray-600 truncate">{p.file.name}</div>
+                    <div className="mt-1 text-xs text-muted-foreground truncate">{p.file.name}</div>
                   </div>
                 ))}
               </div>
@@ -237,10 +237,10 @@ export default function InquiryForm() {
                   isImageFile(file) ? null : (
                     <li
                       key={`${file.name}-${index}`}
-                      className="flex items-center justify-between text-sm bg-gray-50 rounded px-3 py-2"
+                      className="flex items-center justify-between text-sm bg-muted/60 rounded px-3 py-2"
                     >
                       <span className="truncate flex-1">{file.name}</span>
-                      <span className="text-gray-500 ml-2">
+                      <span className="text-muted-foreground ml-2">
                         {(file.size / 1024).toFixed(1)} KB
                       </span>
                       <Button

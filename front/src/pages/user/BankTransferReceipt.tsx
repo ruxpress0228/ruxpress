@@ -30,7 +30,7 @@ export default function BankTransferReceipt() {
 
   if (!data) {
     return (
-      <div className="max-w-lg mx-auto py-16 text-center text-gray-500">
+      <div className="max-w-lg mx-auto py-16 text-center text-muted-foreground">
         {t("bankTransfer.receiptLoading")}
       </div>
     );
@@ -52,38 +52,38 @@ export default function BankTransferReceipt() {
       </div>
 
       <Card className="print:border-0 print:shadow-none">
-        <CardHeader className="print:text-center border-b print:border-gray-300 pb-4">
+        <CardHeader className="print:text-center border-b print:border-input pb-4">
           <CardTitle className="text-2xl">{t("bankTransfer.receiptTitle")}</CardTitle>
-          <p className="text-sm text-gray-500 mt-2">Main Proxy · {t("bankTransfer.receiptSubtitle")}</p>
+          <p className="text-sm text-muted-foreground mt-2">Main Proxy · {t("bankTransfer.receiptSubtitle")}</p>
         </CardHeader>
         <CardContent className="pt-6 space-y-4 text-sm">
           <div className="grid grid-cols-2 gap-2">
-            <span className="text-gray-500">{t("bankTransfer.receipt.entryId")}</span>
+            <span className="text-muted-foreground">{t("bankTransfer.receipt.entryId")}</span>
             <span className="font-mono font-medium">{data.entryId}</span>
-            <span className="text-gray-500">{t("bankTransfer.receipt.type")}</span>
+            <span className="text-muted-foreground">{t("bankTransfer.receipt.type")}</span>
             <span>{data.entryType}</span>
-            <span className="text-gray-500">{t("bankTransfer.receipt.status")}</span>
+            <span className="text-muted-foreground">{t("bankTransfer.receipt.status")}</span>
             <span>{data.status}</span>
-            <span className="text-gray-500">{t("bankTransfer.field.amount")}</span>
+            <span className="text-muted-foreground">{t("bankTransfer.field.amount")}</span>
             <span className="font-semibold">
               {data.amount.toLocaleString(locale === "en" ? "en-US" : "ko-KR")} {data.currency}
             </span>
             {data.depositorName ? (
               <>
-                <span className="text-gray-500">{t("bankTransfer.field.depositorName")}</span>
+                <span className="text-muted-foreground">{t("bankTransfer.field.depositorName")}</span>
                 <span>{data.depositorName}</span>
               </>
             ) : null}
-            <span className="text-gray-500">{t("bankTransfer.receipt.confirmedAt")}</span>
+            <span className="text-muted-foreground">{t("bankTransfer.receipt.confirmedAt")}</span>
             <span>{data.confirmedAt ? formatDate(data.confirmedAt, locale) : "—"}</span>
-            <span className="text-gray-500">{t("bankTransfer.receipt.bank")}</span>
+            <span className="text-muted-foreground">{t("bankTransfer.receipt.bank")}</span>
             <span>{data.settlementAccount.bankName}</span>
-            <span className="text-gray-500">{t("bankTransfer.receipt.account")}</span>
+            <span className="text-muted-foreground">{t("bankTransfer.receipt.account")}</span>
             <span className="font-mono">{data.settlementAccount.accountNumber}</span>
-            <span className="text-gray-500">{t("bankTransfer.receipt.holder")}</span>
+            <span className="text-muted-foreground">{t("bankTransfer.receipt.holder")}</span>
             <span>{data.settlementAccount.accountHolder}</span>
           </div>
-          <p className="text-xs text-gray-400 pt-4 border-t">{t("bankTransfer.receiptFooter")}</p>
+          <p className="text-xs text-muted-foreground/70 pt-4 border-t">{t("bankTransfer.receiptFooter")}</p>
         </CardContent>
       </Card>
     </div>

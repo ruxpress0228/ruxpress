@@ -192,57 +192,57 @@ export default function AdminDashboard() {
   ] : [];
 
   if (loading || !stats) {
-    return <div className="py-12 text-center text-gray-500">{t("admin.common.loading")}</div>;
+    return <div className="py-12 text-center text-muted-foreground">{t("admin.common.loading")}</div>;
   }
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold text-gray-900">{t("admin.dashboard.title")}</h1>
-        <p className="text-gray-600 mt-1">{t("admin.dashboard.subtitle")}</p>
+        <h1 className="text-3xl font-bold text-foreground">{t("admin.dashboard.title")}</h1>
+        <p className="text-muted-foreground mt-1">{t("admin.dashboard.subtitle")}</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={openUsers}>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">{t("admin.dashboard.totalUsers")}</CardTitle>
-            <Users className="w-4 h-4 text-blue-600" />
+            <CardTitle className="text-sm font-medium text-muted-foreground">{t("admin.dashboard.totalUsers")}</CardTitle>
+            <Users className="w-4 h-4 text-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-gray-900">{t("admin.common.countUnit", { n: stats.totalUsers })}</div>
+            <div className="text-2xl font-bold text-foreground">{t("admin.common.countUnit", { n: stats.totalUsers })}</div>
             <p className="text-xs text-green-600 mt-1">{t("admin.common.todayPlus", { n: stats.newUsersToday })}</p>
           </CardContent>
         </Card>
 
         <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={openInquiries}>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">{t("admin.dashboard.inquiries")}</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">{t("admin.dashboard.inquiries")}</CardTitle>
             <MessageSquare className="w-4 h-4 text-purple-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-gray-900">{t("admin.common.countCase", { n: stats.totalInquiries })}</div>
+            <div className="text-2xl font-bold text-foreground">{t("admin.common.countCase", { n: stats.totalInquiries })}</div>
             <p className="text-xs text-orange-600 mt-1">{t("admin.common.pendingCount", { n: stats.pendingInquiries })}</p>
           </CardContent>
         </Card>
 
         <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={openNotices}>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">{t("admin.dashboard.notices")}</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">{t("admin.dashboard.notices")}</CardTitle>
             <FileText className="w-4 h-4 text-green-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-gray-900">{t("admin.common.countCase", { n: stats.totalNotices })}</div>
+            <div className="text-2xl font-bold text-foreground">{t("admin.common.countCase", { n: stats.totalNotices })}</div>
           </CardContent>
         </Card>
 
         <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => navigate("/admin/exchange-rate")}>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">{t("admin.dashboard.exchangeRate")}</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">{t("admin.dashboard.exchangeRate")}</CardTitle>
             <TrendingUp className="w-4 h-4 text-indigo-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-gray-900">-</div>
-            <p className="text-xs text-gray-500 mt-1">{t("admin.dashboard.exchangeHint")}</p>
+            <div className="text-2xl font-bold text-foreground">-</div>
+            <p className="text-xs text-muted-foreground mt-1">{t("admin.dashboard.exchangeHint")}</p>
           </CardContent>
         </Card>
       </div>
@@ -265,19 +265,19 @@ export default function AdminDashboard() {
         <CardContent>
           <div className="space-y-3">
             {recentInquiries.length === 0 ? (
-              <p className="text-center text-gray-500 py-4">{t("admin.dashboard.noRecentInquiries")}</p>
+              <p className="text-center text-muted-foreground py-4">{t("admin.dashboard.noRecentInquiries")}</p>
             ) : recentInquiries.map((inquiry) => (
               <div
                 key={inquiry.id}
-                className="flex items-start justify-between p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer"
+                className="flex items-start justify-between p-3 border border-border rounded-lg hover:bg-muted/60 cursor-pointer"
                 onClick={() => { openInquiries().then(() => openInqDetail(inquiry.id)); }}
               >
                 <div className="flex-1">
                   <div className="flex items-center space-x-2 mb-1">
-                    <span className="font-medium text-gray-900">{inquiry.title}</span>
+                    <span className="font-medium text-foreground">{inquiry.title}</span>
                     <Badge variant={inqStatusVariant[inquiry.status]}>{t(inquiryStatusKey(inquiry.status))}</Badge>
                   </div>
-                  <p className="text-sm text-gray-500">
+                  <p className="text-sm text-muted-foreground">
                     {t(inquiryCategoryKey(inquiry.category))} · {new Date(inquiry.createdAt).toLocaleDateString(dateLocale)}
                   </p>
                 </div>
@@ -293,13 +293,13 @@ export default function AdminDashboard() {
             <DialogTitle>{t("admin.dashboard.usersPopupTitle")}</DialogTitle>
             <DialogDescription>{t("admin.dashboard.usersPopupDesc")}</DialogDescription>
           </DialogHeader>
-          {usersLoading ? <div className="py-8 text-center text-gray-500">{t("admin.common.loading")}</div> : (
+          {usersLoading ? <div className="py-8 text-center text-muted-foreground">{t("admin.common.loading")}</div> : (
             <>
               {userStats && (
                 <div className="grid grid-cols-5 gap-3 mb-4">
                   {userStatItems.map((s) => (
-                    <div key={s.key} className="text-center p-2 bg-gray-50 rounded-lg">
-                      <p className="text-xs text-gray-500">
+                    <div key={s.key} className="text-center p-2 bg-muted/60 rounded-lg">
+                      <p className="text-xs text-muted-foreground">
                         {s.key === "all" ? t("admin.common.all") : t(`admin.user.stats.${s.key}` as "admin.user.stats.active")}
                       </p>
                       <p className="text-lg font-bold">{s.v}</p>
@@ -321,9 +321,9 @@ export default function AdminDashboard() {
                   {users.map((u) => (
                     <TableRow key={u.id}>
                       <TableCell className="font-medium">{u.nickname}</TableCell>
-                      <TableCell className="text-sm text-gray-500">{u.email}</TableCell>
+                      <TableCell className="text-sm text-muted-foreground">{u.email}</TableCell>
                       <TableCell><Badge variant={userStatusVariant[u.status]}>{t(userStatusKey(u.status))}</Badge></TableCell>
-                      <TableCell className="text-sm text-gray-500">{new Date(u.createdAt).toLocaleDateString(dateLocale)}</TableCell>
+                      <TableCell className="text-sm text-muted-foreground">{new Date(u.createdAt).toLocaleDateString(dateLocale)}</TableCell>
                       <TableCell>
                         <div className="flex gap-1">
                           {u.status !== "ACTIVE" && <Button size="sm" variant="outline" onClick={() => changeUserStatus(u.id, "ACTIVE")}>{t("admin.user.status.ACTIVE")}</Button>}
@@ -351,26 +351,26 @@ export default function AdminDashboard() {
             <DialogDescription>{inqDetail ? inqDetail.title : t("admin.dashboard.inquiriesPopupDesc")}</DialogDescription>
           </DialogHeader>
 
-          {inqLoading ? <div className="py-8 text-center text-gray-500">{t("admin.common.loading")}</div> : inqDetail ? (
+          {inqLoading ? <div className="py-8 text-center text-muted-foreground">{t("admin.common.loading")}</div> : inqDetail ? (
             <div className="space-y-4">
               <Button variant="ghost" size="sm" onClick={() => setInqDetail(null)}>{t("admin.common.backToList")}</Button>
-              <div className="p-4 bg-gray-50 rounded-lg">
+              <div className="p-4 bg-muted/60 rounded-lg">
                 <div className="flex items-center gap-2 mb-2">
                   <Badge variant="outline">{t(inquiryCategoryKey(inqDetail.category))}</Badge>
                   <Badge variant={inqStatusVariant[inqDetail.status]}>{t(inquiryStatusKey(inqDetail.status))}</Badge>
-                  <span className="text-xs text-gray-500">
+                  <span className="text-xs text-muted-foreground">
                     {inqDetail.nickname ?? t("admin.common.memberHash", { id: inqDetail.userId })}
                     {inqDetail.email && ` (${inqDetail.email})`}
                   </span>
                 </div>
-                <p className="whitespace-pre-wrap text-gray-700">{inqDetail.content}</p>
+                <p className="whitespace-pre-wrap text-foreground/80">{inqDetail.content}</p>
               </div>
 
               {inqDetail.replies && inqDetail.replies.length > 0 && (
                 <div className="space-y-2">
                   {inqDetail.replies.map((r) => (
-                    <div key={r.id} className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                      <div className="flex justify-between text-xs text-gray-500 mb-1">
+                    <div key={r.id} className="p-3 bg-muted border border-border rounded-lg">
+                      <div className="flex justify-between text-xs text-muted-foreground mb-1">
                         <span>{t("admin.common.adminLabel")}</span>
                         <span>{new Date(r.createdAt).toLocaleDateString(dateLocale, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}</span>
                       </div>
@@ -412,14 +412,14 @@ export default function AdminDashboard() {
                 </TableHeader>
                 <TableBody>
                   {inquiries.length === 0 ? (
-                    <TableRow><TableCell colSpan={5} className="text-center py-6 text-gray-500">{t("admin.dashboard.noInquiries")}</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={5} className="text-center py-6 text-muted-foreground">{t("admin.dashboard.noInquiries")}</TableCell></TableRow>
                   ) : inquiries.map((inq) => (
-                    <TableRow key={inq.id} className="cursor-pointer hover:bg-gray-50" onClick={() => openInqDetail(inq.id)}>
+                    <TableRow key={inq.id} className="cursor-pointer hover:bg-muted/60" onClick={() => openInqDetail(inq.id)}>
                       <TableCell><Badge variant="outline">{t(inquiryCategoryKey(inq.category))}</Badge></TableCell>
                       <TableCell className="font-medium">{inq.title}</TableCell>
-                      <TableCell className="text-sm text-gray-500">{inq.nickname ?? `#${inq.userId}`}</TableCell>
+                      <TableCell className="text-sm text-muted-foreground">{inq.nickname ?? `#${inq.userId}`}</TableCell>
                       <TableCell><Badge variant={inqStatusVariant[inq.status]}>{t(inquiryStatusKey(inq.status))}</Badge></TableCell>
-                      <TableCell className="text-sm text-gray-500">{new Date(inq.createdAt).toLocaleDateString(dateLocale)}</TableCell>
+                      <TableCell className="text-sm text-muted-foreground">{new Date(inq.createdAt).toLocaleDateString(dateLocale)}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -440,7 +440,7 @@ export default function AdminDashboard() {
             <DialogTitle>{t("admin.dashboard.noticesPopupTitle")}</DialogTitle>
             <DialogDescription>{t("admin.dashboard.noticesPopupDesc")}</DialogDescription>
           </DialogHeader>
-          {noticesLoading ? <div className="py-8 text-center text-gray-500">{t("admin.common.loading")}</div> : (
+          {noticesLoading ? <div className="py-8 text-center text-muted-foreground">{t("admin.common.loading")}</div> : (
             <>
               <Table>
                 <TableHeader>
@@ -453,7 +453,7 @@ export default function AdminDashboard() {
                 </TableHeader>
                 <TableBody>
                   {notices.length === 0 ? (
-                    <TableRow><TableCell colSpan={4} className="text-center py-6 text-gray-500">{t("admin.notices.empty")}</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={4} className="text-center py-6 text-muted-foreground">{t("admin.notices.empty")}</TableCell></TableRow>
                   ) : notices.map((n) => (
                     <TableRow key={n.id}>
                       <TableCell className="font-medium">
@@ -465,7 +465,7 @@ export default function AdminDashboard() {
                           {t(noticeStatusKey(n.status))}
                         </Badge>
                       </TableCell>
-                      <TableCell className="text-sm text-gray-500">{n.viewCount}</TableCell>
+                      <TableCell className="text-sm text-muted-foreground">{n.viewCount}</TableCell>
                       <TableCell>
                         <div className="flex gap-1">
                           <Button variant="ghost" size="sm" onClick={() => togglePin(n.id)} title={n.isPinned ? t("admin.common.unpin") : t("admin.common.pin")}>

@@ -35,13 +35,13 @@ function ProductUrlBlock({ shop, urls, t }: { shop?: string | null; urls: string
     <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
       <div className="min-w-0 flex-1 space-y-2">
         {shop ? (
-          <p className="text-xs font-medium text-gray-500">
-            {t("purchaseDetail.shop")} <span className="text-gray-800">{shop}</span>
+          <p className="text-xs font-medium text-muted-foreground">
+            {t("purchaseDetail.shop")} <span className="text-foreground">{shop}</span>
           </p>
         ) : null}
         <ul className="space-y-1">
           {urls.map((url, i) => (
-            <li key={`${url}-${i}`} className="text-sm text-gray-900 break-all font-mono leading-relaxed">
+            <li key={`${url}-${i}`} className="text-sm text-foreground break-all font-mono leading-relaxed">
               {urls.length > 1 ? `${i + 1}. ` : ""}
               {url}
             </li>
@@ -65,15 +65,15 @@ function ProductUrlBlock({ shop, urls, t }: { shop?: string | null; urls: string
 function OptionAttributesReadonlyList({ entries }: { entries: [string, string][] }) {
   if (entries.length === 0) return null;
   return (
-    <ul className="mt-1 space-y-0.5 text-sm leading-relaxed text-gray-800">
+    <ul className="mt-1 space-y-0.5 text-sm leading-relaxed text-foreground">
       {entries.map(([name, value], i) => (
         <li key={`${name}-${i}`} className="pl-0.5">
-          <span className="text-gray-400 select-none" aria-hidden>
+          <span className="text-muted-foreground/70 select-none" aria-hidden>
             -{" "}
           </span>
-          <span className="text-gray-600">{name}</span>
-          <span className="text-gray-400">: </span>
-          <span className="text-gray-900">{value}</span>
+          <span className="text-muted-foreground">{name}</span>
+          <span className="text-muted-foreground/70">: </span>
+          <span className="text-foreground">{value}</span>
         </li>
       ))}
     </ul>
@@ -214,7 +214,7 @@ export default function PurchaseRequestDetail() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <p className="text-gray-500">{t("purchaseDetail.loading")}</p>
+        <p className="text-muted-foreground">{t("purchaseDetail.loading")}</p>
       </div>
     );
   }
@@ -222,7 +222,7 @@ export default function PurchaseRequestDetail() {
   if (!data) {
     return (
       <div className="text-center py-12">
-        <p className="text-gray-500">{t("purchaseDetail.notFound")}</p>
+        <p className="text-muted-foreground">{t("purchaseDetail.notFound")}</p>
         <Button variant="link" className="mt-2" onClick={() => navigate("/purchase")}>
           {t("inquiry.detail.backToList")}
         </Button>
@@ -254,7 +254,7 @@ export default function PurchaseRequestDetail() {
           <div className="flex items-start justify-between gap-4">
             <div className="min-w-0">
               <CardTitle className="text-2xl">{data.requestName}</CardTitle>
-              <p className="text-sm text-gray-500 mt-1 break-words">
+              <p className="text-sm text-muted-foreground mt-1 break-words">
                 {t("purchaseDetail.requestNumber")}: {data.requestNumber}
               </p>
             </div>
@@ -267,21 +267,21 @@ export default function PurchaseRequestDetail() {
         <CardContent className="space-y-5">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <p className="text-sm text-gray-500">{t("purchaseDetail.quantity")}</p>
+              <p className="text-sm text-muted-foreground">{t("purchaseDetail.quantity")}</p>
               <p className="font-semibold">{t("purchaseDetail.quantityUnit", { n: data.quantity })}</p>
             </div>
             <div>
-              <p className="text-sm text-gray-500">{t("purchaseDetail.totalAmount")}</p>
+              <p className="text-sm text-muted-foreground">{t("purchaseDetail.totalAmount")}</p>
               <p className="font-semibold">₩{(data.totalAmountKrw ?? 0).toLocaleString()}</p>
             </div>
             <div>
-              <p className="text-sm text-gray-500">{t("purchaseDetail.createdAt")}</p>
+              <p className="text-sm text-muted-foreground">{t("purchaseDetail.createdAt")}</p>
               <p className="font-semibold">
                 {new Date(data.createdAt).toLocaleString(dateLocale)}
               </p>
             </div>
             <div>
-              <p className="text-sm text-gray-500">{t("purchaseDetail.updatedAt")}</p>
+              <p className="text-sm text-muted-foreground">{t("purchaseDetail.updatedAt")}</p>
               <p className="font-semibold">
                 {new Date(data.updatedAt).toLocaleString(dateLocale)}
               </p>
@@ -299,15 +299,15 @@ export default function PurchaseRequestDetail() {
                   return (
                     <li key={`${it.url}-${idx}`} className="border rounded-lg p-3 sm:p-4 space-y-2">
                       <ProductUrlBlock shop={it.shop} urls={itemUrls(it)} t={t} />
-                      <div className="text-sm text-gray-700 pt-1 border-t border-gray-100">
+                      <div className="text-sm text-foreground/80 pt-1 border-t border-border">
                         {t("purchaseDetail.unitPrice")} ₩{(it.priceKrw ?? 0).toLocaleString()} × {t("purchaseDetail.quantityUnit", { n: it.quantity ?? 0 })} =
                         <span className="font-semibold ml-1">
                           ₩{((it.priceKrw ?? 0) * (it.quantity ?? 0)).toLocaleString()}
                         </span>
                       </div>
                       {itemOptions.length > 0 ? (
-                        <div className="pt-2 border-t border-gray-50">
-                          <p className="text-sm font-medium text-gray-600 mb-1">{t("purchaseDetail.options")}</p>
+                        <div className="pt-2 border-t border-border">
+                          <p className="text-sm font-medium text-muted-foreground mb-1">{t("purchaseDetail.options")}</p>
                           <OptionAttributesReadonlyList entries={itemOptions} />
                         </div>
                       ) : null}
@@ -324,13 +324,13 @@ export default function PurchaseRequestDetail() {
                 ))}
               </ul>
             ) : (
-              <p className="text-sm text-gray-500">{t("purchaseDetail.noItems")}</p>
+              <p className="text-sm text-muted-foreground">{t("purchaseDetail.noItems")}</p>
             )}
           </div>
 
           {legacyOptionsEntries.length > 0 && (
             <div className="space-y-1">
-              <p className="text-sm font-medium text-gray-600">{t("purchaseDetail.commonOptions")}</p>
+              <p className="text-sm font-medium text-muted-foreground">{t("purchaseDetail.commonOptions")}</p>
               <OptionAttributesReadonlyList entries={legacyOptionsEntries} />
             </div>
           )}
@@ -340,13 +340,13 @@ export default function PurchaseRequestDetail() {
               {hasShippingSnapshot(data.shipping) && data.shipping && (
                 <div className="space-y-2">
                   <p className="font-semibold">{t("purchaseDetail.shipping")}</p>
-                  <div className="rounded-lg border border-gray-200 bg-gray-50/80 p-3 text-sm text-gray-800 space-y-1">
-                    {data.shipping.label ? <p className="font-medium text-gray-900">{data.shipping.label}</p> : null}
+                  <div className="rounded-lg border border-border bg-muted/60 p-3 text-sm text-foreground space-y-1">
+                    {data.shipping.label ? <p className="font-medium text-foreground">{data.shipping.label}</p> : null}
                     {(data.shipping.recipientName || data.shipping.recipientPhone) && (
                       <p>
                         {data.shipping.recipientName ?? ""}
                         {data.shipping.recipientPhone ? (
-                          <span className="text-gray-600"> · {data.shipping.recipientPhone}</span>
+                          <span className="text-muted-foreground"> · {data.shipping.recipientPhone}</span>
                         ) : null}
                       </p>
                     )}
@@ -362,7 +362,7 @@ export default function PurchaseRequestDetail() {
               {data.trackingNumber && (
                 <div className="space-y-1">
                   <p className="font-semibold">{t("purchaseDetail.trackingNumber")}</p>
-                  <p className="text-sm font-mono text-gray-900">{data.trackingNumber}</p>
+                  <p className="text-sm font-mono text-foreground">{data.trackingNumber}</p>
                 </div>
               )}
             </div>
@@ -371,13 +371,13 @@ export default function PurchaseRequestDetail() {
           {data.memo && (
             <div className="space-y-2">
               <p className="font-semibold">{t("purchaseDetail.memo")}</p>
-              <p className="text-sm text-gray-700 whitespace-pre-wrap">{data.memo}</p>
+              <p className="text-sm text-foreground/80 whitespace-pre-wrap">{data.memo}</p>
             </div>
           )}
 
           {userAttachments.length > 0 && (
-            <div className="pt-4 border-t border-gray-200">
-              <p className="text-sm font-medium text-gray-700 mb-3">{t("purchaseDetail.myPhotos")}</p>
+            <div className="pt-4 border-t border-border">
+              <p className="text-sm font-medium text-foreground/80 mb-3">{t("purchaseDetail.myPhotos")}</p>
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
                 {userAttachments.map((att) => {
                   const idx = imageAttachments.findIndex((a) => a.id === att.id);
@@ -401,8 +401,8 @@ export default function PurchaseRequestDetail() {
           )}
 
           {adminAttachments.length > 0 && (
-            <div className="pt-4 border-t border-gray-200">
-              <p className="text-sm font-medium text-gray-700 mb-3">{t("purchaseDetail.adminPhotos")}</p>
+            <div className="pt-4 border-t border-border">
+              <p className="text-sm font-medium text-foreground/80 mb-3">{t("purchaseDetail.adminPhotos")}</p>
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
                 {adminAttachments.map((att) => {
                   const idx = imageAttachments.findIndex((a) => a.id === att.id);

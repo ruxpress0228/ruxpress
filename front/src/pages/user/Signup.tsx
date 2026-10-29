@@ -5,6 +5,7 @@ import { Input } from "../../components/ui/input";
 import { Label } from "../../components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../components/ui/card";
 import { Separator } from "../../components/ui/separator";
+import { Mark } from "../../components/brand/BrandMark";
 import { toast } from "sonner";
 import { api } from "../../utils/api";
 import { useTranslation } from "../../hooks/useTranslation";
@@ -206,9 +207,7 @@ export default function Signup() {
       <Card className={`w-full ${step === "legal" ? "max-w-lg" : "max-w-md"}`}>
         <CardHeader className="space-y-1">
           <div className="flex items-center justify-center mb-4">
-            <div className="w-12 h-12 bg-gradient-to-br from-blue-600 to-blue-400 rounded-xl flex items-center justify-center">
-              <span className="text-white text-lg font-bold tracking-tight">MP</span>
-            </div>
+            <Mark size="lg" />
           </div>
           <CardTitle className="text-2xl text-center">{stepTitle}</CardTitle>
           <CardDescription className="text-center">{stepDescription}</CardDescription>
@@ -245,7 +244,7 @@ export default function Signup() {
                 type="button"
                 variant="ghost"
                 size="sm"
-                className="px-0 text-gray-500"
+                className="px-0 text-muted-foreground"
                 onClick={() => setStep("legal")}
               >
                 ← {t("signup.step.back")}
@@ -286,7 +285,7 @@ export default function Signup() {
                       {emailVerifying ? t("signup.codeVerifying") : t("signup.codeVerify")}
                     </Button>
                   </div>
-                  <p className="text-xs text-gray-500">{t("signup.codeValidity")}</p>
+                  <p className="text-xs text-muted-foreground">{t("signup.codeValidity")}</p>
                 </div>
               )}
             </>
@@ -298,7 +297,7 @@ export default function Signup() {
                 type="button"
                 variant="ghost"
                 size="sm"
-                className="px-0 text-gray-500"
+                className="px-0 text-muted-foreground"
                 onClick={() => {
                   setEmailVerified(false);
                   setStep("email");
@@ -338,7 +337,7 @@ export default function Signup() {
                 />
               </div>
               <Separator className="my-2" />
-              <p className="text-sm font-medium text-gray-800">{t("signup.shippingAddress")}</p>
+              <p className="text-sm font-medium text-foreground">{t("signup.shippingAddress")}</p>
               <div className="space-y-2">
                 <Label htmlFor="addr-postal">{t("signup.postalCode")}</Label>
                 <Input
@@ -380,9 +379,9 @@ export default function Signup() {
             </>
           )}
 
-          <div className="text-center text-sm text-gray-600 mt-6">
+          <div className="text-center text-sm text-muted-foreground mt-6">
             {t("signup.haveAccount")}{" "}
-            <Link to="/login" className="text-blue-600 hover:underline font-medium">
+            <Link to="/login" className="text-foreground hover:underline font-medium">
               {t("signup.loginLink")}
             </Link>
           </div>

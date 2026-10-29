@@ -123,7 +123,7 @@ function QuickActionsMenu({
           type="button"
           variant="ghost"
           size="icon"
-          className="h-8 w-8 text-gray-600"
+          className="h-8 w-8 text-muted-foreground"
           aria-label={t("purchase.list.quickActions")}
           onClick={(e) => e.stopPropagation()}
         >
@@ -298,24 +298,24 @@ export default function PurchaseRequestList() {
     <div>
       <div className="mb-4 flex flex-col gap-3 md:mb-5 md:flex-row md:items-center md:justify-between">
         <div className="min-w-0">
-          <h1 className="text-2xl font-bold tracking-tight text-gray-900 md:text-3xl">{t("purchase.list.pageTitle")}</h1>
-          <p className="mt-0.5 text-sm text-gray-600 md:mt-1 md:text-base">{t("purchase.list.pageSubtitle")}</p>
+          <h1 className="text-2xl font-bold tracking-tight text-foreground md:text-3xl">{t("purchase.list.pageTitle")}</h1>
+          <p className="mt-0.5 text-sm text-muted-foreground md:mt-1 md:text-base">{t("purchase.list.pageSubtitle")}</p>
         </div>
         <div className="flex w-full shrink-0 items-center justify-between gap-2 md:w-auto md:justify-end">
           <Link
             to="/wallet"
-            className="flex min-w-0 max-w-[55%] items-center gap-2 rounded-lg bg-blue-50/90 px-2.5 py-1.5 ring-1 ring-blue-100 transition-colors hover:bg-blue-100/90 md:max-w-none md:px-3 md:py-2"
+            className="flex min-w-0 max-w-[55%] items-center gap-2 rounded-lg bg-muted px-2.5 py-1.5 ring-1 ring-border transition-colors hover:bg-muted md:max-w-none md:px-3 md:py-2"
             title={t("purchase.list.walletLinkTitle")}
           >
-            <Wallet className="h-4 w-4 shrink-0 text-blue-700 md:h-5 md:w-5" />
+            <Wallet className="h-4 w-4 shrink-0 text-foreground md:h-5 md:w-5" />
             <div className="min-w-0 text-right leading-tight">
-              <p className="text-[10px] text-blue-700 md:text-xs">{t("purchase.list.balanceLabel")}</p>
-              <p className="truncate text-sm font-bold text-blue-900 md:text-lg">
+              <p className="text-[10px] text-foreground md:text-xs">{t("purchase.list.balanceLabel")}</p>
+              <p className="truncate text-sm font-bold text-foreground md:text-lg">
                 ₩{(balance ?? 0).toLocaleString(dateLocale, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </p>
               <BalanceEquivalents
                 balance={balance}
-                className="truncate text-[10px] text-blue-600/80 md:text-xs"
+                className="truncate text-[10px] text-muted-foreground md:text-xs"
               />
             </div>
           </Link>
@@ -330,10 +330,10 @@ export default function PurchaseRequestList() {
 
       {/* 요약 + 검색/정렬 */}
       <div className="mb-3 space-y-3 md:mb-4">
-        <div className="rounded-xl border border-gray-100 bg-white p-3 shadow-sm md:p-3.5">
+        <div className="rounded-xl border border-border bg-card p-3 md:p-3.5">
           <div className="mb-2 flex items-center justify-between gap-2">
-            <p className="text-xs font-semibold text-gray-700 md:text-sm">{t("purchase.list.summaryTitle")}</p>
-            <Package className="h-4 w-4 text-gray-400" aria-hidden />
+            <p className="text-xs font-semibold text-foreground/80 md:text-sm">{t("purchase.list.summaryTitle")}</p>
+            <Package className="h-4 w-4 text-muted-foreground/70" aria-hidden />
           </div>
           <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-4 md:grid-cols-7 sm:gap-2">
             {FILTER_CHIPS.map((chip) => {
@@ -351,18 +351,23 @@ export default function PurchaseRequestList() {
                   onClick={() => setStatusFilter(chip.value)}
                   className={cn(
                     "flex min-h-[52px] flex-col items-center justify-center rounded-lg border px-1 py-1.5 text-center transition-all sm:min-h-[56px]",
-                    active ? activeChip.shell : "border-transparent bg-gray-50/80 hover:bg-gray-100/90",
+                    active ? activeChip.shell : "border-transparent bg-muted/60 hover:bg-muted",
                   )}
                 >
                   <span
                     className={cn(
                       "text-lg font-bold tabular-nums leading-none sm:text-xl",
-                      active ? activeChip.countClass : "text-gray-900",
+                      active ? activeChip.countClass : "text-foreground",
                     )}
                   >
                     {count ?? 0}
                   </span>
-                  <span className="mt-0.5 line-clamp-2 text-[10px] font-medium text-gray-600 sm:text-xs">
+                  <span
+                    className={cn(
+                      "mt-0.5 line-clamp-2 text-[10px] font-medium sm:text-xs",
+                      active ? "text-background/80" : "text-muted-foreground",
+                    )}
+                  >
                     {chip.value === "all"
                       ? t("purchase.list.filterAll")
                       : chip.value === "progress"
@@ -375,17 +380,17 @@ export default function PurchaseRequestList() {
           </div>
         </div>
 
-        <div className="flex flex-col gap-2 rounded-xl border border-gray-100 bg-white p-3 shadow-sm sm:flex-row sm:items-center sm:gap-3">
+        <div className="flex flex-col gap-2 rounded-xl border border-border bg-card p-3 sm:flex-row sm:items-center sm:gap-3">
           <div className="relative min-w-0 flex-1">
-            <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" aria-hidden />
+            <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground/70" aria-hidden />
             <Input
               placeholder={t("purchase.list.searchPlaceholder")}
-              className="h-9 border-gray-200 pl-9 text-sm"
+              className="h-9 border-border pl-9 text-sm"
               value={searchKeyword}
               onChange={(e) => setSearchKeyword(e.target.value)}
             />
           </div>
-          <div className="flex shrink-0 items-center gap-1 rounded-lg border border-gray-200 bg-gray-50/80 p-0.5">
+          <div className="flex shrink-0 items-center gap-1 rounded-lg border border-border bg-muted/60 p-0.5">
             <Button
               type="button"
               variant={sortValue === "latest" ? "default" : "ghost"}
@@ -431,7 +436,7 @@ export default function PurchaseRequestList() {
                 }
               }}
               className={cn(
-                "relative flex cursor-pointer rounded-lg border border-gray-100/90 border-l-4 bg-white py-2.5 pl-2 pr-2 shadow-sm outline-none transition-colors hover:border-gray-200 hover:bg-gray-50/40 md:py-3 md:pl-2.5 md:pr-3",
+                "relative flex cursor-pointer rounded-lg border border-border border-l-4 bg-card py-2.5 pl-2 pr-2 outline-none transition-colors hover:border-border hover:bg-muted/60 md:py-3 md:pl-2.5 md:pr-3",
                 accent.bar,
                 accent.softBg,
               )}
@@ -441,31 +446,31 @@ export default function PurchaseRequestList() {
                   <Badge variant="outline" className={cn("px-2 py-0 text-[11px] font-semibold md:text-xs", accent.badgeClass)}>
                     {t(`purchase.status.${request.status}` as `purchase.status.${PurchaseRequestStatus}`)}
                   </Badge>
-                  <span className="shrink-0 text-right text-base font-bold tabular-nums text-gray-900 md:hidden">
+                  <span className="shrink-0 text-right text-base font-bold tabular-nums text-foreground md:hidden">
                     ₩{total.toLocaleString(dateLocale)}
                   </span>
                 </div>
 
-                <h2 className="line-clamp-2 text-[15px] font-semibold leading-snug text-gray-900 md:text-base">
+                <h2 className="line-clamp-2 text-[15px] font-semibold leading-snug text-foreground md:text-base">
                   {request.requestName}
                 </h2>
 
                 <p
                   className={cn(
                     "text-xs leading-snug md:text-[13px]",
-                    refundDue ? "font-medium text-amber-800" : "text-gray-600",
+                    refundDue ? "font-medium text-amber-800" : "text-muted-foreground",
                   )}
                 >
                   {t(progressKey)}
                 </p>
 
-                <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] text-gray-500 md:text-xs">
+                <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] text-muted-foreground md:text-xs">
                   <time dateTime={request.createdAt}>{formatShortDate(request.createdAt, dateLocale)}</time>
-                  <span className="text-gray-300" aria-hidden>
+                  <span className="text-muted-foreground/40" aria-hidden>
                     ·
                   </span>
                   <span>{fillTpl(t("purchase.list.qtyInlineTpl"), { n: request.quantity })}</span>
-                  <span className="hidden text-gray-300 sm:inline" aria-hidden>
+                  <span className="hidden text-muted-foreground/40 sm:inline" aria-hidden>
                     ·
                   </span>
                   <span className="hidden min-w-0 max-w-[220px] truncate sm:inline" title={request.requestNumber}>
@@ -474,8 +479,8 @@ export default function PurchaseRequestList() {
                 </div>
               </div>
 
-              <div className="flex shrink-0 flex-col items-end gap-1 border-gray-100/80 md:border-l md:pl-3">
-                <span className="hidden text-lg font-bold tabular-nums text-gray-900 md:inline">
+              <div className="flex shrink-0 flex-col items-end gap-1 border-border md:border-l md:pl-3">
+                <span className="hidden text-lg font-bold tabular-nums text-foreground md:inline">
                   ₩{total.toLocaleString(dateLocale)}
                 </span>
                 <div className="absolute right-1.5 top-1.5 md:relative md:right-auto md:top-auto">
@@ -490,11 +495,11 @@ export default function PurchaseRequestList() {
       {!loading && filteredRequests.length === 0 && (
         <Card className="mt-4 border-dashed py-10 md:py-12">
           <div className="text-center">
-            <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-gray-100 md:mb-4 md:h-16 md:w-16">
-              <Plus className="h-7 w-7 text-gray-400 md:h-8 md:w-8" />
+            <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-muted md:mb-4 md:h-16 md:w-16">
+              <Plus className="h-7 w-7 text-muted-foreground/70 md:h-8 md:w-8" />
             </div>
-            <h3 className="mb-1 text-base font-semibold text-gray-900 md:text-lg">{t("purchase.list.emptyTitle")}</h3>
-            <p className="mb-5 text-sm text-gray-500">{t("purchase.list.emptySubtitle")}</p>
+            <h3 className="mb-1 text-base font-semibold text-foreground md:text-lg">{t("purchase.list.emptyTitle")}</h3>
+            <p className="mb-5 text-sm text-muted-foreground">{t("purchase.list.emptySubtitle")}</p>
             <Link to="/purchase/new">
               <Button>
                 <Plus className="mr-2 h-4 w-4" />
@@ -507,7 +512,7 @@ export default function PurchaseRequestList() {
 
       {statusFilter !== "progress" && (totalPages > 1 || requests.length > 0) && (
         <div className="mt-4 flex flex-wrap items-center justify-between gap-2">
-          <div className="flex items-center gap-2 text-xs text-gray-500 md:text-sm">
+          <div className="flex items-center gap-2 text-xs text-muted-foreground md:text-sm">
             <span>{t("purchase.list.perPage")}</span>
             <Select
               value={String(size)}
@@ -533,7 +538,7 @@ export default function PurchaseRequestList() {
             <Button variant="outline" size="sm" disabled={page <= 0} onClick={() => void loadRequests(page - 1, size)}>
               {t("purchase.list.prev")}
             </Button>
-            <span className="text-xs text-gray-500 md:text-sm">
+            <span className="text-xs text-muted-foreground md:text-sm">
               {page + 1} / {Math.max(1, totalPages)}
             </span>
             <Button

@@ -69,8 +69,8 @@ export default function InquiryList() {
     <div>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">{t("inquiry.title")}</h1>
-          <p className="text-gray-600 mt-1">{t("inquiry.subtitle")}</p>
+          <h1 className="text-3xl font-bold text-foreground">{t("inquiry.title")}</h1>
+          <p className="text-muted-foreground mt-1">{t("inquiry.subtitle")}</p>
         </div>
         <Link to="/inquiry/new">
           <Button size="lg">
@@ -82,7 +82,7 @@ export default function InquiryList() {
 
       {loading ? (
         <div className="flex items-center justify-center py-12">
-          <p className="text-gray-500">{t("inquiry.loading")}</p>
+          <p className="text-muted-foreground">{t("inquiry.loading")}</p>
         </div>
       ) : (
         <>
@@ -108,14 +108,14 @@ export default function InquiryList() {
                               </Badge>
                             )}
                           </div>
-                          <h3 className="text-lg font-semibold text-gray-900 mb-1">
+                          <h3 className="text-lg font-semibold text-foreground mb-1">
                             {inquiry.title}
                           </h3>
                         </div>
                       </div>
 
-                      <div className="flex items-center justify-between pt-3 border-t border-gray-200">
-                        <p className="text-sm text-gray-500">
+                      <div className="flex items-center justify-between pt-3 border-t border-border">
+                        <p className="text-sm text-muted-foreground">
                           {new Date(inquiry.createdAt).toLocaleDateString(dateLocale, {
                             year: 'numeric',
                             month: 'long',
@@ -125,7 +125,7 @@ export default function InquiryList() {
                           })}
                         </p>
                         {inquiry.replyCount > 0 && (
-                          <div className="flex items-center text-sm text-blue-600">
+                          <div className="flex items-center text-sm text-foreground">
                             <MessageSquare className="w-4 h-4 mr-1" />
                             {t("inquiry.replies")} {inquiry.replyCount}{t("inquiry.repliesUnit")}
                           </div>
@@ -141,13 +141,13 @@ export default function InquiryList() {
           {items.length === 0 && (
             <Card className="p-12">
               <div className="text-center">
-                <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <MessageSquare className="w-8 h-8 text-gray-400" />
+                <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
+                  <MessageSquare className="w-8 h-8 text-muted-foreground/70" />
                 </div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                <h3 className="text-lg font-semibold text-foreground mb-2">
                   {t("inquiry.empty.title")}
                 </h3>
-                <p className="text-gray-500 mb-6">
+                <p className="text-muted-foreground mb-6">
                   {t("inquiry.empty.description")}
                 </p>
                 <Link to="/inquiry/new">
@@ -162,7 +162,7 @@ export default function InquiryList() {
 
           {totalPages > 0 && (
             <div className="flex items-center justify-between mt-4 flex-wrap gap-2">
-              <div className="flex items-center gap-2 text-sm text-gray-500">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <span>{t("purchase.list.perPage")}</span>
                 <Select value={String(size)} onValueChange={(v) => handleSizeChange(Number(v))}>
                   <SelectTrigger className="w-[80px] h-8 text-xs"><SelectValue /></SelectTrigger>
@@ -175,7 +175,7 @@ export default function InquiryList() {
               </div>
               <div className="flex items-center gap-2">
                 <Button variant="outline" size="sm" disabled={page <= 0} onClick={() => setPage((p) => p - 1)}>{t("purchase.list.prev")}</Button>
-                <span className="text-sm text-gray-500">{page + 1} / {Math.max(1, totalPages)}</span>
+                <span className="text-sm text-muted-foreground">{page + 1} / {Math.max(1, totalPages)}</span>
                 <Button variant="outline" size="sm" disabled={page >= totalPages - 1} onClick={() => setPage((p) => p + 1)}>{t("purchase.list.next")}</Button>
               </div>
             </div>

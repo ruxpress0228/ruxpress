@@ -62,7 +62,7 @@ export default function ResetPassword() {
         </CardHeader>
         <CardContent>
           {!tokenFromUrl ? (
-            <p className="text-sm text-center text-gray-600 mb-4">
+            <p className="text-sm text-center text-muted-foreground mb-4">
               {t("resetPassword.invalidLinkNote")}
             </p>
           ) : null}
@@ -93,8 +93,8 @@ export default function ResetPassword() {
             <Button type="submit" className="w-full" size="lg" disabled={loading || !tokenFromUrl}>
               {loading ? t("resetPassword.submitting") : t("resetPassword.submit")}
             </Button>
-            <div className="text-center text-sm text-gray-600">
-              <Link to="/login" className="text-blue-600 hover:underline font-medium">
+            <div className="text-center text-sm text-muted-foreground">
+              <Link to="/login" className="text-foreground hover:underline font-medium">
                 {t("resetPassword.backToLogin")}
               </Link>
             </div>
