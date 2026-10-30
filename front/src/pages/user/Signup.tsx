@@ -220,10 +220,12 @@ export default function Signup() {
   return (
     <div className="flex justify-center py-4 md:min-h-[68vh] md:items-center md:py-10">
       <div className={cn("w-full", step === "legal" ? "max-w-lg" : "max-w-md")}>
-        <Mark size="md" />
-        <h1 className="mt-8">{stepTitle}</h1>
-        <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{stepDescription}</p>
-        <Steps className="mt-6" steps={stepLabels} current={stepIndex} />
+        <div className="flex justify-center">
+          <Mark size="md" />
+        </div>
+        <h1 className="page-title mt-8 text-center">{stepTitle}</h1>
+        <p className="mt-2 text-center text-sm leading-relaxed text-muted-foreground">{stepDescription}</p>
+        <Steps className="mt-6 justify-center" steps={stepLabels} current={stepIndex} />
 
         <div className="mt-8">
           {step === "legal" && (

@@ -38,9 +38,11 @@ export default function ForgotPassword() {
   return (
     <div className="flex justify-center py-4 md:min-h-[68vh] md:items-center md:py-10">
       <div className="w-full max-w-md">
-        <Mark size="md" />
-        <h1 className="mt-8">{t("forgotPassword.title")}</h1>
-        <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{t("forgotPassword.description")}</p>
+        <div className="flex justify-center">
+          <Mark size="md" />
+        </div>
+        <h1 className="page-title mt-8 text-center">{t("forgotPassword.title")}</h1>
+        <p className="mt-2 text-center text-sm leading-relaxed text-muted-foreground">{t("forgotPassword.description")}</p>
 
         <form onSubmit={handleSubmit} className="mt-8 space-y-5">
           <Field htmlFor="forgot-email" label={t("forgotPassword.emailLabel")}>

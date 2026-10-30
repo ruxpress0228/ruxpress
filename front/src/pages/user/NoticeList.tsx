@@ -61,7 +61,7 @@ export default function NoticeList() {
 
   return (
     <div>
-      <PageHeader title={t("notice.list.title")} description={t("notice.list.subtitle")} />
+      <PageHeader align="center" title={t("notice.list.title")} description={t("notice.list.subtitle")} />
 
       {loading ? (
         <LoadingState label={t("notice.loading")} />
@@ -75,17 +75,19 @@ export default function NoticeList() {
                 <li key={notice.id}>
                   <Link
                     to={`/notice/${notice.id}`}
-                    className="flex flex-col gap-1 border-b border-border py-4 transition-colors hover:bg-muted/60 md:flex-row md:items-center md:justify-between md:gap-4"
+                    className="grid gap-1 border-b border-border py-5 transition-colors hover:bg-muted/60 md:grid-cols-[10rem_minmax(0,1fr)_auto] md:items-baseline md:gap-6"
                   >
+                    <time
+                      dateTime={notice.publishedAt ?? notice.createdAt}
+                      className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground figure"
+                    >
+                      {formatDate(notice)}
+                    </time>
                     <span className="flex min-w-0 items-center gap-2">
-                      {notice.isPinned ? (
-                        <Badge className="px-1.5 py-0 text-[10px] font-medium">{t("notice.important")}</Badge>
-                      ) : null}
-                      <span className="min-w-0 truncate text-sm font-medium">{notice.title}</span>
+                      {notice.isPinned ? <Badge>{t("notice.important")}</Badge> : null}
+                      <span className="min-w-0 truncate text-base font-light tracking-[0.02em]">{notice.title}</span>
                     </span>
-                    <span className="shrink-0 text-xs text-muted-foreground figure">
-                      <time dateTime={notice.publishedAt ?? notice.createdAt}>{formatDate(notice)}</time>
-                      {" · "}
+                    <span className="hidden text-[11px] tracking-[0.12em] text-muted-foreground figure md:block">
                       {t("notice.detail.viewCount", { n: notice.viewCount.toLocaleString() })}
                     </span>
                   </Link>

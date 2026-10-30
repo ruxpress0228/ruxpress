@@ -87,9 +87,9 @@ export function ProductCard({ product, rateMap, className }: ProductCardProps) {
           <Badge className="absolute left-2 top-2 px-1.5 py-0 text-[10px] font-medium">{t("products.featured")}</Badge>
         ) : null}
       </div>
-      <p className="mt-3 truncate text-[10px] uppercase tracking-[0.14em] text-muted-foreground">{product.shopName}</p>
-      <h3 className="mt-1 line-clamp-2 text-[13px] font-normal leading-snug">{product.name}</h3>
-      <p className="mt-1.5 text-[13px] figure">
+      <p className="mt-3 truncate text-[10px] uppercase tracking-[0.16em] text-muted-foreground">{product.shopName}</p>
+      <h3 className="mt-1.5 line-clamp-2 text-xs font-light leading-snug tracking-[0.04em]">{product.name}</h3>
+      <p className="mt-1.5 text-xs figure">
         {formatKrw(product.priceKrw, locale)}
         {rub ? <span className="text-muted-foreground"> {rub}</span> : null}
       </p>

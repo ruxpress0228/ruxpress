@@ -4,6 +4,7 @@ import { Button } from "../../components/ui/button";
 import { Badge } from "../../components/ui/badge";
 import { cn } from "../../components/ui/utils";
 import { Section, SectionLink } from "../../components/page";
+import { Button as ViewAllButton } from "../../components/ui/button";
 import { ExchangePanel } from "../../components/exchange/ExchangePanel";
 import { ProductRail } from "../../components/product/ProductCard";
 import { CategoryTiles } from "../../components/product/CategoryTiles";
@@ -105,11 +106,11 @@ export default function Landing() {
   const facts = ["rate", "escrow", "chat", "track"] as const;
 
   return (
-    <div className="space-y-20 md:space-y-28">
+    <div className="-mt-8 space-y-20 md:-mt-10 md:space-y-28">
       {/* Showcase: the shop's own photos, edge to edge, with the promise over them */}
       <section
         aria-label={t("landing.hero.eyebrow")}
-        className="full-bleed -mt-24 flex min-h-[80vh] flex-col justify-end bg-foreground text-background md:-mt-26 md:min-h-[92vh]"
+        className="full-bleed flex min-h-[72vh] flex-col justify-end bg-foreground text-background md:min-h-[82vh]"
         onMouseEnter={() => setPaused(true)}
         onMouseLeave={() => setPaused(false)}
         onFocusCapture={() => setPaused(true)}
@@ -135,17 +136,18 @@ export default function Landing() {
           </>
         ) : null}
 
-        <div className="relative mx-auto w-full max-w-6xl px-5 pb-10 pt-32 md:px-6 md:pb-16">
-          <div className="grid gap-8 md:grid-cols-[minmax(0,1fr)_auto] md:items-end">
-            <div className="min-w-0 max-w-2xl">
-              <p className="text-[11px] uppercase tracking-[0.22em] text-background/80">{t("landing.hero.eyebrow")}</p>
-              <h1 className="mt-4 text-4xl font-light leading-[1.05] tracking-[-0.02em] text-background md:text-6xl">
+        <div className="relative mx-auto w-full max-w-6xl px-5 pb-10 pt-24 md:px-6 md:pb-14">
+          <div className="grid gap-8 md:grid-cols-[1fr_auto_1fr] md:items-end">
+            <div className="hidden md:block" aria-hidden />
+            <div className="mx-auto min-w-0 max-w-2xl text-center">
+              <p className="text-[11px] uppercase tracking-[0.24em] text-background/80">{t("landing.hero.eyebrow")}</p>
+              <h1 className="mt-4 text-4xl font-light leading-[1.1] tracking-[0.02em] text-background md:text-5xl lg:text-6xl">
                 {t("landing.hero.title")}
               </h1>
-              <p className="mt-5 max-w-md text-sm leading-relaxed text-background/80 md:text-base">
+              <p className="mx-auto mt-5 max-w-md text-sm leading-relaxed text-background/80 md:text-base">
                 {t("landing.hero.subtitle")}
               </p>
-              <LinkStartBar tone="onDark" className="mt-8 max-w-xl" />
+              <LinkStartBar tone="onDark" className="mx-auto mt-8 max-w-xl text-left" />
             </div>
 
             {current ? (
@@ -198,19 +200,27 @@ export default function Landing() {
 
       {/* Categories: dark panels in the shop's own photos */}
       {categories.length > 0 ? (
-        <Section
-          title={t("landing.categories.title")}
-          action={<SectionLink to="/products">{t("common.viewAll")}</SectionLink>}
-        >
-          <CategoryTiles categories={categories} products={catalogue} className="mt-2" />
-        </Section>
+        <section aria-labelledby="landing-categories">
+          <h2 id="landing-categories" className="store-title">
+            {t("landing.categories.title")}
+          </h2>
+          <CategoryTiles categories={categories} products={catalogue} className="mt-8" />
+        </section>
       ) : null}
 
       {/* Featured products */}
       {featured.length > 0 ? (
-        <Section title={t("landing.products.title")} action={<SectionLink to="/products">{t("common.viewAll")}</SectionLink>}>
-          <ProductRail products={featured} rateMap={rateMap} className="mt-2" />
-        </Section>
+        <section aria-labelledby="landing-featured">
+          <h2 id="landing-featured" className="store-title">
+            {t("landing.products.title")}
+          </h2>
+          <ProductRail products={featured} rateMap={rateMap} className="mt-8" />
+          <div className="mt-10 flex justify-center">
+            <ViewAllButton variant="outline" asChild>
+              <Link to="/products">{t("common.viewAll")}</Link>
+            </ViewAllButton>
+          </div>
+        </section>
       ) : null}
 
       {/* The statement, then the facts behind it */}
@@ -229,8 +239,11 @@ export default function Landing() {
       </section>
 
       {/* How it works: a real sequence, so the steps are numbered */}
-      <Section title={t("landing.how.title")}>
-        <ol className="grid gap-8 md:grid-cols-3 md:gap-6">
+      <section aria-labelledby="landing-how">
+        <h2 id="landing-how" className="store-title">
+          {t("landing.how.title")}
+        </h2>
+        <ol className="mt-10 grid gap-8 md:grid-cols-3 md:gap-6">
           {steps.map((step) => (
             <li key={step.n} className="border-t border-border pt-4">
               <span className="text-[11px] tracking-[0.16em] text-muted-foreground figure">0{step.n}</span>
@@ -239,7 +252,7 @@ export default function Landing() {
             </li>
           ))}
         </ol>
-      </Section>
+      </section>
 
       {/* Notices and the rate */}
       <div className="grid gap-14 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] lg:gap-12">

@@ -54,9 +54,11 @@ export default function ResetPassword() {
   return (
     <div className="flex justify-center py-4 md:min-h-[68vh] md:items-center md:py-10">
       <div className="w-full max-w-md">
-        <Mark size="md" />
-        <h1 className="mt-8">{t("resetPassword.title")}</h1>
-        <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{t("resetPassword.description")}</p>
+        <div className="flex justify-center">
+          <Mark size="md" />
+        </div>
+        <h1 className="page-title mt-8 text-center">{t("resetPassword.title")}</h1>
+        <p className="mt-2 text-center text-sm leading-relaxed text-muted-foreground">{t("resetPassword.description")}</p>
         {!tokenFromUrl ? (
           <p className="mt-4 text-sm text-destructive">{t("resetPassword.invalidLinkNote")}</p>
         ) : null}

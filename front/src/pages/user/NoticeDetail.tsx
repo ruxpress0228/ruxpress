@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router";
 import { Button } from "../../components/ui/button";
 import { Badge } from "../../components/ui/badge";
-import { EmptyState, LoadingState, PageHeader, Section } from "../../components/page";
+import { EmptyState, LoadingState, PageHeader } from "../../components/page";
 import { api } from "../../utils/api";
 import { unwrap } from "../../utils/exception";
 import { useTranslation } from "../../hooks/useTranslation";
@@ -55,9 +55,9 @@ export default function NoticeDetail() {
   const dateRaw = notice.publishedAt ?? notice.createdAt;
 
   return (
-    <div className="max-w-3xl">
+    <div className="mx-auto max-w-3xl">
       <PageHeader
-        back={{ to: "/notice", label: t("notice.detail.backToList") }}
+        align="center"
         title={notice.title}
         meta={
           <>
@@ -81,13 +81,11 @@ export default function NoticeDetail() {
         }
       />
 
-      <Section title={t("admin.notices.contentLabel")}>
-        <div className="text-sm leading-relaxed whitespace-pre-wrap break-words">
-          {renderTextWithLinks(notice.content)}
-        </div>
-      </Section>
+      <div className="mx-auto max-w-2xl border-t border-border pt-8 text-[15px] leading-[1.9] whitespace-pre-wrap break-words md:pt-10">
+        {renderTextWithLinks(notice.content)}
+      </div>
 
-      <div className="mt-10 border-t border-border pt-6 md:mt-12">
+      <div className="mt-12 flex justify-center border-t border-border pt-8 md:mt-16">
         <Button variant="outline" onClick={() => navigate("/notice")}>
           {t("notice.detail.backToList")}
         </Button>

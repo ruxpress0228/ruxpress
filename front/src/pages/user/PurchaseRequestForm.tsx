@@ -346,7 +346,7 @@ export default function PurchaseRequestForm() {
         .filter((it) => it.urls.length > 0 && it.priceKrw > 0);
 
       if (cleanedItems.length === 0) {
-        toast.error("최소 1개 이상의 상품(URL/단가/수량)을 입력해주세요.");
+        toast.error(t("purchase.itemsRequired"));
         setSubmitting(false);
         return;
       }
@@ -446,7 +446,7 @@ export default function PurchaseRequestForm() {
               <p className="text-sm font-medium">{t("purchase.itemLinesLabel")}</p>
               <Button type="button" variant="outline" size="sm" onClick={addItem}>
                 <Plus strokeWidth={1.5} aria-hidden />
-                항목 추가
+                {t("purchase.addItem")}
               </Button>
             </div>
 
@@ -518,7 +518,7 @@ export default function PurchaseRequestForm() {
                   </div>
 
                   <div className="grid grid-cols-2 gap-3">
-                    <Field htmlFor={`item-${index}-price`} label="단가 (KRW)">
+                    <Field htmlFor={`item-${index}-price`} label={t("purchase.unitPriceLabel")}>
                       <Input
                         id={`item-${index}-price`}
                         type="number"
@@ -531,7 +531,7 @@ export default function PurchaseRequestForm() {
                         required
                       />
                     </Field>
-                    <Field htmlFor={`item-${index}-qty`} label="수량">
+                    <Field htmlFor={`item-${index}-qty`} label={t("purchase.quantityLabel")}>
                       <Input
                         id={`item-${index}-qty`}
                         type="number"
@@ -597,7 +597,7 @@ export default function PurchaseRequestForm() {
                   </div>
 
                   <p className="text-xs text-muted-foreground figure">
-                    소계: ₩{formatNumber((item.priceKrw || 0) * (item.quantity || 0), locale, numOpt)}
+                    {t("purchase.subtotalLabel")}: ₩{formatNumber((item.priceKrw || 0) * (item.quantity || 0), locale, numOpt)}
                   </p>
                 </li>
               ))}
@@ -605,7 +605,9 @@ export default function PurchaseRequestForm() {
 
             <p className="text-xs text-muted-foreground">{t("purchase.urlHint")}</p>
             <p className="text-sm">
-              전체 수량 합계: <span className="font-medium figure">{totalQuantity}</span> 개 · 상품가 합계:{" "}
+              {t("purchase.totalQuantityLabel")}: <span className="font-medium figure">{totalQuantity}</span>
+              {" · "}
+              {t("purchase.totalPriceLabel")}:{" "}
               <span className="font-medium figure">₩{formatNumber(aggregatedPriceKrw, locale, numOpt)}</span>
             </p>
           </div>
