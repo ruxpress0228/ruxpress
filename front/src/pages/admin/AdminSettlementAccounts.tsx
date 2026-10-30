@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState } from "react";
-import { Plus, Pencil, Trash2, Upload, ImageIcon, X } from "lucide-react";
+import { Plus, Upload, ImageIcon, X } from "lucide-react";
 import { Button } from "../../components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../components/ui/card";
+import { Badge } from "../../components/ui/badge";
 import { Input } from "../../components/ui/input";
-import { Label } from "../../components/ui/label";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../../components/ui/dialog";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "../../components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../components/ui/table";
+import { EmptyState, Field, LoadingState, PageHeader, Section } from "../../components/page";
 import { toast } from "sonner";
 import {
   adminListSettlementAccounts,
@@ -180,179 +180,189 @@ export default function AdminSettlementAccounts() {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">{t("admin.bank.settlement.title")}</h1>
-          <p className="text-muted-foreground text-sm">{t("admin.bank.settlement.subtitle")}</p>
-        </div>
-        <Dialog open={open} onOpenChange={setOpen}>
-          <Button onClick={openCreate}>
-            <Plus className="w-4 h-4 mr-2" />
+    <div className="space-y-10 md:space-y-12">
+      <PageHeader
+        title={t("admin.bank.settlement.title")}
+        description={t("admin.bank.settlement.subtitle")}
+        actions={
+          <Button type="button" onClick={openCreate}>
+            <Plus className="size-4" strokeWidth={1.5} aria-hidden />
             {t("admin.bank.settlement.add")}
           </Button>
-          <DialogContent className="max-w-md">
-            <DialogHeader>
-              <DialogTitle>
-                {editId == null ? t("admin.bank.settlement.add") : t("admin.bank.settlement.edit")}
-              </DialogTitle>
-            </DialogHeader>
-            <div className="space-y-3 pt-2">
-              <div>
-                <Label>{t("admin.bank.settlement.bankName")}</Label>
-                <Input value={bankName} onChange={(e) => setBankName(e.target.value)} />
-              </div>
-              <div>
-                <Label>{t("admin.bank.settlement.accountNumber")}</Label>
-                <Input value={accountNumber} onChange={(e) => setAccountNumber(e.target.value)} />
-              </div>
-              <div>
-                <Label>{t("admin.bank.settlement.accountHolder")}</Label>
-                <Input value={accountHolder} onChange={(e) => setAccountHolder(e.target.value)} />
-              </div>
-              <div>
-                <Label>{t("admin.bank.settlement.memo")}</Label>
-                <Input value={displayMemo} onChange={(e) => setDisplayMemo(e.target.value)} />
-              </div>
-              {editId != null ? (
-                <label className="flex items-center gap-2 text-sm">
-                  <input
-                    type="checkbox"
-                    checked={active}
-                    onChange={(e) => setActive(e.target.checked)}
-                  />
-                  {t("admin.bank.settlement.active")}
-                </label>
-              ) : null}
-              <Button className="w-full" onClick={onSave}>
-                {t("common.save")}
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
-      </div>
+        }
+      />
 
-      <Card>
-        <CardHeader>
-          <CardTitle>{t("admin.bank.settlement.listTitle")}</CardTitle>
-          <CardDescription>{t("admin.bank.settlement.listDesc")}</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {loading ? (
-            <p className="text-sm text-muted-foreground">{t("admin.bank.loading")}</p>
-          ) : (
-            <Table>
-              <TableHeader>
+      <Section title={t("admin.bank.settlement.listTitle")} description={t("admin.bank.settlement.listDesc")}>
+        {loading ? (
+          <LoadingState label={t("admin.bank.loading")} />
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>ID</TableHead>
+                <TableHead>{t("admin.bank.settlement.bankName")}</TableHead>
+                <TableHead>{t("admin.bank.settlement.accountNumber")}</TableHead>
+                <TableHead>{t("admin.bank.settlement.accountHolder")}</TableHead>
+                <TableHead>{t("admin.bank.settlement.active")}</TableHead>
+                <TableHead className="text-right">{t("admin.bank.actions")}</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {rows.length === 0 ? (
                 <TableRow>
-                  <TableHead>ID</TableHead>
-                  <TableHead>{t("admin.bank.settlement.bankName")}</TableHead>
-                  <TableHead>{t("admin.bank.settlement.accountNumber")}</TableHead>
-                  <TableHead>{t("admin.bank.settlement.accountHolder")}</TableHead>
-                  <TableHead>{t("admin.bank.settlement.active")}</TableHead>
-                  <TableHead className="text-right">{t("admin.bank.actions")}</TableHead>
+                  <TableCell colSpan={6} className="py-10 text-center text-muted-foreground">
+                    {t("admin.bank.settlement.empty")}
+                  </TableCell>
                 </TableRow>
-              </TableHeader>
-              <TableBody>
-                {rows.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={6} className="text-center text-muted-foreground">
-                      {t("admin.bank.settlement.empty")}
+              ) : (
+                rows.map((a) => (
+                  <TableRow key={a.id}>
+                    <TableCell className="text-muted-foreground figure">{a.id}</TableCell>
+                    <TableCell className="font-medium">{a.bankName}</TableCell>
+                    <TableCell className="figure">{a.accountNumber}</TableCell>
+                    <TableCell>{a.accountHolder}</TableCell>
+                    <TableCell>
+                      {a.active ? (
+                        <Badge>{t("admin.bank.settlement.active")}</Badge>
+                      ) : (
+                        <Badge variant="secondary">{t("admin.admin.status.INACTIVE")}</Badge>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex items-center justify-end gap-1">
+                        <Button variant="ghost" size="sm" onClick={() => openEdit(a)}>
+                          {t("admin.common.edit")}
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-destructive hover:text-destructive"
+                          onClick={() => onDelete(a.id)}
+                        >
+                          {t("admin.common.delete")}
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
-                ) : (
-                  rows.map((a) => (
-                    <TableRow key={a.id}>
-                      <TableCell>{a.id}</TableCell>
-                      <TableCell>{a.bankName}</TableCell>
-                      <TableCell className="font-mono">{a.accountNumber}</TableCell>
-                      <TableCell>{a.accountHolder}</TableCell>
-                      <TableCell>{a.active ? "Y" : "N"}</TableCell>
-                      <TableCell className="text-right space-x-2">
-                        <Button variant="outline" size="sm" onClick={() => openEdit(a)}>
-                          <Pencil className="w-4 h-4" />
-                        </Button>
-                        <Button variant="destructive" size="sm" onClick={() => onDelete(a.id)}>
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        )}
+      </Section>
 
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between gap-2">
-            <div>
-              <CardTitle className="flex items-center gap-2">
-                <ImageIcon className="w-5 h-5 text-foreground" />
-                {t("admin.settlement.noticeImages.title")}
-              </CardTitle>
-              <CardDescription>
-                {t("admin.settlement.noticeImages.desc", { max: MAX_NOTICE_IMAGES })}
-              </CardDescription>
-            </div>
-            <div>
-              <input
-                ref={noticeInputRef}
-                type="file"
-                accept="image/jpeg,image/png,image/webp"
-                multiple
-                className="hidden"
-                onChange={onPickNoticeFiles}
-              />
-              <Button
-                type="button"
-                onClick={() => noticeInputRef.current?.click()}
-                disabled={noticeUploading || noticeImages.length >= MAX_NOTICE_IMAGES}
-              >
-                <Upload className="w-4 h-4 mr-2" />
-                {noticeUploading ? t("admin.common.uploading") : t("admin.settlement.noticeImages.add")}
-              </Button>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent>
-          {noticeLoading ? (
-            <p className="text-sm text-muted-foreground">{t("admin.common.loading")}</p>
-          ) : noticeImages.length === 0 ? (
-            <p className="text-sm text-muted-foreground">{t("admin.settlement.noticeImages.empty")}</p>
-          ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-              {noticeImages.map((img) => {
-                const src = img.viewUrl || img.storedUrl;
-                return (
-                  <div key={img.id} className="relative group border rounded-lg overflow-hidden">
-                    <a href={src} target="_blank" rel="noopener noreferrer" title={img.originalFilename}>
-                      <img
-                        src={img.thumbnailUrl || src}
-                        alt={img.originalFilename}
-                        className="h-32 w-full object-cover"
-                        loading="lazy"
-                      />
-                    </a>
+      <Section
+        title={t("admin.settlement.noticeImages.title")}
+        description={t("admin.settlement.noticeImages.desc", { max: MAX_NOTICE_IMAGES })}
+        action={
+          <>
+            <input
+              ref={noticeInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              multiple
+              className="hidden"
+              onChange={onPickNoticeFiles}
+            />
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => noticeInputRef.current?.click()}
+              disabled={noticeUploading || noticeImages.length >= MAX_NOTICE_IMAGES}
+            >
+              <Upload className="size-4" strokeWidth={1.5} aria-hidden />
+              {noticeUploading ? t("admin.common.uploading") : t("admin.settlement.noticeImages.add")}
+            </Button>
+          </>
+        }
+      >
+        {noticeLoading ? (
+          <LoadingState compact label={t("admin.common.loading")} />
+        ) : noticeImages.length === 0 ? (
+          <EmptyState compact icon={ImageIcon} title={t("admin.settlement.noticeImages.empty")} />
+        ) : (
+          <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
+            {noticeImages.map((img) => {
+              const src = img.viewUrl || img.storedUrl;
+              return (
+                <li key={img.id} className="border border-border">
+                  <a href={src} target="_blank" rel="noopener noreferrer" title={img.originalFilename} className="block">
+                    <img
+                      src={img.thumbnailUrl || src}
+                      alt={img.originalFilename}
+                      className="h-32 w-full object-cover"
+                      loading="lazy"
+                    />
+                  </a>
+                  <div className="flex items-center justify-between gap-2 border-t border-border py-1 pl-2 pr-1">
+                    <p className="min-w-0 truncate text-xs text-muted-foreground">{img.originalFilename}</p>
                     <Button
                       type="button"
-                      variant="destructive"
+                      variant="ghost"
                       size="icon"
-                      className="absolute top-1 right-1 h-7 w-7 opacity-90"
+                      className="size-7 shrink-0 text-destructive hover:text-destructive"
                       onClick={() => void onDeleteNoticeImage(img.id)}
                       title={t("admin.common.delete")}
+                      aria-label={t("admin.common.delete")}
                     >
-                      <X className="w-4 h-4" />
+                      <X className="size-4" strokeWidth={1.5} aria-hidden />
                     </Button>
-                    <p className="text-xs text-muted-foreground truncate px-2 py-1 bg-card">{img.originalFilename}</p>
                   </div>
-                );
-              })}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </Section>
+
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>
+              {editId == null ? t("admin.bank.settlement.add") : t("admin.bank.settlement.edit")}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-5">
+            <Field htmlFor="settlement-bank" label={t("admin.bank.settlement.bankName")} required>
+              <Input id="settlement-bank" value={bankName} onChange={(e) => setBankName(e.target.value)} />
+            </Field>
+            <Field htmlFor="settlement-number" label={t("admin.bank.settlement.accountNumber")} required>
+              <Input
+                id="settlement-number"
+                className="figure"
+                value={accountNumber}
+                onChange={(e) => setAccountNumber(e.target.value)}
+              />
+            </Field>
+            <Field htmlFor="settlement-holder" label={t("admin.bank.settlement.accountHolder")} required>
+              <Input id="settlement-holder" value={accountHolder} onChange={(e) => setAccountHolder(e.target.value)} />
+            </Field>
+            <Field htmlFor="settlement-memo" label={t("admin.bank.settlement.memo")}>
+              <Input id="settlement-memo" value={displayMemo} onChange={(e) => setDisplayMemo(e.target.value)} />
+            </Field>
+            {editId != null ? (
+              <label className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  className="size-4 accent-foreground"
+                  checked={active}
+                  onChange={(e) => setActive(e.target.checked)}
+                />
+                {t("admin.bank.settlement.active")}
+              </label>
+            ) : null}
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="ghost" onClick={() => setOpen(false)}>
+              {t("admin.common.cancel")}
+            </Button>
+            <Button type="button" onClick={onSave}>
+              {t("common.save")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

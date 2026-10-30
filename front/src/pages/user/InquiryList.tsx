@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router";
-import { Plus, MessageSquare } from "lucide-react";
+import { MessageSquare } from "lucide-react";
 import { Button } from "../../components/ui/button";
 import { Badge } from "../../components/ui/badge";
-import { Card, CardContent } from "../../components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../components/ui/select";
+import { EmptyState, LoadingState, PageHeader, Pager } from "../../components/page";
 import { api } from "../../utils/api";
 import { unwrap } from "../../utils/exception";
 import { useTranslation } from "../../hooks/useTranslation";
@@ -14,11 +14,14 @@ import type { PageResponse } from "../../types";
 
 const LOCALE_MAP: Record<string, string> = { ko: "ko-KR", ru: "ru-RU", en: "en-US" };
 
+const BADGE_CLASS = "px-2 py-0.5 text-[10px] font-medium";
+
+/** Status badges: pending is outlined, replied is black, closed is grey. */
 function getStatusLabels(t: (key: string) => string): Record<InquiryStatus, { label: string; variant: 'default' | 'secondary' | 'outline' }> {
   return {
-    PENDING: { label: t("inquiry.status.pending"), variant: 'secondary' },
+    PENDING: { label: t("inquiry.status.pending"), variant: 'outline' },
     REPLIED: { label: t("inquiry.status.replied"), variant: 'default' },
-    CLOSED: { label: t("inquiry.status.closed"), variant: 'outline' },
+    CLOSED: { label: t("inquiry.status.closed"), variant: 'secondary' },
   };
 }
 
@@ -67,55 +70,44 @@ export default function InquiryList() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">{t("inquiry.title")}</h1>
-          <p className="text-muted-foreground mt-1">{t("inquiry.subtitle")}</p>
-        </div>
-        <Link to="/inquiry/new">
-          <Button size="lg">
-            <Plus className="w-5 h-5 mr-2" />
-            {t("inquiry.newInquiry")}
+      <PageHeader
+        title={t("inquiry.title")}
+        description={t("inquiry.subtitle")}
+        actions={
+          <Button asChild>
+            <Link to="/inquiry/new">{t("inquiry.newInquiry")}</Link>
           </Button>
-        </Link>
-      </div>
+        }
+      />
 
       {loading ? (
-        <div className="flex items-center justify-center py-12">
-          <p className="text-muted-foreground">{t("inquiry.loading")}</p>
-        </div>
+        <LoadingState label={t("inquiry.loading")} />
       ) : (
         <>
-          <div className="space-y-4">
-            {items.map((inquiry) => {
-              const statusInfo = statusLabels[inquiry.status];
-              return (
-                <Link key={inquiry.id} to={`/inquiry/${inquiry.id}`}>
-                  <Card className="hover:shadow-lg transition-shadow cursor-pointer">
-                    <CardContent className="p-6">
-                      <div className="flex items-start justify-between mb-3">
-                        <div className="flex-1">
-                          <div className="flex items-center space-x-2 mb-2">
-                            <Badge variant="outline">
-                              {categoryLabels[inquiry.category]}
-                            </Badge>
-                            <Badge variant={statusInfo.variant}>
-                              {statusInfo.label}
-                            </Badge>
-                            {inquiry.hasUnreadReply && (
-                              <Badge variant="destructive" className="text-xs">
-                                {t("inquiry.newReply")}
-                              </Badge>
-                            )}
-                          </div>
-                          <h3 className="text-lg font-semibold text-foreground mb-1">
-                            {inquiry.title}
-                          </h3>
-                        </div>
+          {items.length > 0 ? (
+            <ul className="border-t border-border">
+              {items.map((inquiry) => {
+                const statusInfo = statusLabels[inquiry.status];
+                return (
+                  <li key={inquiry.id}>
+                    <Link
+                      to={`/inquiry/${inquiry.id}`}
+                      className="grid gap-2 border-b border-border py-4 transition-colors hover:bg-muted/60 md:grid-cols-[auto_minmax(0,1fr)_auto] md:items-center md:gap-5"
+                    >
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <Badge variant="outline" className={BADGE_CLASS}>
+                          {categoryLabels[inquiry.category]}
+                        </Badge>
+                        <Badge variant={statusInfo.variant} className={BADGE_CLASS}>
+                          {statusInfo.label}
+                        </Badge>
+                        {inquiry.hasUnreadReply && (
+                          <Badge className="px-1.5 py-0 text-[10px] font-medium">{t("inquiry.newReply")}</Badge>
+                        )}
                       </div>
-
-                      <div className="flex items-center justify-between pt-3 border-t border-border">
-                        <p className="text-sm text-muted-foreground">
+                      <p className="min-w-0 truncate text-sm font-medium">{inquiry.title}</p>
+                      <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                        <time dateTime={inquiry.createdAt} className="figure">
                           {new Date(inquiry.createdAt).toLocaleDateString(dateLocale, {
                             year: 'numeric',
                             month: 'long',
@@ -123,62 +115,54 @@ export default function InquiryList() {
                             hour: '2-digit',
                             minute: '2-digit'
                           })}
-                        </p>
+                        </time>
                         {inquiry.replyCount > 0 && (
-                          <div className="flex items-center text-sm text-foreground">
-                            <MessageSquare className="w-4 h-4 mr-1" />
+                          <span className="flex items-center gap-1 figure">
+                            <MessageSquare className="size-4" strokeWidth={1.5} aria-hidden />
                             {t("inquiry.replies")} {inquiry.replyCount}{t("inquiry.repliesUnit")}
-                          </div>
+                          </span>
                         )}
                       </div>
-                    </CardContent>
-                  </Card>
-                </Link>
-              );
-            })}
-          </div>
-
-          {items.length === 0 && (
-            <Card className="p-12">
-              <div className="text-center">
-                <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
-                  <MessageSquare className="w-8 h-8 text-muted-foreground/70" />
-                </div>
-                <h3 className="text-lg font-semibold text-foreground mb-2">
-                  {t("inquiry.empty.title")}
-                </h3>
-                <p className="text-muted-foreground mb-6">
-                  {t("inquiry.empty.description")}
-                </p>
-                <Link to="/inquiry/new">
-                  <Button>
-                    <Plus className="w-4 h-4 mr-2" />
-                    {t("inquiry.inquire")}
-                  </Button>
-                </Link>
-              </div>
-            </Card>
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          ) : (
+            <EmptyState
+              icon={MessageSquare}
+              title={t("inquiry.empty.title")}
+              description={t("inquiry.empty.description")}
+              action={
+                <Button variant="outline" asChild>
+                  <Link to="/inquiry/new">{t("inquiry.inquire")}</Link>
+                </Button>
+              }
+            />
           )}
 
           {totalPages > 0 && (
-            <div className="flex items-center justify-between mt-4 flex-wrap gap-2">
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <span>{t("purchase.list.perPage")}</span>
-                <Select value={String(size)} onValueChange={(v) => handleSizeChange(Number(v))}>
-                  <SelectTrigger className="w-[80px] h-8 text-xs"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {PAGE_SIZE_OPTIONS.map((s) => (
-                      <SelectItem key={s} value={String(s)}>{t("purchase.list.perPageOption", { n: s })}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="flex items-center gap-2">
-                <Button variant="outline" size="sm" disabled={page <= 0} onClick={() => setPage((p) => p - 1)}>{t("purchase.list.prev")}</Button>
-                <span className="text-sm text-muted-foreground">{page + 1} / {Math.max(1, totalPages)}</span>
-                <Button variant="outline" size="sm" disabled={page >= totalPages - 1} onClick={() => setPage((p) => p + 1)}>{t("purchase.list.next")}</Button>
-              </div>
-            </div>
+            <Pager
+              page={page}
+              totalPages={totalPages}
+              onPrev={() => setPage((p) => p - 1)}
+              onNext={() => setPage((p) => p + 1)}
+              prevLabel={t("purchase.list.prev")}
+              nextLabel={t("purchase.list.next")}
+              leading={
+                <>
+                  <span>{t("purchase.list.perPage")}</span>
+                  <Select value={String(size)} onValueChange={(v) => handleSizeChange(Number(v))}>
+                    <SelectTrigger size="sm" className="w-24 text-xs"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {PAGE_SIZE_OPTIONS.map((s) => (
+                        <SelectItem key={s} value={String(s)}>{t("purchase.list.perPageOption", { n: s })}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </>
+              }
+            />
           )}
         </>
       )}

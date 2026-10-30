@@ -1,15 +1,14 @@
 import { useCallback, useEffect, useState } from "react";
-import { Coins, Minus, Plus, Search, History } from "lucide-react";
+import { Minus, Plus, Search, Wallet } from "lucide-react";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
-import { Label } from "../../components/ui/label";
 import { Badge } from "../../components/ui/badge";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../components/ui/table";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "../../components/ui/dialog";
@@ -21,6 +20,15 @@ import {
   SelectValue,
 } from "../../components/ui/select";
 import { Textarea } from "../../components/ui/textarea";
+import {
+  DescriptionList,
+  EmptyState,
+  Field,
+  LoadingState,
+  PageHeader,
+  Pager,
+  Toolbar,
+} from "../../components/page";
 import { toast } from "sonner";
 import { useTranslation } from "../../hooks/useTranslation";
 import { formatDate, formatNumber } from "../../utils/format";
@@ -34,10 +42,31 @@ import {
 import type { WalletLedgerEntry } from "../../api/balance";
 import { DEFAULT_PAGE_SIZE, PAGE_SIZE_OPTIONS } from "../../utils/constants";
 
+const DESTRUCTIVE_OUTLINE = "border-destructive/30 bg-destructive/10 text-destructive";
+
 function entryLabel(t: (k: string) => string, type: string): string {
   const key = `wallet.entry.${type}`;
   const label = t(key);
   return label === key ? type : label;
+}
+
+/** Wallet rows carry the raw member status; reuse the member-status label when one exists. */
+function walletStatusLabel(t: (k: string) => string, status: string): string {
+  const key = `admin.user.status.${status}`;
+  const label = t(key);
+  return label === key ? status : label;
+}
+
+function WalletStatusBadge({ status, label }: { status: string; label: string }) {
+  if (status === "ACTIVE") return <Badge>{label}</Badge>;
+  if (status === "SUSPENDED" || status === "WITHDRAWN") {
+    return (
+      <Badge variant="outline" className={DESTRUCTIVE_OUTLINE}>
+        {label}
+      </Badge>
+    );
+  }
+  return <Badge variant="outline">{label}</Badge>;
 }
 
 export default function AdminUserWallets() {
@@ -150,23 +179,23 @@ export default function AdminUserWallets() {
   };
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold text-foreground">{t("admin.wallets.title")}</h1>
-        <p className="text-muted-foreground mt-1">{t("admin.wallets.subtitle")}</p>
-      </div>
+    <div className="space-y-10 md:space-y-12">
+      <PageHeader title={t("admin.wallets.title")} description={t("admin.wallets.subtitle")} />
 
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle>{t("admin.wallets.searchTitle")}</CardTitle>
-        </CardHeader>
-        <CardContent className="flex flex-wrap gap-3 items-end">
-          <div className="space-y-1 flex-1 min-w-[200px]">
-            <Label>{t("admin.wallets.keyword")}</Label>
+      <div className="space-y-4">
+        <Toolbar>
+          <div className="relative min-w-0 flex-1 sm:max-w-sm">
+            <Search
+              className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
+              strokeWidth={1.5}
+              aria-hidden
+            />
             <Input
+              className="pl-9"
               value={keyword}
               onChange={(e) => setKeyword(e.target.value)}
               placeholder={t("admin.wallets.keywordPlaceholder")}
+              aria-label={t("admin.wallets.keyword")}
               onKeyDown={(e) => {
                 if (e.key === "Enter") {
                   setPage(0);
@@ -176,73 +205,70 @@ export default function AdminUserWallets() {
             />
           </div>
           <Button
+            type="button"
+            variant="outline"
             onClick={() => {
               setPage(0);
               void load(0, size);
             }}
           >
-            <Search className="w-4 h-4 mr-2" />
             {t("admin.bank.apply")}
           </Button>
-        </CardContent>
-      </Card>
+        </Toolbar>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Coins className="w-5 h-5 text-foreground" />
-            {t("admin.wallets.listTitle")}
-          </CardTitle>
-          <CardDescription>{t("admin.wallets.listDesc")}</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {loading ? (
-            <p className="text-sm text-muted-foreground">{t("admin.bank.loading")}</p>
-          ) : rows.length === 0 ? (
-            <p className="text-sm text-muted-foreground">{t("admin.wallets.empty")}</p>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>{t("admin.wallets.col.email")}</TableHead>
-                  <TableHead>{t("admin.wallets.col.nickname")}</TableHead>
-                  <TableHead>{t("admin.wallets.col.status")}</TableHead>
-                  <TableHead className="text-right">{t("admin.wallets.col.balance")}</TableHead>
-                  <TableHead className="text-right">{t("admin.bank.actions")}</TableHead>
+        {loading ? (
+          <LoadingState label={t("admin.bank.loading")} />
+        ) : rows.length === 0 ? (
+          <EmptyState icon={Wallet} title={t("admin.wallets.empty")} />
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>{t("admin.wallets.col.email")}</TableHead>
+                <TableHead>{t("admin.wallets.col.nickname")}</TableHead>
+                <TableHead>{t("admin.wallets.col.status")}</TableHead>
+                <TableHead className="text-right">{t("admin.wallets.col.balance")}</TableHead>
+                <TableHead className="text-right">{t("admin.bank.actions")}</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {rows.map((r) => (
+                <TableRow key={r.userId}>
+                  <TableCell className="max-w-[220px] truncate" title={r.email}>
+                    {r.email}
+                  </TableCell>
+                  <TableCell>{r.nickname ?? "—"}</TableCell>
+                  <TableCell>
+                    <WalletStatusBadge status={r.status} label={walletStatusLabel(t, r.status)} />
+                  </TableCell>
+                  <TableCell className="text-right font-medium figure">
+                    ₩{formatNumber(r.balance, locale, numOpt)}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex items-center justify-end gap-1">
+                      <Button size="sm" variant="ghost" onClick={() => openAdjust(r)}>
+                        {t("admin.wallets.adjust")}
+                      </Button>
+                      <Button size="sm" variant="ghost" onClick={() => void openLedger(r)}>
+                        {t("admin.wallets.ledger")}
+                      </Button>
+                    </div>
+                  </TableCell>
                 </TableRow>
-              </TableHeader>
-              <TableBody>
-                {rows.map((r) => (
-                  <TableRow key={r.userId}>
-                    <TableCell className="max-w-[220px] truncate" title={r.email}>
-                      {r.email}
-                    </TableCell>
-                    <TableCell>{r.nickname ?? "—"}</TableCell>
-                    <TableCell>
-                      <Badge variant={r.status === "ACTIVE" ? "default" : "secondary"}>{r.status}</Badge>
-                    </TableCell>
-                    <TableCell className="text-right font-semibold tabular-nums">
-                      ₩{formatNumber(r.balance, locale, numOpt)}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="inline-flex flex-col gap-1 min-w-[120px]">
-                        <Button size="sm" variant="default" onClick={() => openAdjust(r)}>
-                          <Plus className="w-4 h-4 mr-1" />
-                          {t("admin.wallets.adjust")}
-                        </Button>
-                        <Button size="sm" variant="outline" onClick={() => void openLedger(r)}>
-                          <History className="w-4 h-4 mr-1" />
-                          {t("admin.wallets.ledger")}
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
-          <div className="flex items-center justify-between p-4 border-t flex-wrap gap-2">
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              ))}
+            </TableBody>
+          </Table>
+        )}
+
+        <Pager
+          page={page}
+          totalPages={totalPages}
+          onPrev={() => load(page - 1, size)}
+          onNext={() => load(page + 1, size)}
+          prevLabel={t("admin.wallets.prev")}
+          nextLabel={t("admin.wallets.next")}
+          leading={
+            <>
               <span>{t("admin.wallets.pageSize")}</span>
               <Select
                 value={String(size)}
@@ -253,7 +279,7 @@ export default function AdminUserWallets() {
                   void load(0, s);
                 }}
               >
-                <SelectTrigger className="w-[80px] h-8 text-xs">
+                <SelectTrigger size="sm" className="w-[5.5rem] text-xs" aria-label={t("admin.wallets.pageSize")}>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -264,89 +290,87 @@ export default function AdminUserWallets() {
                   ))}
                 </SelectContent>
               </Select>
-            </div>
-            <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm" disabled={page <= 0} onClick={() => load(page - 1, size)}>
-                {t("admin.wallets.prev")}
-              </Button>
-              <span className="text-sm text-muted-foreground">
-                {page + 1} / {Math.max(1, totalPages)}
-              </span>
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={page >= totalPages - 1}
-                onClick={() => load(page + 1, size)}
-              >
-                {t("admin.wallets.next")}
-              </Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+            </>
+          }
+        />
+      </div>
 
       <Dialog open={adjustOpen} onOpenChange={setAdjustOpen}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>{t("admin.wallets.adjustTitle")}</DialogTitle>
-            <DialogDescription>
-              {selected
-                ? `${selected.email} · ${t("admin.wallets.currentBalance")} ₩${formatNumber(selected.balance, locale, numOpt)}`
-                : null}
-            </DialogDescription>
+            <DialogDescription>{t("admin.wallets.listDesc")}</DialogDescription>
           </DialogHeader>
-          <div className="space-y-3">
-            <div>
-              <Label>{t("admin.bank.ledger.amount")}</Label>
-              <Input value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="10000" />
-            </div>
-            <div>
-              <Label>{t("admin.bank.memo")}</Label>
+          {selected ? (
+            <DescriptionList
+              dense
+              items={[
+                { key: "email", label: t("admin.wallets.col.email"), value: selected.email },
+                {
+                  key: "balance",
+                  label: t("admin.wallets.currentBalance"),
+                  value: (
+                    <span className="font-medium figure">₩{formatNumber(selected.balance, locale, numOpt)}</span>
+                  ),
+                },
+              ]}
+            />
+          ) : null}
+          <div className="space-y-5">
+            <Field htmlFor="wallet-adjust-amount" label={t("admin.bank.ledger.amount")} hint={t("admin.wallets.debitHint")}>
+              <Input
+                id="wallet-adjust-amount"
+                className="figure"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                placeholder="10000"
+              />
+            </Field>
+            <Field htmlFor="wallet-adjust-memo" label={t("admin.bank.memo")}>
               <Textarea
+                id="wallet-adjust-memo"
                 value={memo}
                 onChange={(e) => setMemo(e.target.value)}
                 placeholder={t("admin.wallets.memoPlaceholder")}
                 rows={3}
               />
-            </div>
-            <div className="grid grid-cols-2 gap-2 pt-1">
-              <Button
-                className="w-full"
-                disabled={submitting}
-                onClick={() => void submitAdjust("credit")}
-              >
-                <Plus className="w-4 h-4 mr-1" />
-                {t("admin.wallets.credit")}
-              </Button>
-              <Button
-                variant="destructive"
-                className="w-full"
-                disabled={submitting}
-                onClick={() => void submitAdjust("debit")}
-              >
-                <Minus className="w-4 h-4 mr-1" />
-                {t("admin.wallets.debit")}
-              </Button>
-            </div>
-            <p className="text-xs text-muted-foreground">{t("admin.wallets.debitHint")}</p>
+            </Field>
           </div>
+          <DialogFooter>
+            <Button type="button" variant="ghost" disabled={submitting} onClick={() => setAdjustOpen(false)}>
+              {t("admin.common.cancel")}
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              disabled={submitting}
+              onClick={() => void submitAdjust("debit")}
+            >
+              <Minus className="size-4" strokeWidth={1.5} aria-hidden />
+              {t("admin.wallets.debit")}
+            </Button>
+            <Button type="button" disabled={submitting} onClick={() => void submitAdjust("credit")}>
+              <Plus className="size-4" strokeWidth={1.5} aria-hidden />
+              {t("admin.wallets.credit")}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
       <Dialog open={ledgerOpen} onOpenChange={setLedgerOpen}>
-        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+        <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-2xl">
           <DialogHeader>
             <DialogTitle>{t("admin.wallets.ledgerTitle")}</DialogTitle>
-            <DialogDescription>
+            <DialogDescription className="figure">
               {ledgerUser
                 ? `${ledgerUser.email} · ₩${formatNumber(ledgerUser.balance, locale, numOpt)}`
                 : null}
             </DialogDescription>
           </DialogHeader>
           {ledgerLoading ? (
-            <p className="text-sm text-muted-foreground py-4">{t("admin.bank.loading")}</p>
+            <LoadingState compact label={t("admin.bank.loading")} />
           ) : ledgerRows.length === 0 ? (
-            <p className="text-sm text-muted-foreground py-4">{t("admin.wallets.ledgerEmpty")}</p>
+            <EmptyState compact title={t("admin.wallets.ledgerEmpty")} />
           ) : (
             <Table>
               <TableHeader>
@@ -360,41 +384,37 @@ export default function AdminUserWallets() {
               <TableBody>
                 {ledgerRows.map((row) => (
                   <TableRow key={row.id}>
-                    <TableCell className="text-sm">{entryLabel(t, row.entryType)}</TableCell>
-                    <TableCell className="text-right tabular-nums">
+                    <TableCell>{entryLabel(t, row.entryType)}</TableCell>
+                    <TableCell className="text-right font-medium figure">
                       ₩{formatNumber(row.amount, locale, numOpt)}
                     </TableCell>
-                    <TableCell className="text-sm text-muted-foreground max-w-[180px] truncate" title={row.memo ?? ""}>
+                    <TableCell className="max-w-[180px] truncate text-muted-foreground" title={row.memo ?? ""}>
                       {row.memo ?? "—"}
                     </TableCell>
-                    <TableCell className="text-sm">{formatDate(row.createdAt, locale)}</TableCell>
+                    <TableCell className="text-xs text-muted-foreground figure">
+                      {formatDate(row.createdAt, locale)}
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
             </Table>
           )}
           {ledgerTotalPages > 1 ? (
-            <div className="flex justify-center gap-2 pt-2">
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={ledgerPage <= 0 || ledgerLoading || !ledgerUser}
-                onClick={() => ledgerUser && void loadLedger(ledgerUser.userId, ledgerPage - 1)}
-              >
-                {t("admin.wallets.prev")}
-              </Button>
-              <span className="text-sm text-muted-foreground self-center">
-                {ledgerPage + 1} / {ledgerTotalPages}
-              </span>
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={ledgerPage >= ledgerTotalPages - 1 || ledgerLoading || !ledgerUser}
-                onClick={() => ledgerUser && void loadLedger(ledgerUser.userId, ledgerPage + 1)}
-              >
-                {t("admin.wallets.next")}
-              </Button>
-            </div>
+            <Pager
+              className="pt-0"
+              page={ledgerPage}
+              totalPages={ledgerTotalPages}
+              onPrev={() => {
+                if (ledgerLoading || !ledgerUser) return;
+                void loadLedger(ledgerUser.userId, ledgerPage - 1);
+              }}
+              onNext={() => {
+                if (ledgerLoading || !ledgerUser) return;
+                void loadLedger(ledgerUser.userId, ledgerPage + 1);
+              }}
+              prevLabel={t("admin.wallets.prev")}
+              nextLabel={t("admin.wallets.next")}
+            />
           ) : null}
         </DialogContent>
       </Dialog>

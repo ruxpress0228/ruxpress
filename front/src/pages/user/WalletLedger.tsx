@@ -1,8 +1,7 @@
 import { useEffect, useRef, useState } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../components/ui/table";
-import { Button } from "../../components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../components/ui/select";
+import { LoadingState, PageHeader, Pager, Section } from "../../components/page";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useBalance } from "../../hooks/balance/useBalance";
 import { BalanceEquivalents } from "../../components/balance/BalanceEquivalents";
@@ -56,101 +55,95 @@ export default function WalletLedger() {
   const numOpt = { minimumFractionDigits: 2, maximumFractionDigits: 2 };
 
   return (
-    <div className="max-w-5xl mx-auto space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold text-foreground">{t("wallet.title")}</h1>
-        <p className="text-muted-foreground mt-1">{t("wallet.subtitle")}</p>
-      </div>
+    <div className="space-y-10 md:space-y-12">
+      <PageHeader title={t("wallet.title")} description={t("wallet.subtitle")} />
 
-      <Card>
-        <CardHeader>
-          <CardTitle>{t("wallet.balanceCard.title")}</CardTitle>
-          <CardDescription>{t("wallet.balanceCard.desc")}</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <p className="text-3xl font-bold text-foreground">
-            {balance == null ? "—" : `₩${formatNumber(balance, locale, numOpt)}`}
+      <section className="border border-border p-5 md:p-6">
+        <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
+          <div className="min-w-0">
+            <p className="text-sm text-muted-foreground">{t("wallet.balanceCard.title")}</p>
+            <p className="mt-3 text-4xl font-light figure md:text-5xl">
+              {balance == null ? "—" : `₩${formatNumber(balance, locale, numOpt)}`}
+            </p>
+            <BalanceEquivalents
+              balance={balance}
+              hintKey="wallet.balanceEquivalentsHint"
+              className="mt-2 text-sm text-muted-foreground figure"
+            />
+          </div>
+          <p className="max-w-xs text-xs leading-snug text-muted-foreground md:text-right">
+            {t("wallet.balanceCard.desc")}
           </p>
-          <BalanceEquivalents balance={balance} hintKey="wallet.balanceEquivalentsHint" className="text-sm text-muted-foreground mt-2" />
-        </CardContent>
-      </Card>
+        </div>
+      </section>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>{t("wallet.ledger.title")}</CardTitle>
-          <CardDescription>{t("wallet.ledger.desc")}</CardDescription>
-        </CardHeader>
-        <CardContent className="p-0">
-          {loading ? (
-            <p className="p-6 text-muted-foreground">{t("wallet.ledger.loading")}</p>
-          ) : (
-            <>
-              <Table>
-                <TableHeader>
+      <Section title={t("wallet.ledger.title")} description={t("wallet.ledger.desc")}>
+        {loading ? (
+          <LoadingState label={t("wallet.ledger.loading")} />
+        ) : (
+          <>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>{t("wallet.ledger.colDate")}</TableHead>
+                  <TableHead>{t("wallet.ledger.colType")}</TableHead>
+                  <TableHead className="text-right">{t("wallet.ledger.colAmount")}</TableHead>
+                  <TableHead>{t("wallet.ledger.colMemo")}</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {rows.length === 0 ? (
                   <TableRow>
-                    <TableHead>{t("wallet.ledger.colDate")}</TableHead>
-                    <TableHead>{t("wallet.ledger.colType")}</TableHead>
-                    <TableHead>{t("wallet.ledger.colAmount")}</TableHead>
-                    <TableHead>{t("wallet.ledger.colMemo")}</TableHead>
+                    <TableCell colSpan={4} className="py-10 text-center text-muted-foreground">
+                      {t("wallet.ledger.empty")}
+                    </TableCell>
                   </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {rows.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={4} className="text-center text-muted-foreground py-10">
-                        {t("wallet.ledger.empty")}
+                ) : (
+                  rows.map((e) => (
+                    <TableRow key={e.id}>
+                      <TableCell className="whitespace-nowrap text-muted-foreground figure">
+                        {formatDate(e.createdAt, locale)}
+                      </TableCell>
+                      <TableCell>{entryLabel(t, e.entryType)}</TableCell>
+                      <TableCell className="text-right font-medium figure">
+                        {e.entryType === "DEBIT_PURCHASE" || e.entryType === "DEBIT_BANK_REFUND" ? "−" : ""}
+                        ₩{formatNumber(e.amount, locale, numOpt)}
+                      </TableCell>
+                      <TableCell className="min-w-[8rem] max-w-[14rem] whitespace-normal break-words text-muted-foreground figure">
+                        {e.memo ?? (e.purchaseRequestId ? `#${e.purchaseRequestId}` : "")}
                       </TableCell>
                     </TableRow>
-                  ) : (
-                    rows.map((e) => (
-                      <TableRow key={e.id}>
-                        <TableCell className="whitespace-nowrap text-sm">
-                          {formatDate(e.createdAt, locale)}
-                        </TableCell>
-                        <TableCell className="text-sm">{entryLabel(t, e.entryType)}</TableCell>
-                        <TableCell className="font-medium">
-                          {e.entryType === "DEBIT_PURCHASE" || e.entryType === "DEBIT_BANK_REFUND" ? "−" : "+"}
-                          ₩{formatNumber(e.amount, locale, numOpt)}
-                        </TableCell>
-                        <TableCell className="text-sm text-muted-foreground max-w-[200px] truncate">
-                          {e.memo ?? (e.purchaseRequestId ? `#${e.purchaseRequestId}` : "")}
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-              <div className="flex items-center justify-between p-4 border-t flex-wrap gap-2">
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <span>페이지당</span>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+            <Pager
+              page={page}
+              totalPages={data?.totalPages ?? 1}
+              onPrev={() => void load(page - 1, size)}
+              onNext={() => void load(page + 1, size)}
+              prevLabel={t("wallet.ledger.prev")}
+              nextLabel={t("wallet.ledger.next")}
+              leading={
+                <>
+                  <span>{t("purchase.list.perPage")}</span>
                   <Select
                     value={String(size)}
                     onValueChange={(v) => { const s = Number(v); setSize(s); void load(0, s); }}
                   >
-                    <SelectTrigger className="w-[80px] h-8 text-xs"><SelectValue /></SelectTrigger>
+                    <SelectTrigger size="sm" className="w-24 text-xs"><SelectValue /></SelectTrigger>
                     <SelectContent>
                       {PAGE_SIZE_OPTIONS.map((s) => (
-                        <SelectItem key={s} value={String(s)}>{s}건</SelectItem>
+                        <SelectItem key={s} value={String(s)}>{t("purchase.list.perPageOption", { n: s })}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Button type="button" variant="outline" size="sm" disabled={page <= 0} onClick={() => void load(page - 1, size)}>
-                    {t("wallet.ledger.prev")}
-                  </Button>
-                  <span className="text-sm text-muted-foreground">
-                    {page + 1} / {Math.max(1, data?.totalPages ?? 1)}
-                  </span>
-                  <Button type="button" variant="outline" size="sm" disabled={data != null && page >= (data.totalPages ?? 1) - 1} onClick={() => void load(page + 1, size)}>
-                    {t("wallet.ledger.next")}
-                  </Button>
-                </div>
-              </div>
-            </>
-          )}
-        </CardContent>
-      </Card>
+                </>
+              }
+            />
+          </>
+        )}
+      </Section>
     </div>
   );
 }

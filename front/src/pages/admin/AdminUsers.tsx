@@ -3,10 +3,17 @@ import { Search } from "lucide-react";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import { Badge } from "../../components/ui/badge";
-import { Card, CardContent } from "../../components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../components/ui/table";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "../../components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "../../components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../components/ui/select";
+import { DescriptionList, LoadingState, PageHeader, Pager, StatStrip, Toolbar } from "../../components/page";
 import { toast } from "sonner";
 import { api } from "../../utils/api";
 import { unwrap } from "../../utils/exception";
@@ -14,16 +21,33 @@ import type { User, UserStatus, PageResponse } from "../../types";
 import { useTranslation } from "../../hooks/useTranslation";
 import { DEFAULT_PAGE_SIZE, PAGE_SIZE_OPTIONS } from "../../utils/constants";
 
-const userStatusVariants: Record<UserStatus, "default" | "secondary" | "outline" | "destructive"> = {
-  ACTIVE: "default",
-  SUSPENDED: "destructive",
-  WITHDRAWN: "outline",
+const DESTRUCTIVE_OUTLINE = "border-destructive/30 bg-destructive/10 text-destructive";
+
+/** Active is a black fill; suspended and withdrawn use the destructive outline. */
+const userStatusBadge: Record<UserStatus, { variant: "default" | "outline"; className?: string }> = {
+  ACTIVE: { variant: "default" },
+  SUSPENDED: { variant: "outline", className: DESTRUCTIVE_OUTLINE },
+  WITHDRAWN: { variant: "outline", className: DESTRUCTIVE_OUTLINE },
 };
 
 const USER_STATUSES: UserStatus[] = ["ACTIVE", "SUSPENDED", "WITHDRAWN"];
 
 function userStatusKey(status: UserStatus) {
   return `admin.user.status.${status}` as "admin.user.status.ACTIVE" | "admin.user.status.SUSPENDED" | "admin.user.status.WITHDRAWN";
+}
+
+/** The detail labels end with a colon in every locale; the description list separates columns itself. */
+function stripColon(label: string) {
+  return label.replace(/[:：]\s*$/, "");
+}
+
+function UserStatusBadge({ status, label }: { status: UserStatus; label: string }) {
+  const { variant, className } = userStatusBadge[status];
+  return (
+    <Badge variant={variant} className={className}>
+      {label}
+    </Badge>
+  );
 }
 
 interface UserStats {
@@ -116,39 +140,26 @@ export default function AdminUsers() {
   ] : [];
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold text-foreground">{t("admin.user.title")}</h1>
-        <p className="text-muted-foreground mt-1">{t("admin.user.subtitle")}</p>
-      </div>
+    <div className="space-y-10 md:space-y-12">
+      <PageHeader title={t("admin.user.title")} description={t("admin.user.subtitle")} />
 
       {stats && (
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-          {statCards.map((s) => (
-            <Card key={s.key}>
-              <CardContent className="pt-4 pb-4 text-center">
-                <p className="text-sm text-muted-foreground">{t(`admin.user.stats.${s.key}` as "admin.user.stats.total")}</p>
-                <p className="text-2xl font-bold">{s.value}</p>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+        <StatStrip
+          size="sm"
+          columns={5}
+          items={statCards.map((s) => ({
+            key: s.key,
+            label: t(`admin.user.stats.${s.key}`),
+            value: s.value,
+          }))}
+        />
       )}
 
-      <Card>
-        <CardContent className="pt-6">
-          <div className="flex gap-4">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground/70" />
-              <Input
-                placeholder={t("admin.user.searchPlaceholder")}
-                className="pl-10"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-              />
-            </div>
+      <div className="space-y-4">
+        <Toolbar
+          trailing={
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-[150px]">
+              <SelectTrigger className="w-full sm:w-44" aria-label={t("admin.user.statusFilter")}>
                 <SelectValue placeholder={t("admin.user.statusFilter")} />
               </SelectTrigger>
               <SelectContent>
@@ -158,16 +169,28 @@ export default function AdminUsers() {
                 ))}
               </SelectContent>
             </Select>
+          }
+        >
+          <div className="relative min-w-0 flex-1 sm:max-w-sm">
+            <Search
+              className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
+              strokeWidth={1.5}
+              aria-hidden
+            />
+            <Input
+              className="pl-9"
+              placeholder={t("admin.user.searchPlaceholder")}
+              aria-label={t("admin.user.searchPlaceholder")}
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
           </div>
-        </CardContent>
-      </Card>
+        </Toolbar>
 
-      <Card>
-        <CardContent className="p-0">
-          {loading ? (
-            <div className="py-12 text-center text-muted-foreground">{t("admin.common.loading")}</div>
-          ) : (
-            <>
+        {loading ? (
+          <LoadingState label={t("admin.common.loading")} />
+        ) : (
+          <>
             <Table>
               <TableHeader>
                 <TableRow>
@@ -177,33 +200,31 @@ export default function AdminUsers() {
                   <TableHead>{t("admin.common.col.signupType")}</TableHead>
                   <TableHead>{t("admin.common.col.status")}</TableHead>
                   <TableHead>{t("admin.common.col.signupDate")}</TableHead>
-                  <TableHead>{t("admin.common.actions")}</TableHead>
+                  <TableHead className="text-right">{t("admin.common.actions")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {users.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                    <TableCell colSpan={7} className="py-10 text-center text-muted-foreground">
                       {t("admin.user.empty")}
                     </TableCell>
                   </TableRow>
                 ) : (
                   users.map((user) => (
                     <TableRow key={user.id}>
-                      <TableCell className="text-sm text-muted-foreground">#{user.id}</TableCell>
+                      <TableCell className="text-muted-foreground figure">#{user.id}</TableCell>
                       <TableCell>{user.email}</TableCell>
                       <TableCell className="font-medium">{user.nickname}</TableCell>
-                      <TableCell className="text-sm text-muted-foreground">{user.signupType}</TableCell>
+                      <TableCell className="text-muted-foreground">{user.signupType}</TableCell>
                       <TableCell>
-                        <Badge variant={userStatusVariants[user.status]}>
-                          {t(userStatusKey(user.status))}
-                        </Badge>
+                        <UserStatusBadge status={user.status} label={t(userStatusKey(user.status))} />
                       </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
+                      <TableCell className="text-xs text-muted-foreground figure">
                         {new Date(user.createdAt).toLocaleDateString(dateLocale)}
                       </TableCell>
-                      <TableCell>
-                        <Button variant="outline" size="sm" onClick={() => openDetail(user.id)}>
+                      <TableCell className="text-right">
+                        <Button variant="ghost" size="sm" onClick={() => openDetail(user.id)}>
                           {t("admin.common.detail")}
                         </Button>
                       </TableCell>
@@ -212,66 +233,112 @@ export default function AdminUsers() {
                 )}
               </TableBody>
             </Table>
-            <div className="flex items-center justify-between p-4 border-t flex-wrap gap-2">
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <span>{t("admin.common.pageSize")}</span>
-                <Select value={String(size)} onValueChange={(v) => { setSize(Number(v)); setPage(0); }}>
-                  <SelectTrigger className="w-[80px] h-8 text-xs"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {PAGE_SIZE_OPTIONS.map((s) => (
-                      <SelectItem key={s} value={String(s)}>{t("admin.common.pageSizeSuffix", { n: s })}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="flex items-center gap-2">
-                <Button variant="outline" size="sm" disabled={page <= 0} onClick={() => setPage((p) => p - 1)}>{t("admin.common.prev")}</Button>
-                <span className="text-sm text-muted-foreground">{t("admin.common.pageOf", { page: page + 1, total: Math.max(1, totalPages) })}</span>
-                <Button variant="outline" size="sm" disabled={page >= totalPages - 1} onClick={() => setPage((p) => p + 1)}>{t("admin.common.next")}</Button>
-              </div>
-            </div>
-            </>
-          )}
-        </CardContent>
-      </Card>
+            <Pager
+              page={page}
+              totalPages={totalPages}
+              onPrev={() => setPage((p) => p - 1)}
+              onNext={() => setPage((p) => p + 1)}
+              prevLabel={t("admin.common.prev")}
+              nextLabel={t("admin.common.next")}
+              leading={
+                <>
+                  <span>{t("admin.common.pageSize")}</span>
+                  <Select value={String(size)} onValueChange={(v) => { setSize(Number(v)); setPage(0); }}>
+                    <SelectTrigger size="sm" className="w-[5.5rem] text-xs" aria-label={t("admin.common.pageSize")}>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {PAGE_SIZE_OPTIONS.map((s) => (
+                        <SelectItem key={s} value={String(s)}>{t("admin.common.pageSizeSuffix", { n: s })}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </>
+              }
+            />
+          </>
+        )}
+      </div>
 
       <Dialog open={dialogOpen} onOpenChange={(o) => { setDialogOpen(o); if (!o) setSelectedUser(null); }}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>{t("admin.user.detailTitle")}</DialogTitle>
             <DialogDescription>{t("admin.user.detailDesc")}</DialogDescription>
           </DialogHeader>
           {selectedUser && (
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-3 text-sm">
-                <div><span className="text-muted-foreground">{t("admin.user.label.id")}</span> #{selectedUser.id}</div>
-                <div><span className="text-muted-foreground">{t("admin.user.label.email")}</span> {selectedUser.email || "-"}</div>
-                <div><span className="text-muted-foreground">{t("admin.user.label.nickname")}</span> {selectedUser.nickname}</div>
-                <div><span className="text-muted-foreground">{t("admin.user.label.signupType")}</span> {selectedUser.signupType}</div>
-                <div><span className="text-muted-foreground">{t("admin.user.label.status")}</span>{" "}
-                  <Badge variant={userStatusVariants[selectedUser.status]}>
-                    {t(userStatusKey(selectedUser.status))}
-                  </Badge>
-                </div>
-                <div><span className="text-muted-foreground">{t("admin.user.label.signupDate")}</span>{" "}
-                  {new Date(selectedUser.createdAt).toLocaleDateString(dateLocale)}
-                </div>
-                <div><span className="text-muted-foreground">{t("admin.user.label.lastLogin")}</span>{" "}
-                  {selectedUser.lastLoginAt ? new Date(selectedUser.lastLoginAt).toLocaleString(dateLocale) : "-"}
-                </div>
-              </div>
-              <div className="flex gap-2 pt-2">
-                {selectedUser.status !== "ACTIVE" && (
-                  <Button size="sm" onClick={() => updateStatus(selectedUser.id, "ACTIVE")}>{t("admin.user.activate")}</Button>
+            <>
+              <DescriptionList
+                dense
+                items={[
+                  {
+                    key: "id",
+                    label: stripColon(t("admin.user.label.id")),
+                    value: <span className="figure">#{selectedUser.id}</span>,
+                  },
+                  {
+                    key: "email",
+                    label: stripColon(t("admin.user.label.email")),
+                    value: selectedUser.email || "-",
+                  },
+                  {
+                    key: "nickname",
+                    label: stripColon(t("admin.user.label.nickname")),
+                    value: selectedUser.nickname,
+                  },
+                  {
+                    key: "signupType",
+                    label: stripColon(t("admin.user.label.signupType")),
+                    value: selectedUser.signupType,
+                  },
+                  {
+                    key: "status",
+                    label: stripColon(t("admin.user.label.status")),
+                    value: (
+                      <UserStatusBadge status={selectedUser.status} label={t(userStatusKey(selectedUser.status))} />
+                    ),
+                  },
+                  {
+                    key: "signupDate",
+                    label: stripColon(t("admin.user.label.signupDate")),
+                    value: <span className="figure">{new Date(selectedUser.createdAt).toLocaleDateString(dateLocale)}</span>,
+                  },
+                  {
+                    key: "lastLogin",
+                    label: stripColon(t("admin.user.label.lastLogin")),
+                    value: (
+                      <span className="figure">
+                        {selectedUser.lastLoginAt ? new Date(selectedUser.lastLoginAt).toLocaleString(dateLocale) : "-"}
+                      </span>
+                    ),
+                  },
+                ]}
+              />
+              <DialogFooter>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => { setDialogOpen(false); setSelectedUser(null); }}
+                >
+                  {t("admin.common.cancel")}
+                </Button>
+                {selectedUser.status !== "WITHDRAWN" && (
+                  <Button type="button" variant="destructive" onClick={() => updateStatus(selectedUser.id, "WITHDRAWN")}>
+                    {t("admin.user.withdraw")}
+                  </Button>
                 )}
                 {selectedUser.status !== "SUSPENDED" && selectedUser.status !== "WITHDRAWN" && (
-                  <Button size="sm" variant="destructive" onClick={() => updateStatus(selectedUser.id, "SUSPENDED")}>{t("admin.user.suspend")}</Button>
+                  <Button type="button" variant="outline" onClick={() => updateStatus(selectedUser.id, "SUSPENDED")}>
+                    {t("admin.user.suspend")}
+                  </Button>
                 )}
-                {selectedUser.status !== "WITHDRAWN" && (
-                  <Button size="sm" variant="outline" onClick={() => updateStatus(selectedUser.id, "WITHDRAWN")}>{t("admin.user.withdraw")}</Button>
+                {selectedUser.status !== "ACTIVE" && (
+                  <Button type="button" onClick={() => updateStatus(selectedUser.id, "ACTIVE")}>
+                    {t("admin.user.activate")}
+                  </Button>
                 )}
-              </div>
-            </div>
+              </DialogFooter>
+            </>
           )}
         </DialogContent>
       </Dialog>

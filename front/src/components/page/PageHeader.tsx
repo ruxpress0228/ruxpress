@@ -1,0 +1,46 @@
+import type { ReactNode } from "react";
+import { Link } from "react-router";
+import { ArrowLeft } from "lucide-react";
+import { cn } from "../ui/utils";
+
+type PageHeaderProps = {
+  title: ReactNode;
+  /** One sentence under the title. Keep it short. */
+  description?: ReactNode;
+  /** Buttons or links aligned to the right on desktop. */
+  actions?: ReactNode;
+  /** Optional link rendered above the title, usually back to the list. */
+  back?: { to: string; label: ReactNode };
+  /** Small line under the description: badges, dates, identifiers. */
+  meta?: ReactNode;
+  className?: string;
+};
+
+/** Standard page opening: light large title, muted description, actions on the right. */
+export function PageHeader({ title, description, actions, back, meta, className }: PageHeaderProps) {
+  return (
+    <header className={cn("mb-8 md:mb-10", className)}>
+      {back ? (
+        <Link
+          to={back.to}
+          className="mb-4 inline-flex items-center gap-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground"
+        >
+          <ArrowLeft className="size-3.5" strokeWidth={1.5} aria-hidden />
+          {back.label}
+        </Link>
+      ) : null}
+      <div className="flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
+        <div className="min-w-0">
+          <h1 className="page-title">{title}</h1>
+          {description ? (
+            <p className="mt-2 max-w-2xl text-sm text-muted-foreground md:text-base">{description}</p>
+          ) : null}
+          {meta ? (
+            <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">{meta}</div>
+          ) : null}
+        </div>
+        {actions ? <div className="flex shrink-0 flex-wrap items-center gap-2">{actions}</div> : null}
+      </div>
+    </header>
+  );
+}

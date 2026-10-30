@@ -1,12 +1,11 @@
 import { useState, useRef, useEffect, useMemo } from "react";
 import { useLocation, useNavigate } from "react-router";
-import { Upload, X } from "lucide-react";
+import { Paperclip, Upload, X } from "lucide-react";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
-import { Label } from "../../components/ui/label";
 import { Textarea } from "../../components/ui/textarea";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../components/ui/select";
+import { Field, FormActions, FormSection, PageHeader } from "../../components/page";
 import { toast } from "sonner";
 import { api } from "../../utils/api";
 import { unwrap } from "../../utils/exception";
@@ -121,160 +120,117 @@ export default function InquiryForm() {
   };
 
   return (
-    <div className="max-w-3xl mx-auto">
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold text-foreground">{t("inquiry.form.title")}</h1>
-        <p className="text-muted-foreground mt-2">
-          {t("inquiry.form.subtitle")}
-        </p>
-      </div>
+    <div className="max-w-3xl">
+      <PageHeader title={t("inquiry.form.title")} description={t("inquiry.form.subtitle")} />
 
-      <form onSubmit={handleSubmit} className="space-y-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>{t("inquiry.form.cardTitle")}</CardTitle>
-            <CardDescription>
-              {t("inquiry.form.cardDescription")}
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="category">{t("inquiry.form.categoryLabel")}</Label>
-              <Select required value={category} onValueChange={(v) => setCategory(v as InquiryCategory)}>
-                <SelectTrigger>
-                  <SelectValue placeholder={t("inquiry.form.categoryPlaceholder")} />
-                </SelectTrigger>
-                <SelectContent>
-                  {categoryOptions.map((opt) => (
-                    <SelectItem key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+      <form onSubmit={handleSubmit}>
+        <FormSection title={t("inquiry.form.cardTitle")} description={t("inquiry.form.cardDescription")}>
+          <Field htmlFor="category" label={t("inquiry.form.categoryLabel")}>
+            <Select required value={category} onValueChange={(v) => setCategory(v as InquiryCategory)}>
+              <SelectTrigger id="category">
+                <SelectValue placeholder={t("inquiry.form.categoryPlaceholder")} />
+              </SelectTrigger>
+              <SelectContent>
+                {categoryOptions.map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </Field>
 
-            <div className="space-y-2">
-              <Label htmlFor="title">{t("inquiry.form.titleLabel")}</Label>
-              <Input
-                id="title"
-                placeholder={t("inquiry.form.titlePlaceholder")}
-                required
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                maxLength={200}
-              />
-            </div>
+          <Field htmlFor="title" label={t("inquiry.form.titleLabel")}>
+            <Input
+              id="title"
+              placeholder={t("inquiry.form.titlePlaceholder")}
+              required
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              maxLength={200}
+            />
+          </Field>
 
-            <div className="space-y-2">
-              <Label htmlFor="content">{t("inquiry.form.contentLabel")}</Label>
-              <Textarea
-                id="content"
-                placeholder={t("inquiry.form.contentPlaceholder")}
-                rows={8}
-                required
-                value={content}
-                onChange={(e) => setContent(e.target.value)}
-                maxLength={5000}
-              />
-            </div>
-          </CardContent>
-        </Card>
+          <Field htmlFor="content" label={t("inquiry.form.contentLabel")}>
+            <Textarea
+              id="content"
+              placeholder={t("inquiry.form.contentPlaceholder")}
+              rows={8}
+              required
+              value={content}
+              onChange={(e) => setContent(e.target.value)}
+              maxLength={5000}
+            />
+          </Field>
+        </FormSection>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>{t("inquiry.form.attachmentsTitle")}</CardTitle>
-            <CardDescription>
-              {t("inquiry.form.attachmentsDesc")}
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div
-              className="border-2 border-dashed border-input rounded-lg p-8 text-center hover:border-foreground cursor-pointer transition-colors"
-              onClick={() => fileInputRef.current?.click()}
-            >
-              <input
-                ref={fileInputRef}
-                type="file"
-                multiple
-                className="hidden"
-                onChange={handleFileChange}
-              />
-              <Upload className="w-12 h-12 mx-auto text-muted-foreground/70 mb-2" />
-              <p className="text-sm text-muted-foreground">
-                {t("inquiry.form.uploadHint")}
-              </p>
-              <p className="text-xs text-muted-foreground mt-1">
-                {t("inquiry.form.uploadHintDetail")}
-              </p>
-            </div>
-            {imagePreviews.length > 0 && (
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-                {imagePreviews.map((p) => (
-                  <div key={`${p.file.name}-${p.index}`} className="relative group">
-                    <img
-                      src={p.url}
-                      alt={p.file.name}
-                      className="h-28 w-full object-cover rounded border"
-                    />
+        <FormSection title={t("inquiry.form.attachmentsTitle")} description={t("inquiry.form.attachmentsDesc")}>
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            className="block w-full border border-dashed border-input p-8 text-center text-sm text-muted-foreground transition-colors hover:border-foreground"
+          >
+            <Upload className="mx-auto size-6" strokeWidth={1.25} aria-hidden />
+            <span className="mt-3 block">{t("inquiry.form.uploadHint")}</span>
+            <span className="mt-1 block text-xs">{t("inquiry.form.uploadHintDetail")}</span>
+          </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            multiple
+            className="hidden"
+            onChange={handleFileChange}
+          />
+
+          {files.length > 0 && (
+            <ul className="border-t border-border">
+              {files.map((file, index) => {
+                const preview = imagePreviews.find((p) => p.index === index);
+                return (
+                  <li
+                    key={`${file.name}-${index}`}
+                    className="flex items-center gap-3 border-b border-border py-2.5 text-sm"
+                  >
+                    {preview ? (
+                      <img src={preview.url} alt="" className="size-10 shrink-0 border border-border object-cover" />
+                    ) : (
+                      <Paperclip className="size-4 shrink-0 text-muted-foreground" strokeWidth={1.5} aria-hidden />
+                    )}
+                    <span className="min-w-0 flex-1 truncate">{file.name}</span>
+                    <span className="shrink-0 text-xs text-muted-foreground figure">
+                      {(file.size / 1024).toFixed(1)} KB
+                    </span>
                     <Button
                       type="button"
                       variant="ghost"
                       size="icon"
-                      className="absolute top-1 right-1 h-8 w-8 bg-white/80 hover:bg-card"
-                      onClick={() => removeFile(p.index)}
+                      className="size-8 shrink-0"
+                      title={t("admin.common.delete")}
+                      aria-label={t("admin.common.delete")}
+                      onClick={() => removeFile(index)}
                     >
-                      <X className="h-4 w-4" />
+                      <X className="size-4" strokeWidth={1.5} aria-hidden />
                     </Button>
-                    <div className="mt-1 text-xs text-muted-foreground truncate">{p.file.name}</div>
-                  </div>
-                ))}
-              </div>
-            )}
-            {files.some((f) => !isImageFile(f)) && (
-              <ul className="space-y-2">
-                {files.map((file, index) =>
-                  isImageFile(file) ? null : (
-                    <li
-                      key={`${file.name}-${index}`}
-                      className="flex items-center justify-between text-sm bg-muted/60 rounded px-3 py-2"
-                    >
-                      <span className="truncate flex-1">{file.name}</span>
-                      <span className="text-muted-foreground ml-2">
-                        {(file.size / 1024).toFixed(1)} KB
-                      </span>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="ml-2 h-8 w-8"
-                        onClick={() => removeFile(index)}
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
-                    </li>
-                  )
-                )}
-              </ul>
-            )}
-          </CardContent>
-        </Card>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </FormSection>
 
-        <div className="flex space-x-4">
+        <FormActions>
           <Button
             type="button"
-            variant="outline"
-            size="lg"
-            className="flex-1"
+            variant="ghost"
             onClick={() => navigate(-1)}
             disabled={submitting}
           >
             {t("inquiry.form.cancel")}
           </Button>
-          <Button type="submit" size="lg" className="flex-1" disabled={submitting}>
+          <Button type="submit" disabled={submitting}>
             {submitting ? t("inquiry.form.submitting") : t("inquiry.form.submit")}
           </Button>
-        </div>
+        </FormActions>
       </form>
     </div>
   );

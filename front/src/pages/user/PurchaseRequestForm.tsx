@@ -1,14 +1,23 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router";
-import { Plus, X, Upload } from "lucide-react";
+import { MapPin, Plus, X, Upload } from "lucide-react";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import { Label } from "../../components/ui/label";
 import { Textarea } from "../../components/ui/textarea";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../components/ui/card";
 import { Badge } from "../../components/ui/badge";
 import { Tabs, TabsList, TabsTrigger } from "../../components/ui/tabs";
 import { RadioGroup, RadioGroupItem } from "../../components/ui/radio-group";
+import { cn } from "../../components/ui/utils";
+import {
+  DescriptionList,
+  EmptyState,
+  Field,
+  FormActions,
+  FormSection,
+  LoadingState,
+  PageHeader,
+} from "../../components/page";
 import { toast } from "sonner";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useExchangeRate } from "../../hooks/exchange/useExchangeRate";
@@ -35,9 +44,8 @@ const ALLOWED_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 
 /** 옵션: 전형적인 입력 박스보다 덜 강조된 밑줄 스타일(상품 속성 메모 느낌) */
 const OPTION_FIELD_CLASS =
-  "h-9 min-w-0 w-full border-0 border-b border-border rounded-none bg-transparent px-1 py-1 shadow-none " +
-  "focus-visible:ring-0 focus-visible:border-input focus-visible:ring-offset-0 " +
-  "placeholder:text-muted-foreground/70 text-sm text-foreground";
+  "h-9 w-full min-w-0 border-0 border-b border-border bg-transparent px-1 py-1 text-sm " +
+  "focus-visible:border-foreground focus-visible:ring-0 placeholder:text-muted-foreground/70";
 
 type LineOption = { name: string; value: string };
 type PurchaseLineItem = { urls: string[]; shop: string; priceKrw: number; quantity: number; options: LineOption[] };
@@ -378,65 +386,87 @@ export default function PurchaseRequestForm() {
 
   const numOpt = { minimumFractionDigits: 2, maximumFractionDigits: 2 };
 
-  return (
-    <div className="max-w-4xl mx-auto">
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold text-foreground">{t("purchase.title")}</h1>
-        <p className="text-muted-foreground mt-2">{t("purchase.subtitle")}</p>
-      </div>
+  /** KRW amount with the optional quote-currency equivalent underneath, right-aligned. */
+  const amountCell = (krw: number, quote: number) => (
+    <span className="block text-right">
+      <span className="font-medium figure">{formatNumber(krw, locale, numOpt)}원</span>
+      {quoteCurrency !== "KRW" && (
+        <span className="block text-xs text-muted-foreground figure">
+          ~ {formatNumber(quote, locale, numOpt)} {quoteCurrency}
+        </span>
+      )}
+    </span>
+  );
 
-      <form onSubmit={handleSubmit} className="space-y-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>{t("purchase.productCard.title")}</CardTitle>
-            <CardDescription>{t("purchase.productCard.desc")}</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="requestName">{t("purchase.requestName")}</Label>
-              <Input
-                id="requestName"
-                placeholder={t("purchase.requestNamePlaceholder")}
-                value={requestName}
-                onChange={(e) => setRequestName(e.target.value)}
-                required
-              />
+  return (
+    <div className="max-w-3xl">
+      <PageHeader title={t("purchase.title")} description={t("purchase.subtitle")} />
+
+      <form onSubmit={handleSubmit}>
+        <FormSection title={t("purchase.productCard.title")} description={t("purchase.productCard.desc")}>
+          <Field htmlFor="requestName" label={t("purchase.requestName")}>
+            <Input
+              id="requestName"
+              placeholder={t("purchase.requestNamePlaceholder")}
+              value={requestName}
+              onChange={(e) => setRequestName(e.target.value)}
+              required
+            />
+          </Field>
+
+          <div className="space-y-3">
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-sm font-medium">{t("purchase.itemLinesLabel")}</p>
+              <Button type="button" variant="outline" size="sm" onClick={addItem}>
+                <Plus strokeWidth={1.5} aria-hidden />
+                항목 추가
+              </Button>
             </div>
 
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label>{t("purchase.itemLinesLabel")}</Label>
-                <Button type="button" variant="outline" size="sm" onClick={addItem}>
-                  <Plus className="w-4 h-4 mr-1" />
-                  항목 추가
-                </Button>
-              </div>
+            <ul className="border-t border-border">
               {items.map((item, index) => (
-                <div key={index} className="border rounded-md p-3 space-y-2">
+                <li key={index} className="space-y-4 border-b border-border py-5">
                   <div className="flex items-start gap-2">
                     <Input
+                      aria-label={t("purchase.shopName")}
                       placeholder={t("purchase.shopName")}
                       value={item.shop}
                       onChange={(e) => updateItem(index, "shop", e.target.value)}
-                      className="w-1/3"
+                      className="sm:max-w-xs"
                     />
                     {items.length > 1 && (
-                      <Button type="button" variant="ghost" size="icon" onClick={() => removeItem(index)}>
-                        <X className="w-4 h-4" />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="ml-auto shrink-0 text-muted-foreground hover:text-foreground"
+                        title={t("admin.common.delete")}
+                        aria-label={t("admin.common.delete")}
+                        onClick={() => removeItem(index)}
+                      >
+                        <X strokeWidth={1.5} aria-hidden />
                       </Button>
                     )}
                   </div>
+
                   <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <Label className="text-xs text-muted-foreground">{t("purchase.itemUrlsLabel")}</Label>
-                      <Button type="button" variant="outline" size="sm" onClick={() => addUrl(index)}>
-                        <Plus className="w-3 h-3 mr-1" />
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="text-xs font-medium text-muted-foreground">{t("purchase.itemUrlsLabel")}</p>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="text-muted-foreground hover:text-foreground"
+                        onClick={() => addUrl(index)}
+                      >
+                        <Plus strokeWidth={1.5} aria-hidden />
                         {t("purchase.addUrl")}
                       </Button>
                     </div>
                     {item.urls.map((url, urlIndex) => (
                       <div key={urlIndex} className="flex items-center gap-2">
                         <Input
+                          aria-label={t("purchase.itemUrlsLabel")}
                           placeholder="https://..."
                           value={url}
                           onChange={(e) => updateUrl(index, urlIndex, e.target.value)}
@@ -444,69 +474,75 @@ export default function PurchaseRequestForm() {
                           required={index === 0 && urlIndex === 0}
                         />
                         {item.urls.length > 1 && (
-                          <Button type="button" variant="ghost" size="icon" onClick={() => removeUrl(index, urlIndex)}>
-                            <X className="w-4 h-4" />
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="shrink-0 text-muted-foreground hover:text-foreground"
+                            title={t("admin.common.delete")}
+                            aria-label={t("admin.common.delete")}
+                            onClick={() => removeUrl(index, urlIndex)}
+                          >
+                            <X strokeWidth={1.5} aria-hidden />
                           </Button>
                         )}
                       </div>
                     ))}
                   </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <div>
-                      <Label className="text-xs text-muted-foreground">단가 (KRW)</Label>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <Field htmlFor={`item-${index}-price`} label="단가 (KRW)">
                       <Input
+                        id={`item-${index}-price`}
                         type="number"
                         min="0"
                         step="0.01"
                         placeholder="0.00"
+                        className="figure"
                         value={item.priceKrw || ""}
                         onChange={(e) => updateItem(index, "priceKrw", e.target.value)}
                         required
                       />
-                    </div>
-                    <div>
-                      <Label className="text-xs text-muted-foreground">수량</Label>
+                    </Field>
+                    <Field htmlFor={`item-${index}-qty`} label="수량">
                       <Input
+                        id={`item-${index}-qty`}
                         type="number"
                         min="1"
+                        className="figure"
                         value={item.quantity}
                         onChange={(e) => updateItem(index, "quantity", e.target.value)}
                         required
                       />
-                    </div>
+                    </Field>
                   </div>
-                  <div className="space-y-2 pt-2 border-t border-border">
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="text-sm font-medium text-muted-foreground">{t("purchase.optionHeading")}</span>
+
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="text-xs font-medium text-muted-foreground">{t("purchase.optionHeading")}</p>
                       <Button
                         type="button"
                         variant="ghost"
                         size="sm"
-                        className="h-8 shrink-0 gap-1 text-xs text-muted-foreground hover:text-foreground"
+                        className="text-muted-foreground hover:text-foreground"
                         onClick={() => addLineOption(index)}
                       >
-                        <Plus className="h-3.5 w-3.5" />
+                        <Plus strokeWidth={1.5} aria-hidden />
                         {t("purchase.addLineOption")}
                       </Button>
                     </div>
                     {item.options.length > 0 ? (
-                      <ul className="space-y-2 pl-0.5">
+                      <ul className="space-y-2">
                         {item.options.map((option, optIdx) => (
-                          <li key={optIdx} className="flex items-start gap-2">
-                            <span className="mt-2 shrink-0 text-muted-foreground/40 select-none" aria-hidden>
-                              -
-                            </span>
-                            <div className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row sm:items-center sm:gap-2">
+                          <li key={optIdx} className="flex items-center gap-2">
+                            <div className="grid min-w-0 flex-1 grid-cols-1 gap-2 sm:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
                               <Input
                                 aria-label={t("purchase.optionNamePlaceholder")}
                                 placeholder={t("purchase.optionNamePlaceholder")}
                                 value={option.name}
                                 onChange={(e) => updateLineOption(index, optIdx, "name", e.target.value)}
-                                className={`${OPTION_FIELD_CLASS} sm:max-w-[40%]`}
+                                className={OPTION_FIELD_CLASS}
                               />
-                              <span className="hidden shrink-0 text-muted-foreground/40 sm:inline" aria-hidden>
-                                :
-                              </span>
                               <Input
                                 aria-label={t("purchase.optionValuePlaceholder")}
                                 placeholder={t("purchase.optionValuePlaceholder")}
@@ -519,258 +555,238 @@ export default function PurchaseRequestForm() {
                               type="button"
                               variant="ghost"
                               size="icon"
-                              className="h-9 w-9 shrink-0 text-muted-foreground/70 hover:text-foreground/80"
+                              className="size-8 shrink-0 text-muted-foreground hover:text-foreground"
                               onClick={() => removeLineOption(index, optIdx)}
+                              title="옵션 줄 삭제"
                               aria-label="옵션 줄 삭제"
                             >
-                              <X className="h-4 w-4" />
+                              <X className="size-4" strokeWidth={1.5} aria-hidden />
                             </Button>
                           </li>
                         ))}
                       </ul>
                     ) : null}
-                    <p className="text-xs text-muted-foreground/70">{t("purchase.itemOptionHint")}</p>
+                    <p className="text-xs text-muted-foreground">{t("purchase.itemOptionHint")}</p>
                   </div>
-                  <p className="text-xs text-muted-foreground/70">
+
+                  <p className="text-xs text-muted-foreground figure">
                     소계: ₩{formatNumber((item.priceKrw || 0) * (item.quantity || 0), locale, numOpt)}
                   </p>
-                </div>
+                </li>
               ))}
-              <p className="text-xs text-muted-foreground">{t("purchase.urlHint")}</p>
-              <p className="text-sm text-foreground/80">
-                전체 수량 합계: <span className="font-semibold">{totalQuantity}</span> 개 · 상품가 합계:{" "}
-                <span className="font-semibold">₩{formatNumber(aggregatedPriceKrw, locale, numOpt)}</span>
-              </p>
-            </div>
-          </CardContent>
-        </Card>
+            </ul>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>{t("purchase.shipping.title")}</CardTitle>
-            <CardDescription>{t("purchase.shipping.desc")}</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {addressesLoading ? (
-              <p className="text-sm text-muted-foreground">{t("purchase.shipping.loading")}</p>
-            ) : addresses.length === 0 ? (
-              <div className="space-y-3">
-                <p className="text-sm text-muted-foreground">{t("purchase.shipping.empty")}</p>
+            <p className="text-xs text-muted-foreground">{t("purchase.urlHint")}</p>
+            <p className="text-sm">
+              전체 수량 합계: <span className="font-medium figure">{totalQuantity}</span> 개 · 상품가 합계:{" "}
+              <span className="font-medium figure">₩{formatNumber(aggregatedPriceKrw, locale, numOpt)}</span>
+            </p>
+          </div>
+        </FormSection>
+
+        <FormSection title={t("purchase.shipping.title")} description={t("purchase.shipping.desc")}>
+          {addressesLoading ? (
+            <LoadingState compact label={t("purchase.shipping.loading")} />
+          ) : addresses.length === 0 ? (
+            <EmptyState
+              compact
+              icon={MapPin}
+              title={t("purchase.shipping.empty")}
+              action={
                 <Button type="button" variant="outline" size="sm" asChild>
                   <Link to="/mypage">{t("purchase.shipping.manage")}</Link>
                 </Button>
-              </div>
-            ) : (
-              <RadioGroup
-                value={selectedShippingId != null ? String(selectedShippingId) : ""}
-                onValueChange={(v) => setSelectedShippingId(v ? Number(v) : null)}
-                className="gap-3"
-              >
-                {addresses.map((a) => (
-                  <div
-                    key={a.id}
-                    className={`flex items-start gap-3 rounded-lg border p-3 transition-colors ${
-                      selectedShippingId === a.id ? "border-foreground bg-muted/60" : "border-border"
-                    }`}
-                  >
-                    <RadioGroupItem value={String(a.id)} id={`ship-addr-${a.id}`} className="mt-1" />
-                    <Label htmlFor={`ship-addr-${a.id}`} className="flex-1 cursor-pointer space-y-1 text-sm leading-relaxed">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className="font-medium text-foreground">{a.label?.trim() || t("purchase.shipping.title")}</span>
-                        {a.isDefault ? (
-                          <Badge variant="secondary" className="text-xs">
-                            {t("purchase.shipping.defaultBadge")}
-                          </Badge>
-                        ) : null}
-                      </div>
-                      {a.recipientName ? (
-                        <p className="text-foreground">
-                          {a.recipientName}
-                          {a.recipientPhone ? <span className="text-muted-foreground"> · {a.recipientPhone}</span> : null}
-                        </p>
-                      ) : null}
-                      <p className="text-foreground/80 break-words">
-                        {a.postalCode ? <span className="mr-1">({a.postalCode})</span> : null}
-                        {a.addressLine1}
-                        {a.addressLine2 ? ` ${a.addressLine2}` : ""}
-                      </p>
-                    </Label>
-                  </div>
-                ))}
-              </RadioGroup>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>{t("purchase.image.title")}</CardTitle>
-            <CardDescription>{t("purchase.image.desc")}</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div
-              className={[
-                "border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors",
-                isDragOver ? "border-foreground bg-muted" : "border-input hover:border-foreground",
-              ].join(" ")}
-              onClick={() => imageInputRef.current?.click()}
-              onDragEnter={(e) => {
-                e.preventDefault();
-                setIsDragOver(true);
-              }}
-              onDragOver={(e) => {
-                e.preventDefault();
-                setIsDragOver(true);
-              }}
-              onDragLeave={(e) => {
-                e.preventDefault();
-                setIsDragOver(false);
-              }}
-              onDrop={handleDrop}
-              role="button"
-              tabIndex={0}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" || e.key === " ") imageInputRef.current?.click();
-              }}
-            >
-              <input
-                ref={imageInputRef}
-                type="file"
-                accept="image/jpeg,image/png,image/webp"
-                multiple
-                className="hidden"
-                onChange={handleImageChange}
-              />
-              <Upload className="w-12 h-12 mx-auto text-muted-foreground/70 mb-2" />
-              <p className="text-sm text-muted-foreground">{t("purchase.image.upload")}</p>
-            </div>
-            {imagePreviews.length > 0 && (
-              <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-                {imagePreviews.map((p, index) => (
-                  <div key={`${p.file.name}-${p.file.size}-${index}`} className="relative group">
-                    <img src={p.url} alt={p.file.name} className="h-28 w-full object-cover rounded border" />
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="absolute top-1 right-1 h-8 w-8 bg-white/80 hover:bg-card"
-                      onClick={() => removeImage(index)}
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                    <div className="mt-1 text-xs text-muted-foreground truncate">{p.file.name}</div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>{t("purchase.notes.title")}</CardTitle>
-            <CardDescription>{t("purchase.notes.desc")}</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Textarea
-              placeholder={t("purchase.notes.placeholder")}
-              rows={4}
-              value={memo}
-              onChange={(e) => setMemo(e.target.value)}
+              }
             />
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>{t("purchase.summary.title")}</CardTitle>
-            <CardDescription>
-              <div className="space-y-3">
-                <p className="text-sm text-muted-foreground mb-2">{t("purchase.summary.quoteCurrency")}</p>
-                <Tabs value={quoteCurrency} onValueChange={(v) => setQuoteCurrency(v as QuoteCurrency)}>
-                  <TabsList className="grid w-full grid-cols-4">
-                    {QUOTE_CURRENCIES.map((c) => (
-                      <TabsTrigger key={c} value={c} className="text-xs sm:text-sm">
-                        {c}
-                      </TabsTrigger>
-                    ))}
-                  </TabsList>
-                </Tabs>
-                {quoteCurrency !== "KRW" && selectedQuoteRate ? (
-                  <div>
-                    <Badge variant="secondary" className="mr-2">
-                      {t("purchase.summary.rate")
-                        .replace("{{currency}}", quoteCurrency)
-                        .replace("{{rate}}", Number(selectedQuoteRate.rateToKrw).toFixed(2))}
-                    </Badge>
-                    <span className="text-xs">
-                      ({formatDate(selectedQuoteRate.fetchedAt, locale)} {t("purchase.summary.asOf")}) ·{" "}
-                      {t("purchase.summary.paymentNote").replace("{{currency}}", quoteCurrency)}
+          ) : (
+            <RadioGroup
+              value={selectedShippingId != null ? String(selectedShippingId) : ""}
+              onValueChange={(v) => setSelectedShippingId(v ? Number(v) : null)}
+              className="gap-2"
+            >
+              {addresses.map((a) => (
+                <div
+                  key={a.id}
+                  className={cn(
+                    "flex items-start gap-3 border p-4 transition-colors",
+                    selectedShippingId === a.id ? "border-foreground bg-muted/60" : "border-border hover:border-foreground/40",
+                  )}
+                >
+                  <RadioGroupItem value={String(a.id)} id={`ship-addr-${a.id}`} className="mt-0.5" />
+                  <Label
+                    htmlFor={`ship-addr-${a.id}`}
+                    className="flex-1 cursor-pointer flex-col items-start gap-1 text-sm font-normal leading-relaxed"
+                  >
+                    <span className="flex flex-wrap items-center gap-2">
+                      <span className="font-medium">{a.label?.trim() || t("purchase.shipping.title")}</span>
+                      {a.isDefault ? (
+                        <Badge variant="outline" className="px-1.5 py-0 text-[10px] font-medium">
+                          {t("purchase.shipping.defaultBadge")}
+                        </Badge>
+                      ) : null}
                     </span>
-                  </div>
-                ) : quoteCurrency === "KRW" ? (
-                  <span className="text-xs text-muted-foreground">
-                    {t("purchase.summary.paymentNote").replace("{{currency}}", "KRW")}
-                  </span>
-                ) : (
-                  <span className="text-muted-foreground">{t("purchase.summary.loading")}</span>
-                )}
-              </div>
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <p className="text-sm text-amber-900 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
-              {t("purchase.summary.adminWalletNote")}
-            </p>
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">{t("purchase.summary.productPrice")}</span>
-              <div className="flex flex-col items-end gap-0.5">
-                <span className="font-medium">{formatNumber(totals.priceKrw, locale, numOpt)}원</span>
-                {quoteCurrency !== "KRW" && (
-                  <span className="text-xs text-muted-foreground">
-                    ~ {formatNumber(totals.priceQuote, locale, numOpt)} {quoteCurrency}
-                  </span>
-                )}
-              </div>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">
-                {t("purchase.summary.feeLabel").replace("{{percent}}", String(feeRatePercent))}
-              </span>
-              <div className="flex flex-col items-end gap-0.5">
-                <span className="font-medium">{formatNumber(totals.feeKrw, locale, numOpt)}원</span>
-                {quoteCurrency !== "KRW" && (
-                  <span className="text-xs text-muted-foreground">
-                    ~ {formatNumber(totals.feeQuote, locale, numOpt)} {quoteCurrency}
-                  </span>
-                )}
-              </div>
-            </div>
-            <div className="border-t pt-3 flex justify-between">
-              <span className="font-semibold text-lg">{t("purchase.summary.total")}</span>
-              <div className="flex flex-col items-end gap-0.5">
-                <span className="font-bold text-xl text-foreground">
-                  {formatNumber(totals.totalKrw, locale, numOpt)}원
-                </span>
-                {quoteCurrency !== "KRW" && (
-                  <span className="text-xs font-normal text-muted-foreground">
-                    ~ {formatNumber(totals.totalQuote, locale, numOpt)} {quoteCurrency}
-                  </span>
-                )}
-              </div>
-            </div>
-            <p className="text-xs text-muted-foreground">{t("purchase.summary.disclaimer")}</p>
-          </CardContent>
-        </Card>
+                    {a.recipientName ? (
+                      <span className="block">
+                        {a.recipientName}
+                        {a.recipientPhone ? (
+                          <span className="text-muted-foreground figure"> · {a.recipientPhone}</span>
+                        ) : null}
+                      </span>
+                    ) : null}
+                    <span className="block break-words text-muted-foreground">
+                      {a.postalCode ? <span className="mr-1 figure">({a.postalCode})</span> : null}
+                      {a.addressLine1}
+                      {a.addressLine2 ? ` ${a.addressLine2}` : ""}
+                    </span>
+                  </Label>
+                </div>
+              ))}
+            </RadioGroup>
+          )}
+        </FormSection>
 
-        <div className="flex space-x-4">
-          <Button type="button" variant="outline" size="lg" className="flex-1" onClick={() => navigate(-1)}>
+        <FormSection title={t("purchase.image.title")} description={t("purchase.image.desc")}>
+          <div
+            className={cn(
+              "cursor-pointer border border-dashed p-8 text-center text-sm text-muted-foreground transition-colors",
+              isDragOver ? "border-foreground bg-muted/60" : "border-input hover:border-foreground",
+            )}
+            onClick={() => imageInputRef.current?.click()}
+            onDragEnter={(e) => {
+              e.preventDefault();
+              setIsDragOver(true);
+            }}
+            onDragOver={(e) => {
+              e.preventDefault();
+              setIsDragOver(true);
+            }}
+            onDragLeave={(e) => {
+              e.preventDefault();
+              setIsDragOver(false);
+            }}
+            onDrop={handleDrop}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") imageInputRef.current?.click();
+            }}
+          >
+            <input
+              ref={imageInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              multiple
+              className="hidden"
+              onChange={handleImageChange}
+            />
+            <Upload className="mx-auto mb-3 size-6" strokeWidth={1.25} aria-hidden />
+            <p>{t("purchase.image.upload")}</p>
+          </div>
+          {imagePreviews.length > 0 && (
+            <ul className="grid grid-cols-3 gap-3 sm:grid-cols-4">
+              {imagePreviews.map((p, index) => (
+                <li key={`${p.file.name}-${p.file.size}-${index}`} className="relative min-w-0">
+                  <img src={p.url} alt={p.file.name} className="aspect-square w-full border border-border object-cover" />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="absolute right-1 top-1 size-7 bg-background/80 hover:bg-background"
+                    title={t("admin.common.delete")}
+                    aria-label={t("admin.common.delete")}
+                    onClick={() => removeImage(index)}
+                  >
+                    <X className="size-4" strokeWidth={1.5} aria-hidden />
+                  </Button>
+                  <p className="mt-1 truncate text-xs text-muted-foreground">{p.file.name}</p>
+                </li>
+              ))}
+            </ul>
+          )}
+        </FormSection>
+
+        <FormSection title={t("purchase.notes.title")} description={t("purchase.notes.desc")}>
+          <Textarea
+            id="memo"
+            aria-label={t("purchase.notes.title")}
+            placeholder={t("purchase.notes.placeholder")}
+            rows={4}
+            value={memo}
+            onChange={(e) => setMemo(e.target.value)}
+          />
+        </FormSection>
+
+        <FormSection title={t("purchase.summary.title")}>
+          <div className="space-y-2">
+            <p id="quote-currency-label" className="text-sm font-medium">
+              {t("purchase.summary.quoteCurrency")}
+            </p>
+            <Tabs value={quoteCurrency} onValueChange={(v) => setQuoteCurrency(v as QuoteCurrency)}>
+              <TabsList aria-labelledby="quote-currency-label">
+                {QUOTE_CURRENCIES.map((c) => (
+                  <TabsTrigger key={c} value={c} className="px-4 figure">
+                    {c}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+            </Tabs>
+            <p className="text-xs text-muted-foreground figure">
+              {quoteCurrency !== "KRW" && selectedQuoteRate ? (
+                <>
+                  {t("purchase.summary.rate")
+                    .replace("{{currency}}", quoteCurrency)
+                    .replace("{{rate}}", Number(selectedQuoteRate.rateToKrw).toFixed(2))}{" "}
+                  ({formatDate(selectedQuoteRate.fetchedAt, locale)} {t("purchase.summary.asOf")}) ·{" "}
+                  {t("purchase.summary.paymentNote").replace("{{currency}}", quoteCurrency)}
+                </>
+              ) : quoteCurrency === "KRW" ? (
+                t("purchase.summary.paymentNote").replace("{{currency}}", "KRW")
+              ) : (
+                t("purchase.summary.loading")
+              )}
+            </p>
+          </div>
+
+          <p className="border border-border p-4 text-sm leading-relaxed">{t("purchase.summary.adminWalletNote")}</p>
+
+          <div>
+            <DescriptionList
+              items={[
+                {
+                  key: "price",
+                  label: t("purchase.summary.productPrice"),
+                  value: amountCell(totals.priceKrw, totals.priceQuote),
+                },
+                {
+                  key: "fee",
+                  label: t("purchase.summary.feeLabel").replace("{{percent}}", String(feeRatePercent)),
+                  value: amountCell(totals.feeKrw, totals.feeQuote),
+                },
+              ]}
+            />
+            <div className="flex items-start justify-between gap-4 border-b border-border py-4">
+              <span className="text-sm font-medium">{t("purchase.summary.total")}</span>
+              <div className="text-right">
+                <p className="text-3xl font-light figure">{formatNumber(totals.totalKrw, locale, numOpt)}원</p>
+                {quoteCurrency !== "KRW" && (
+                  <p className="mt-1 text-xs text-muted-foreground figure">
+                    ~ {formatNumber(totals.totalQuote, locale, numOpt)} {quoteCurrency}
+                  </p>
+                )}
+              </div>
+            </div>
+            <p className="mt-3 text-xs text-muted-foreground">{t("purchase.summary.disclaimer")}</p>
+          </div>
+        </FormSection>
+
+        <FormActions>
+          <Button type="button" variant="ghost" onClick={() => navigate(-1)}>
             {t("purchase.cancel")}
           </Button>
-          <Button type="submit" size="lg" className="flex-1" disabled={submitting}>
+          <Button type="submit" disabled={submitting}>
             {t("purchase.submit")}
           </Button>
-        </div>
+        </FormActions>
       </form>
     </div>
   );

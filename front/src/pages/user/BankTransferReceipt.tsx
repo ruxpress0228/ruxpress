@@ -1,13 +1,30 @@
 import { useEffect, useState } from "react";
-import { Link, useParams } from "react-router";
-import { ArrowLeft, Printer } from "lucide-react";
+import { useParams } from "react-router";
+import { Printer } from "lucide-react";
 import { Button } from "../../components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card";
+import { Badge } from "../../components/ui/badge";
+import { cn } from "../../components/ui/utils";
+import { DescriptionList, LoadingState, PageHeader } from "../../components/page";
 import { toast } from "sonner";
 import { getLedgerReceipt } from "../../api/bankTransfer";
 import { useTranslation } from "../../hooks/useTranslation";
 import { formatDate } from "../../utils/format";
 import type { LedgerReceipt as LedgerReceiptType } from "../../types/bankTransfer";
+
+/** Pending is outlined, confirmed is black, cancelled/failed is red-outlined. */
+function statusBadgeProps(s: string): { variant: "default" | "secondary" | "outline"; className?: string } {
+  switch (s) {
+    case "CONFIRMED":
+      return { variant: "default" };
+    case "PENDING":
+      return { variant: "outline" };
+    case "CANCELLED":
+    case "FAILED":
+      return { variant: "outline", className: "border-destructive/30 bg-destructive/10 text-destructive" };
+    default:
+      return { variant: "outline" };
+  }
+}
 
 export default function BankTransferReceipt() {
   const { id } = useParams<{ id: string }>();
@@ -29,63 +46,73 @@ export default function BankTransferReceipt() {
   const onPrint = () => window.print();
 
   if (!data) {
-    return (
-      <div className="max-w-lg mx-auto py-16 text-center text-muted-foreground">
-        {t("bankTransfer.receiptLoading")}
-      </div>
-    );
+    return <LoadingState label={t("bankTransfer.receiptLoading")} className="max-w-md" />;
   }
 
-  return (
-    <div className="max-w-2xl mx-auto space-y-6 print:max-w-none">
-      <div className="flex items-center justify-between print:hidden">
-        <Button variant="ghost" asChild>
-          <Link to="/bank-transfer">
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            {t("bankTransfer.back")}
-          </Link>
-        </Button>
-        <Button onClick={onPrint}>
-          <Printer className="w-4 h-4 mr-2" />
-          {t("bankTransfer.print")}
-        </Button>
-      </div>
+  const badge = statusBadgeProps(data.status);
 
-      <Card className="print:border-0 print:shadow-none">
-        <CardHeader className="print:text-center border-b print:border-input pb-4">
-          <CardTitle className="text-2xl">{t("bankTransfer.receiptTitle")}</CardTitle>
-          <p className="text-sm text-muted-foreground mt-2">Main Proxy · {t("bankTransfer.receiptSubtitle")}</p>
-        </CardHeader>
-        <CardContent className="pt-6 space-y-4 text-sm">
-          <div className="grid grid-cols-2 gap-2">
-            <span className="text-muted-foreground">{t("bankTransfer.receipt.entryId")}</span>
-            <span className="font-mono font-medium">{data.entryId}</span>
-            <span className="text-muted-foreground">{t("bankTransfer.receipt.type")}</span>
-            <span>{data.entryType}</span>
-            <span className="text-muted-foreground">{t("bankTransfer.receipt.status")}</span>
-            <span>{data.status}</span>
-            <span className="text-muted-foreground">{t("bankTransfer.field.amount")}</span>
-            <span className="font-semibold">
-              {data.amount.toLocaleString(locale === "en" ? "en-US" : "ko-KR")} {data.currency}
-            </span>
-            {data.depositorName ? (
-              <>
-                <span className="text-muted-foreground">{t("bankTransfer.field.depositorName")}</span>
-                <span>{data.depositorName}</span>
-              </>
-            ) : null}
-            <span className="text-muted-foreground">{t("bankTransfer.receipt.confirmedAt")}</span>
-            <span>{data.confirmedAt ? formatDate(data.confirmedAt, locale) : "—"}</span>
-            <span className="text-muted-foreground">{t("bankTransfer.receipt.bank")}</span>
-            <span>{data.settlementAccount.bankName}</span>
-            <span className="text-muted-foreground">{t("bankTransfer.receipt.account")}</span>
-            <span className="font-mono">{data.settlementAccount.accountNumber}</span>
-            <span className="text-muted-foreground">{t("bankTransfer.receipt.holder")}</span>
-            <span>{data.settlementAccount.accountHolder}</span>
+  return (
+    <div className="max-w-md print:max-w-none">
+      <PageHeader
+        className="print:[&_a]:hidden"
+        back={{ to: "/bank-transfer", label: t("bankTransfer.back") }}
+        title={t("bankTransfer.receiptTitle")}
+        description={`Main Proxy · ${t("bankTransfer.receiptSubtitle")}`}
+        actions={
+          <Button variant="outline" className="print:hidden" onClick={onPrint}>
+            <Printer className="size-4" strokeWidth={1.5} aria-hidden />
+            {t("bankTransfer.print")}
+          </Button>
+        }
+      />
+
+      <section className="border border-border p-6 print:border-input">
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <div className="min-w-0">
+            <p className="text-xs text-muted-foreground">{t("bankTransfer.field.amount")}</p>
+            <p className="mt-2 text-4xl font-light figure">
+              {data.amount.toLocaleString(locale === "en" ? "en-US" : "ko-KR")}{" "}
+              <span className="text-xl text-muted-foreground">{data.currency}</span>
+            </p>
           </div>
-          <p className="text-xs text-muted-foreground/70 pt-4 border-t">{t("bankTransfer.receiptFooter")}</p>
-        </CardContent>
-      </Card>
+          <div className="flex flex-col items-start gap-2 sm:items-end">
+            <p className="text-xs text-muted-foreground">{t("bankTransfer.receipt.status")}</p>
+            <Badge variant={badge.variant} className={cn("px-2 py-0.5 text-[10px] font-medium", badge.className)}>
+              {data.status}
+            </Badge>
+          </div>
+        </div>
+
+        <DescriptionList
+          className="mt-6"
+          dense
+          items={[
+            {
+              key: "entryId",
+              label: t("bankTransfer.receipt.entryId"),
+              value: <span className="font-medium figure">{data.entryId}</span>,
+            },
+            { key: "type", label: t("bankTransfer.receipt.type"), value: data.entryType },
+            ...(data.depositorName
+              ? [{ key: "depositorName", label: t("bankTransfer.field.depositorName"), value: data.depositorName }]
+              : []),
+            {
+              key: "confirmedAt",
+              label: t("bankTransfer.receipt.confirmedAt"),
+              value: <span className="figure">{data.confirmedAt ? formatDate(data.confirmedAt, locale) : "—"}</span>,
+            },
+            { key: "bank", label: t("bankTransfer.receipt.bank"), value: data.settlementAccount.bankName },
+            {
+              key: "account",
+              label: t("bankTransfer.receipt.account"),
+              value: <span className="figure">{data.settlementAccount.accountNumber}</span>,
+            },
+            { key: "holder", label: t("bankTransfer.receipt.holder"), value: data.settlementAccount.accountHolder },
+          ]}
+        />
+
+        <p className="mt-6 text-xs text-muted-foreground">{t("bankTransfer.receiptFooter")}</p>
+      </section>
     </div>
   );
 }

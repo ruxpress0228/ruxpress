@@ -1,14 +1,11 @@
 import { useCallback, useEffect, useState } from "react";
-import { Search, Send, Pencil, Trash2 } from "lucide-react";
+import { Search, Send, Pencil, Trash2, MessageSquare } from "lucide-react";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import { Badge } from "../../components/ui/badge";
-import { Card, CardContent } from "../../components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../components/ui/table";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "../../components/ui/dialog";
-import { Label } from "../../components/ui/label";
 import { Textarea } from "../../components/ui/textarea";
-import { Separator } from "../../components/ui/separator";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../components/ui/select";
 import { toast } from "sonner";
 import { api } from "../../utils/api";
@@ -16,12 +13,16 @@ import { unwrap } from "../../utils/exception";
 import type { AdminInquiryListItem, Inquiry, InquiryStatus, InquiryCategory, PageResponse } from "../../types";
 import { useTranslation } from "../../hooks/useTranslation";
 import { DEFAULT_PAGE_SIZE, PAGE_SIZE_OPTIONS } from "../../utils/constants";
+import { EmptyState, Field, LoadingState, PageHeader, Pager, Toolbar } from "../../components/page";
 
+/** pending → outline, answered → black fill, closed → grey. */
 const statusVariants: Record<InquiryStatus, "default" | "secondary" | "outline"> = {
-  PENDING: "secondary",
+  PENDING: "outline",
   REPLIED: "default",
-  CLOSED: "outline",
+  CLOSED: "secondary",
 };
+
+const BADGE_CLASS = "px-2 py-0.5 text-[10px] font-medium";
 
 const INQUIRY_STATUSES: InquiryStatus[] = ["PENDING", "REPLIED", "CLOSED"];
 
@@ -141,106 +142,130 @@ export default function AdminInquiries() {
     ? items.filter((i) => i.title.toLowerCase().includes(search.toLowerCase()) || String(i.id).includes(search))
     : items;
 
+  const formatDateTime = (iso: string) =>
+    new Date(iso).toLocaleDateString(dateLocale, { year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit" });
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-10 md:space-y-12">
+      <PageHeader title={t("admin.inquiries.title")} description={t("admin.inquiries.subtitle")} />
+
       <div>
-        <h1 className="text-3xl font-bold text-foreground">{t("admin.inquiries.title")}</h1>
-        <p className="text-muted-foreground mt-1">{t("admin.inquiries.subtitle")}</p>
-      </div>
-
-      <Card>
-        <CardContent className="pt-6">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground/70" />
-            <Input placeholder={t("admin.inquiries.searchPlaceholder")} className="pl-10" value={search} onChange={(e) => setSearch(e.target.value)} />
+        <Toolbar>
+          <div className="relative min-w-0 flex-1 sm:max-w-sm">
+            <Search
+              className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
+              strokeWidth={1.5}
+              aria-hidden
+            />
+            <Input
+              className="pl-9"
+              placeholder={t("admin.inquiries.searchPlaceholder")}
+              aria-label={t("admin.inquiries.searchPlaceholder")}
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
           </div>
-        </CardContent>
-      </Card>
+        </Toolbar>
 
-      <Card>
-        <CardContent className="p-0">
-          {loading ? (
-            <div className="py-12 text-center text-muted-foreground">{t("admin.common.loading")}</div>
-          ) : (
-            <>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>{t("admin.common.col.category")}</TableHead>
-                    <TableHead>{t("admin.common.col.title")}</TableHead>
-                    <TableHead>{t("admin.common.col.author")}</TableHead>
-                    <TableHead>{t("admin.common.col.status")}</TableHead>
-                    <TableHead>{t("admin.common.col.createdAt")}</TableHead>
-                    <TableHead>{t("admin.common.actions")}</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filtered.length === 0 ? (
-                    <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-8">{t("admin.inquiries.empty")}</TableCell></TableRow>
-                  ) : filtered.map((inq) => (
-                    <TableRow key={inq.id}>
-                      <TableCell><Badge variant="outline">{t(inquiryCategoryKey(inq.category))}</Badge></TableCell>
-                      <TableCell className="font-medium max-w-xs truncate">{inq.title}</TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
-                        {inq.nickname ?? t("admin.common.memberHash", { id: inq.userId })}
-                        {inq.email && <span className="block text-xs text-muted-foreground/70">{inq.email}</span>}
-                      </TableCell>
-                      <TableCell><Badge variant={statusVariants[inq.status]}>{t(inquiryStatusKey(inq.status))}</Badge></TableCell>
-                      <TableCell className="text-sm text-muted-foreground">{new Date(inq.createdAt).toLocaleDateString(dateLocale)}</TableCell>
-                      <TableCell>
-                        <Button variant="outline" size="sm" onClick={() => openDetail(inq.id)}>
-                          {inq.status === "PENDING" ? t("admin.common.reply") : t("admin.common.view")}
-                        </Button>
-                      </TableCell>
+        {loading ? (
+          <LoadingState label={t("admin.common.loading")} className="mt-4" />
+        ) : (
+          <>
+            {filtered.length === 0 ? (
+              <EmptyState compact icon={MessageSquare} title={t("admin.inquiries.empty")} className="mt-4" />
+            ) : (
+              <div className="mt-2">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>{t("admin.common.col.category")}</TableHead>
+                      <TableHead>{t("admin.common.col.title")}</TableHead>
+                      <TableHead>{t("admin.common.col.author")}</TableHead>
+                      <TableHead>{t("admin.common.col.status")}</TableHead>
+                      <TableHead>{t("admin.common.col.createdAt")}</TableHead>
+                      <TableHead className="text-right">{t("admin.common.actions")}</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-              <div className="flex items-center justify-between p-4 border-t flex-wrap gap-2">
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  </TableHeader>
+                  <TableBody>
+                    {filtered.map((inq) => (
+                      <TableRow key={inq.id}>
+                        <TableCell>
+                          <Badge variant="outline" className={BADGE_CLASS}>{t(inquiryCategoryKey(inq.category))}</Badge>
+                        </TableCell>
+                        <TableCell className="max-w-xs truncate font-medium">{inq.title}</TableCell>
+                        <TableCell className="text-sm">
+                          <span className="block">{inq.nickname ?? t("admin.common.memberHash", { id: inq.userId })}</span>
+                          {inq.email && <span className="block text-xs text-muted-foreground">{inq.email}</span>}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={statusVariants[inq.status]} className={BADGE_CLASS}>{t(inquiryStatusKey(inq.status))}</Badge>
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground figure">
+                          {new Date(inq.createdAt).toLocaleDateString(dateLocale)}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button variant="ghost" size="sm" onClick={() => openDetail(inq.id)}>
+                            {inq.status === "PENDING" ? t("admin.common.reply") : t("admin.common.view")}
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+
+            <Pager
+              page={page}
+              totalPages={totalPages}
+              onPrev={() => setPage((p) => p - 1)}
+              onNext={() => setPage((p) => p + 1)}
+              prevLabel={t("admin.common.prev")}
+              nextLabel={t("admin.common.next")}
+              leading={
+                <>
                   <span>{t("admin.common.pageSize")}</span>
                   <Select value={String(size)} onValueChange={(v) => { setSize(Number(v)); setPage(0); }}>
-                    <SelectTrigger className="w-[80px] h-8 text-xs"><SelectValue /></SelectTrigger>
+                    <SelectTrigger size="sm" className="w-[5.5rem] text-xs" aria-label={t("admin.common.pageSize")}>
+                      <SelectValue />
+                    </SelectTrigger>
                     <SelectContent>
                       {PAGE_SIZE_OPTIONS.map((s) => (
                         <SelectItem key={s} value={String(s)}>{t("admin.common.pageSizeSuffix", { n: s })}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Button variant="outline" size="sm" disabled={page <= 0} onClick={() => setPage((p) => p - 1)}>{t("admin.common.prev")}</Button>
-                  <span className="text-sm text-muted-foreground">{t("admin.common.pageOf", { page: page + 1, total: Math.max(1, totalPages) })}</span>
-                  <Button variant="outline" size="sm" disabled={page >= totalPages - 1} onClick={() => setPage((p) => p + 1)}>{t("admin.common.next")}</Button>
-                </div>
-              </div>
-            </>
-          )}
-        </CardContent>
-      </Card>
+                </>
+              }
+            />
+          </>
+        )}
+      </div>
 
       <Dialog open={dialogOpen} onOpenChange={(o) => { setDialogOpen(o); if (!o) { setSelectedId(null); setDetail(null); setEditingReplyId(null); } }}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
           <DialogHeader>
             <DialogTitle>{t("admin.inquiries.detailTitle")}</DialogTitle>
-            <DialogDescription>
-              {detail && new Date(detail.createdAt).toLocaleDateString(dateLocale, { year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+            <DialogDescription className="figure">
+              {detail && formatDateTime(detail.createdAt)}
             </DialogDescription>
           </DialogHeader>
-          {detailLoading && <div className="py-8 text-center text-muted-foreground">{t("admin.common.loading")}</div>}
+          {detailLoading && <LoadingState compact label={t("admin.common.loading")} />}
           {!detailLoading && detail && (
-            <div className="space-y-4">
-              <div className="p-4 bg-muted/60 rounded-lg">
-                <div className="flex items-center space-x-2 mb-3">
-                  <Badge variant="outline">{t(inquiryCategoryKey(detail.category))}</Badge>
-                  <Badge variant={statusVariants[detail.status]}>{t(inquiryStatusKey(detail.status))}</Badge>
-                  <span className="text-sm text-muted-foreground">
+            <div className="space-y-6">
+              <div className="bg-muted p-4 md:p-5">
+                <div className="flex flex-wrap items-center gap-2">
+                  <Badge variant="outline" className={BADGE_CLASS}>{t(inquiryCategoryKey(detail.category))}</Badge>
+                  <Badge variant={statusVariants[detail.status]} className={BADGE_CLASS}>{t(inquiryStatusKey(detail.status))}</Badge>
+                  <span className="text-xs text-muted-foreground">
                     {detail.nickname ?? t("admin.common.memberHash", { id: detail.userId })}
                     {detail.email && ` (${detail.email})`}
                   </span>
                   <div className="ml-auto">
                     <Select value={detail.status} onValueChange={(v) => changeStatus(v as InquiryStatus)}>
-                      <SelectTrigger className="w-[130px] h-8 text-xs"><SelectValue /></SelectTrigger>
+                      <SelectTrigger size="sm" className="w-[130px] text-xs" aria-label={t("admin.common.col.status")}>
+                        <SelectValue />
+                      </SelectTrigger>
                       <SelectContent>
                         {INQUIRY_STATUSES.map((s) => (
                           <SelectItem key={s} value={s}>{t(inquiryStatusKey(s))}</SelectItem>
@@ -249,71 +274,98 @@ export default function AdminInquiries() {
                     </Select>
                   </div>
                 </div>
-                <h3 className="font-semibold text-lg mb-2">{detail.title}</h3>
-                <p className="text-foreground/80 whitespace-pre-wrap">{detail.content}</p>
+                <h3 className="mt-4 break-words">{detail.title}</h3>
+                <p className="mt-2 text-sm leading-relaxed whitespace-pre-wrap">{detail.content}</p>
               </div>
 
               {detail.replies && detail.replies.length > 0 && (
-                <div className="space-y-3">
-                  <h4 className="font-semibold">{t("admin.inquiries.repliesTitle")}</h4>
-                  {detail.replies.map((reply) => (
-                    <div key={reply.id} className="p-4 bg-muted border border-border rounded-lg">
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center space-x-2">
-                          <div className="w-6 h-6 bg-foreground rounded-full flex items-center justify-center">
-                            <span className="text-white text-[10px] font-bold tracking-tight">MP</span>
+                <div>
+                  <p className="text-sm font-medium">{t("admin.inquiries.repliesTitle")}</p>
+                  <ul className="mt-2 border-t border-border">
+                    {detail.replies.map((reply) => (
+                      <li key={reply.id} className="border-b border-border py-4">
+                        <div className="flex items-center justify-between gap-3">
+                          <div className="flex min-w-0 items-center gap-2">
+                            <span
+                              className="flex size-6 shrink-0 items-center justify-center rounded-full bg-foreground text-[10px] font-medium text-background"
+                              aria-hidden
+                            >
+                              MP
+                            </span>
+                            <span className="text-sm font-medium">{t("admin.common.adminLabel")}</span>
                           </div>
-                          <span className="font-medium text-sm">{t("admin.common.adminLabel")}</span>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <span className="text-xs text-muted-foreground">
-                            {new Date(reply.createdAt).toLocaleDateString(dateLocale, { year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit" })}
-                          </span>
-                          <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => { setEditingReplyId(reply.id); setEditContent(reply.content); }}>
-                            <Pencil className="w-3 h-3" />
-                          </Button>
-                          <Button variant="ghost" size="icon" className="h-6 w-6 text-red-500" onClick={() => deleteReply(reply.id)}>
-                            <Trash2 className="w-3 h-3" />
-                          </Button>
-                        </div>
-                      </div>
-                      <Separator className="my-2 bg-border" />
-                      {editingReplyId === reply.id ? (
-                        <div className="space-y-2">
-                          <Textarea value={editContent} onChange={(e) => setEditContent(e.target.value)} rows={4} />
-                          <div className="flex gap-2">
-                            <Button size="sm" onClick={() => updateReply(reply.id)}>{t("admin.common.save")}</Button>
-                            <Button size="sm" variant="outline" onClick={() => setEditingReplyId(null)}>{t("admin.common.cancel")}</Button>
+                          <div className="flex shrink-0 items-center gap-1">
+                            <span className="text-xs text-muted-foreground figure">{formatDateTime(reply.createdAt)}</span>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="size-7"
+                              title={t("admin.common.edit")}
+                              aria-label={t("admin.common.edit")}
+                              onClick={() => { setEditingReplyId(reply.id); setEditContent(reply.content); }}
+                            >
+                              <Pencil className="size-3.5" strokeWidth={1.5} aria-hidden />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="size-7 text-destructive hover:text-destructive"
+                              title={t("admin.common.delete")}
+                              aria-label={t("admin.common.delete")}
+                              onClick={() => deleteReply(reply.id)}
+                            >
+                              <Trash2 className="size-3.5" strokeWidth={1.5} aria-hidden />
+                            </Button>
                           </div>
                         </div>
-                      ) : (
-                        <p className="text-foreground/80 text-sm whitespace-pre-wrap">{reply.content}</p>
-                      )}
-                    </div>
-                  ))}
+                        {editingReplyId === reply.id ? (
+                          <div className="mt-3 space-y-2">
+                            <Textarea
+                              value={editContent}
+                              onChange={(e) => setEditContent(e.target.value)}
+                              rows={4}
+                              aria-label={t("admin.common.edit")}
+                            />
+                            <div className="flex justify-end gap-2">
+                              <Button size="sm" variant="ghost" onClick={() => setEditingReplyId(null)}>{t("admin.common.cancel")}</Button>
+                              <Button size="sm" onClick={() => updateReply(reply.id)}>{t("admin.common.save")}</Button>
+                            </div>
+                          </div>
+                        ) : (
+                          <p className="mt-2 text-sm leading-relaxed whitespace-pre-wrap">{reply.content}</p>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
                 </div>
               )}
 
               {detail.status !== "CLOSED" && (
-                <div className="space-y-3">
-                  <Separator />
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <Label>{t("admin.inquiries.writeReply")}</Label>
-                      {templates.length > 0 && (
-                        <Select onValueChange={(v) => { const tpl = templates.find(tpl => String(tpl.id) === v); if (tpl) setReplyContent(tpl.value); }}>
-                          <SelectTrigger className="w-[200px] h-8 text-xs"><SelectValue placeholder={t("admin.inquiries.templatePlaceholder")} /></SelectTrigger>
-                          <SelectContent>
-                            {templates.map((tpl) => <SelectItem key={tpl.id} value={String(tpl.id)}>{tpl.key}</SelectItem>)}
-                          </SelectContent>
-                        </Select>
-                      )}
-                    </div>
-                    <Textarea placeholder={t("admin.inquiries.replyPlaceholder")} rows={6} value={replyContent} onChange={(e) => setReplyContent(e.target.value)} disabled={replySubmitting} />
-                  </div>
-                  <div className="flex justify-end">
-                    <Button onClick={sendReply} disabled={replySubmitting}>
-                      <Send className="w-4 h-4 mr-2" />{t("admin.common.registerReply")}
+                <div className="space-y-3 border-t border-border pt-5">
+                  <Field htmlFor="admin-inquiry-reply" label={t("admin.inquiries.writeReply")}>
+                    <Textarea
+                      id="admin-inquiry-reply"
+                      placeholder={t("admin.inquiries.replyPlaceholder")}
+                      rows={6}
+                      value={replyContent}
+                      onChange={(e) => setReplyContent(e.target.value)}
+                      disabled={replySubmitting}
+                    />
+                  </Field>
+                  <div className="flex flex-wrap items-center gap-2">
+                    {templates.length > 0 && (
+                      <Select onValueChange={(v) => { const tpl = templates.find(tpl => String(tpl.id) === v); if (tpl) setReplyContent(tpl.value); }}>
+                        <SelectTrigger size="sm" className="w-[200px] text-xs" aria-label={t("admin.inquiries.templatePlaceholder")}>
+                          <SelectValue placeholder={t("admin.inquiries.templatePlaceholder")} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {templates.map((tpl) => <SelectItem key={tpl.id} value={String(tpl.id)}>{tpl.key}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    )}
+                    <Button className="ml-auto" onClick={sendReply} disabled={replySubmitting}>
+                      <Send className="size-4" strokeWidth={1.5} aria-hidden />
+                      {t("admin.common.registerReply")}
                     </Button>
                   </div>
                 </div>

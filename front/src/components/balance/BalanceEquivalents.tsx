@@ -53,7 +53,7 @@ export function BalanceEquivalents({
 
   if (ratesStatus === "error") {
     return (
-      <p className={`${className} text-amber-700`} title={t(hintKey)}>
+      <p className={`${className} text-destructive`} title={t(hintKey)}>
         {t("balanceEquivalents.unavailable")}
       </p>
     );

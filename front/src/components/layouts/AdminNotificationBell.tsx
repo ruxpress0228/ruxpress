@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router";
-import { Bell, Check, ChevronRight } from "lucide-react";
+import { Bell } from "lucide-react";
 import { Button } from "../ui/button";
+import { cn } from "../ui/utils";
 import { useTranslation } from "../../hooks/useTranslation";
 import { resolveAdminNotificationText } from "../../utils/adminNotificationI18n";
 import { api } from "../../utils/api";
@@ -126,80 +127,79 @@ export default function AdminNotificationBell() {
   return (
     <div ref={containerRef} className="relative">
       <Button
+        type="button"
         variant="ghost"
         size="icon"
         className="relative"
+        title={t("admin.notification.title")}
         aria-label={t("admin.notification.title")}
         aria-expanded={open}
+        aria-haspopup="dialog"
         onClick={() => setOpen((o) => !o)}
       >
-        <Bell className="w-5 h-5" />
+        <Bell className="size-[18px]" strokeWidth={1.5} aria-hidden />
         {summary.unreadCount > 0 && (
-          <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] font-semibold flex items-center justify-center">
+          <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-foreground px-1 text-[10px] leading-none text-background figure">
             {badgeText}
           </span>
         )}
       </Button>
 
       {open && (
-        <div className="absolute right-0 top-full mt-1 w-80 bg-card border border-border rounded-md shadow-lg overflow-hidden"
-          style={{ zIndex: 9999 }}
+        <div
+          role="dialog"
+          aria-label={t("admin.notification.title")}
+          className="absolute right-0 top-full z-[100] mt-2 w-80 max-w-[calc(100vw-2rem)] border border-border bg-popover"
         >
           {/* 헤더 */}
-          <div className="flex items-center justify-between px-4 py-3 border-b border-border">
-            <h3 className="text-sm font-semibold text-foreground">
-              {t("admin.notification.title")}
-            </h3>
+          <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-3">
+            <h3 className="text-sm font-medium">{t("admin.notification.title")}</h3>
             {summary.unreadCount > 0 && (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-7 text-xs text-foreground hover:text-foreground"
+              <button
+                type="button"
                 onClick={handleMarkAllRead}
+                className="text-xs text-muted-foreground underline-offset-4 transition-colors hover:text-foreground hover:underline"
               >
-                <Check className="w-3 h-3 mr-1" />
                 {t("admin.notification.markAllRead")}
-              </Button>
+              </button>
             )}
           </div>
 
           {/* 목록 */}
           <div className="max-h-96 overflow-y-auto">
             {summary.items.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-8">
+              <p className="px-4 py-8 text-center text-sm text-muted-foreground">
                 {t("admin.notification.empty")}
               </p>
             ) : (
-              <ul className="divide-y divide-border">
+              <ul>
                 {summary.items.map((item) => {
                   const text = resolveAdminNotificationText(item, t);
                   return (
-                  <li key={item.id}>
-                    <button
-                      type="button"
-                      onClick={() => handleClickItem(item)}
-                      className={`w-full text-left px-4 py-3 hover:bg-muted/60 transition-colors ${
-                        item.isRead ? "" : "bg-muted"
-                      }`}
-                    >
-                      <div className="flex items-start gap-2">
-                        {!item.isRead && (
-                          <span className="mt-1.5 w-2 h-2 rounded-full bg-foreground flex-shrink-0" />
-                        )}
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-foreground truncate">
+                    <li key={item.id} className="border-b border-border last:border-b-0">
+                      <button
+                        type="button"
+                        onClick={() => handleClickItem(item)}
+                        className="grid w-full grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-muted/60"
+                      >
+                        <span
+                          className={cn(
+                            "mt-[7px] size-1.5 rounded-full",
+                            item.isRead ? "bg-transparent" : "bg-foreground",
+                          )}
+                          aria-hidden
+                        />
+                        <span className="min-w-0">
+                          <span className={cn("block truncate text-sm", !item.isRead && "font-medium")}>
                             {text.title}
-                          </p>
-                          <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">
-                            {text.body}
-                          </p>
-                          <p className="text-[10px] text-muted-foreground/70 mt-1">
-                            {formatRelativeTime(item.createdAt, t)}
-                          </p>
-                        </div>
-                      </div>
-                    </button>
-                  </li>
+                          </span>
+                          <span className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">{text.body}</span>
+                        </span>
+                        <span className="pt-0.5 text-[11px] text-muted-foreground figure">
+                          {formatRelativeTime(item.createdAt, t)}
+                        </span>
+                      </button>
+                    </li>
                   );
                 })}
               </ul>
@@ -207,15 +207,12 @@ export default function AdminNotificationBell() {
           </div>
 
           {/* 전체 보기 */}
-          <div className="border-t border-border">
-            <Link
-              to="/admin/notifications"
-              onClick={() => setOpen(false)}
-              className="flex items-center justify-center gap-1 w-full py-2.5 text-xs text-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
-            >
-              {t("admin.notification.viewAll")}
-              <ChevronRight className="w-3 h-3" />
-            </Link>
+          <div className="border-t border-border p-1">
+            <Button asChild variant="ghost" className="w-full">
+              <Link to="/admin/notifications" onClick={() => setOpen(false)}>
+                {t("admin.notification.viewAll")}
+              </Link>
+            </Button>
           </div>
         </div>
       )}

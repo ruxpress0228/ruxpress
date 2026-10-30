@@ -1,16 +1,22 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router";
-import { ArrowLeft, X, Download, ChevronLeft, ChevronRight, MessageSquare, MapPin, Truck } from "lucide-react";
+import { X, Download, ChevronLeft, ChevronRight, MessageSquare, Paperclip } from "lucide-react";
 import { Button } from "../../components/ui/button";
 import { Badge } from "../../components/ui/badge";
 import { cn } from "../../components/ui/utils";
 import { purchaseStatusBadgeClass } from "../../utils/purchaseStatusStyle";
-import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card";
-import { Separator } from "../../components/ui/separator";
 import { usePurchase } from "../../hooks/purchase/usePurchase";
 import { useTranslation } from "../../hooks/useTranslation";
 import type { PurchaseRequestStatus } from "../../types";
 import type { PurchaseAttachment, PurchaseRequestDetail, PurchaseShipping } from "../../types/purchase";
+import {
+  DescriptionList,
+  EmptyState,
+  LoadingState,
+  PageHeader,
+  Section,
+  type DescriptionItem,
+} from "../../components/page";
 
 function hasShippingSnapshot(s?: PurchaseShipping | null): boolean {
   if (!s) return false;
@@ -46,18 +52,46 @@ function optionRecordEntries(opt: unknown): [string, string][] {
 function OptionAttributesReadonlyList({ entries }: { entries: [string, string][] }) {
   if (entries.length === 0) return null;
   return (
-    <ul className="mt-1 space-y-0.5 text-sm leading-relaxed text-foreground">
+    <ul className="mt-1 space-y-0.5 text-sm leading-relaxed">
       {entries.map(([name, value], i) => (
-        <li key={`${name}-${i}`} className="pl-0.5">
-          <span className="text-muted-foreground/70 select-none" aria-hidden>
-            -{" "}
-          </span>
-          <span className="text-muted-foreground">{name}</span>
-          <span className="text-muted-foreground/70">: </span>
-          <span className="text-foreground">{value}</span>
+        <li key={`${name}-${i}`} className="break-words">
+          <span className="text-muted-foreground">{name}: </span>
+          <span>{value}</span>
         </li>
       ))}
     </ul>
+  );
+}
+
+const LINK_CLASS =
+  "break-all text-sm underline underline-offset-4 decoration-foreground/30 transition-colors hover:decoration-foreground";
+
+/** Thumbnail grid; each tile opens the lightbox. */
+function AttachmentImageGrid({
+  images,
+  onOpen,
+}: {
+  images: PurchaseAttachment[];
+  onOpen: (att: PurchaseAttachment) => void;
+}) {
+  return (
+    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
+      {images.map((att) => (
+        <button
+          key={att.id}
+          type="button"
+          onClick={() => onOpen(att)}
+          title={att.originalFilename}
+          className="block border border-border transition-colors hover:border-foreground"
+        >
+          <img
+            src={att.thumbnailUrl ?? att.viewUrl ?? att.storedUrl}
+            alt={att.originalFilename}
+            className="h-28 w-full object-cover"
+          />
+        </button>
+      ))}
+    </div>
   );
 }
 
@@ -70,6 +104,7 @@ function ImageLightbox({
   initialIndex: number;
   onClose: () => void;
 }) {
+  const { t } = useTranslation();
   const [current, setCurrent] = useState(initialIndex);
   const img = images[current];
   const hasPrev = current > 0;
@@ -85,40 +120,80 @@ function ImageLightbox({
     return () => window.removeEventListener("keydown", handler);
   }, [hasPrev, hasNext, onClose]);
 
+  const iconButtonClass = "text-background hover:bg-background/20 hover:text-background";
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80" onClick={onClose}>
-      <div className="relative flex flex-col items-center max-w-5xl w-full max-h-screen p-4" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center justify-between w-full mb-2">
-          <span className="text-white text-sm truncate max-w-xs">{img.originalFilename}</span>
-          <div className="flex items-center gap-2">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/85"
+      role="dialog"
+      aria-modal="true"
+      aria-label={img.originalFilename}
+      onClick={onClose}
+    >
+      <div
+        className="relative flex max-h-screen w-full max-w-5xl flex-col items-center p-4"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="mb-2 flex w-full items-center justify-between gap-3">
+          <span className="min-w-0 truncate text-sm text-background">{img.originalFilename}</span>
+          <div className="flex shrink-0 items-center gap-1">
             <a
               href={img.viewUrl ?? img.storedUrl}
               download={img.originalFilename}
-              className="inline-flex items-center justify-center w-9 h-9 rounded-md text-white hover:bg-white/20"
+              title={img.originalFilename}
+              aria-label={img.originalFilename}
+              className={cn("inline-flex size-9 items-center justify-center transition-colors", iconButtonClass)}
               onClick={(e) => e.stopPropagation()}
             >
-              <Download className="w-5 h-5" />
+              <Download className="size-5" strokeWidth={1.5} aria-hidden />
             </a>
-            <Button variant="ghost" size="icon" className="text-white hover:bg-white/20" onClick={onClose}>
-              <X className="w-5 h-5" />
+            <Button
+              variant="ghost"
+              size="icon"
+              className={iconButtonClass}
+              title={t("adminPurchase.modal.close")}
+              aria-label={t("adminPurchase.modal.close")}
+              onClick={onClose}
+            >
+              <X className="size-5" strokeWidth={1.5} aria-hidden />
             </Button>
           </div>
         </div>
-        <div className="relative flex items-center justify-center w-full">
+        <div className="relative flex w-full items-center justify-center">
           {hasPrev && (
-            <Button variant="ghost" size="icon" className="absolute left-0 text-white hover:bg-white/20 z-10" onClick={() => setCurrent((c) => c - 1)}>
-              <ChevronLeft className="w-6 h-6" />
+            <Button
+              variant="ghost"
+              size="icon"
+              className={cn("absolute left-0 z-10", iconButtonClass)}
+              title={t("admin.common.prev")}
+              aria-label={t("admin.common.prev")}
+              onClick={() => setCurrent((c) => c - 1)}
+            >
+              <ChevronLeft className="size-6" strokeWidth={1.5} aria-hidden />
             </Button>
           )}
-          <img src={img.viewUrl ?? img.storedUrl} alt={img.originalFilename} className="max-h-[75vh] max-w-full object-contain rounded" />
+          <img
+            src={img.viewUrl ?? img.storedUrl}
+            alt={img.originalFilename}
+            className="max-h-[75vh] max-w-full object-contain"
+          />
           {hasNext && (
-            <Button variant="ghost" size="icon" className="absolute right-0 text-white hover:bg-white/20 z-10" onClick={() => setCurrent((c) => c + 1)}>
-              <ChevronRight className="w-6 h-6" />
+            <Button
+              variant="ghost"
+              size="icon"
+              className={cn("absolute right-0 z-10", iconButtonClass)}
+              title={t("admin.common.next")}
+              aria-label={t("admin.common.next")}
+              onClick={() => setCurrent((c) => c + 1)}
+            >
+              <ChevronRight className="size-6" strokeWidth={1.5} aria-hidden />
             </Button>
           )}
         </div>
         {images.length > 1 && (
-          <p className="text-white/60 text-xs mt-2">{current + 1} / {images.length}</p>
+          <p className="mt-2 text-xs text-background/60 figure">
+            {current + 1} / {images.length}
+          </p>
         )}
       </div>
     </div>
@@ -156,21 +231,19 @@ export default function AdminPurchaseRequestDetail() {
   }, [numericId]);
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <p className="text-muted-foreground">{t("adminPurchase.detail.loading")}</p>
-      </div>
-    );
+    return <LoadingState label={t("adminPurchase.detail.loading")} />;
   }
 
   if (!data) {
     return (
-      <div className="text-center py-12">
-        <p className="text-muted-foreground">{t("adminPurchase.detail.notFound")}</p>
-        <Button variant="link" className="mt-2" onClick={() => navigate("/admin/purchase-requests")}>
-          {t("adminPurchase.detail.backToList")}
-        </Button>
-      </div>
+      <EmptyState
+        title={t("adminPurchase.detail.notFound")}
+        action={
+          <Button variant="outline" onClick={() => navigate("/admin/purchase-requests")}>
+            {t("adminPurchase.detail.backToList")}
+          </Button>
+        }
+      />
     );
   }
 
@@ -183,78 +256,113 @@ export default function AdminPurchaseRequestDetail() {
   const userOtherAttachments = allAttachments.filter(
     (a) => !isImageMime(a.mimeType) && !isAttachmentUploadedByAdmin(a)
   );
+  const openImage = (att: PurchaseAttachment) => {
+    setLightboxIndex(imageAttachments.findIndex((a) => a.id === att.id));
+  };
+
+  const shippingItems: DescriptionItem[] = [];
+  if (hasShippingSnapshot(data.shipping) && data.shipping) {
+    const s = data.shipping;
+    if (s.label) {
+      shippingItems.push({
+        key: "label",
+        label: t("adminPurchase.detail.shippingLabel"),
+        value: <span className="font-medium">{s.label}</span>,
+        span: true,
+      });
+    }
+    shippingItems.push({ key: "recipient", label: t("adminPurchase.detail.recipient"), value: s.recipientName ?? "—" });
+    shippingItems.push({
+      key: "phone",
+      label: t("adminPurchase.detail.phone"),
+      value: <span className="figure">{s.recipientPhone ?? "—"}</span>,
+    });
+    shippingItems.push({
+      key: "address",
+      label: t("adminPurchase.detail.address"),
+      span: true,
+      value: (
+        <span className="leading-relaxed">
+          {s.postalCode ? <span className="text-muted-foreground">({s.postalCode}) </span> : null}
+          {s.addressLine1}
+          {s.addressLine2 ? (
+            <>
+              <br />
+              {s.addressLine2}
+            </>
+          ) : null}
+        </span>
+      ),
+    });
+    if (s.userAddressId != null) {
+      shippingItems.push({
+        key: "userAddressId",
+        label: t("adminPurchase.detail.userAddressId"),
+        value: <span className="text-xs text-muted-foreground figure">{s.userAddressId}</span>,
+        span: true,
+      });
+    }
+  }
+  const trackingItem: DescriptionItem = {
+    key: "tracking",
+    label: t("adminPurchase.detail.tracking"),
+    span: true,
+    value: data.trackingNumber ? (
+      <span className="font-medium figure">{data.trackingNumber}</span>
+    ) : (
+      <span className="text-muted-foreground">{t("adminPurchase.detail.noTracking")}</span>
+    ),
+  };
 
   return (
-    <div className="max-w-4xl mx-auto">
-      <div className="flex items-center justify-between mb-6">
-        <Button variant="ghost" onClick={() => navigate("/admin/purchase-requests")}>
-          <ArrowLeft className="w-4 h-4 mr-2" />
-          {t("adminPurchase.detail.backToList")}
-        </Button>
-        <Button variant="outline" onClick={() => navigate("/admin/chat")}>
-          <MessageSquare className="w-4 h-4 mr-2" />
-          {t("adminPurchase.detail.goToChat")}
-        </Button>
-      </div>
-
-      <Card className="mb-6">
-        <CardHeader className="pb-3">
-          <div className="flex items-start justify-between gap-4">
-            <div className="min-w-0">
-              <CardTitle className="text-2xl">{data.requestName}</CardTitle>
-              <p className="text-sm text-muted-foreground mt-1">{t("adminPurchase.detail.requestNumber", { n: data.requestNumber })}</p>
-              {(data.userNickname || data.userEmail) && (
-                <p className="text-sm text-muted-foreground mt-2">
-                  <span className="text-muted-foreground">{t("adminPurchase.detail.member")}</span>{" "}
-                  <span className="font-medium text-foreground">{data.userNickname ?? "—"}</span>
-                  {data.userEmail ? (
-                    <span className="text-muted-foreground"> · {data.userEmail}</span>
-                  ) : null}
-                </p>
-              )}
-            </div>
-            <Badge variant="outline" className={cn("border-transparent font-semibold", purchaseStatusBadgeClass(data.status))}>
+    <div>
+      <PageHeader
+        back={{ to: "/admin/purchase-requests", label: t("adminPurchase.detail.backToList") }}
+        title={data.requestName}
+        description={
+          data.userNickname || data.userEmail ? (
+            <>
+              <span>{t("adminPurchase.detail.member")}</span>{" "}
+              <span className="font-medium text-foreground">{data.userNickname ?? "—"}</span>
+              {data.userEmail ? <span> · {data.userEmail}</span> : null}
+            </>
+          ) : undefined
+        }
+        meta={
+          <>
+            <Badge variant="outline" className={cn("px-2 py-0.5 text-[10px] font-medium", purchaseStatusBadgeClass(data.status))}>
               {statusLabel}
             </Badge>
-          </div>
-        </CardHeader>
+            <span className="figure">{t("adminPurchase.detail.requestNumber", { n: data.requestNumber })}</span>
+            <span aria-hidden>·</span>
+            <time dateTime={data.createdAt} className="figure">
+              {new Date(data.createdAt).toLocaleString(dateLocale)}
+            </time>
+          </>
+        }
+        actions={
+          <Button variant="outline" onClick={() => navigate("/admin/chat")}>
+            <MessageSquare className="size-4" strokeWidth={1.5} aria-hidden />
+            {t("adminPurchase.detail.goToChat")}
+          </Button>
+        }
+      />
 
-        <CardContent className="space-y-5">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <p className="text-sm text-muted-foreground">{t("adminPurchase.detail.quantity")}</p>
-              <p className="font-semibold">{t("adminPurchase.detail.quantityUnit", { n: data.quantity })}</p>
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">{t("adminPurchase.detail.totalKrw")}</p>
-              <p className="font-semibold">₩{(data.totalAmountKrw ?? 0).toLocaleString()}</p>
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">{t("adminPurchase.detail.createdAt")}</p>
-              <p className="font-semibold">{new Date(data.createdAt).toLocaleString(dateLocale)}</p>
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">{t("adminPurchase.detail.updatedAt")}</p>
-              <p className="font-semibold">{new Date(data.updatedAt).toLocaleString(dateLocale)}</p>
-            </div>
-          </div>
-
-          <Separator />
-
-          <div className="space-y-2">
-            <p className="font-semibold">{t("adminPurchase.detail.items")}</p>
+      <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_20rem] lg:gap-12">
+        <div className="min-w-0 space-y-10">
+          <Section title={t("adminPurchase.detail.items")} flush>
             {data.items && data.items.length > 0 ? (
-              <ul className="space-y-2">
+              <ul>
                 {data.items.map((it, idx) => {
                   const itemOptions = optionRecordEntries(it.options);
                   const urls = it.urls && it.urls.length > 0 ? it.urls : it.url ? [it.url] : [];
                   return (
-                    <li key={`${it.url}-${idx}`} className="border rounded-lg p-3 sm:p-4 space-y-2">
+                    <li key={`${it.url}-${idx}`} className="border-b border-border py-4">
                       {urls.length > 0 ? (
                         <ul className="space-y-1">
                           {urls.map((u, uIdx) => (
                             <li key={`${u}-${uIdx}`}>
-                              <a className="text-foreground underline break-all" href={u} target="_blank" rel="noreferrer">
+                              <a className={LINK_CLASS} href={u} target="_blank" rel="noreferrer">
                                 {it.shop ? `[${it.shop}] ` : ""}
                                 {urls.length > 1 ? `${uIdx + 1}. ` : ""}
                                 {u}
@@ -263,15 +371,15 @@ export default function AdminPurchaseRequestDetail() {
                           ))}
                         </ul>
                       ) : null}
-                      <div className="text-sm text-foreground/80 pt-1 border-t border-border">
-                        {t("adminPurchase.detail.unitPrice", { price: (it.priceKrw ?? 0).toLocaleString(dateLocale), qty: it.quantity ?? 0 })}
-                        <span className="font-semibold ml-1">
+                      <p className="mt-2 text-sm text-muted-foreground figure">
+                        {t("adminPurchase.detail.unitPrice", { price: (it.priceKrw ?? 0).toLocaleString(dateLocale), qty: it.quantity ?? 0 })}{" "}
+                        <span className="font-medium text-foreground">
                           ₩{((it.priceKrw ?? 0) * (it.quantity ?? 0)).toLocaleString()}
                         </span>
-                      </div>
+                      </p>
                       {itemOptions.length > 0 ? (
-                        <div className="pt-2 border-t border-border">
-                          <p className="text-sm font-medium text-muted-foreground mb-1">{t("adminPurchase.detail.options")}</p>
+                        <div className="mt-2">
+                          <p className="text-xs text-muted-foreground">{t("adminPurchase.detail.options")}</p>
                           <OptionAttributesReadonlyList entries={itemOptions} />
                         </div>
                       ) : null}
@@ -280,174 +388,113 @@ export default function AdminPurchaseRequestDetail() {
                 })}
               </ul>
             ) : data.urls && data.urls.length > 0 ? (
-              <ul className="space-y-1">
+              <ul>
                 {data.urls.map((u, idx) => (
-                  <li key={`${u}-${idx}`}>
-                    <a className="text-foreground underline break-all" href={u} target="_blank" rel="noreferrer">{u}</a>
+                  <li key={`${u}-${idx}`} className="border-b border-border py-3">
+                    <a className={LINK_CLASS} href={u} target="_blank" rel="noreferrer">{u}</a>
                   </li>
                 ))}
               </ul>
             ) : (
-              <p className="text-sm text-muted-foreground">{t("adminPurchase.detail.noItems")}</p>
-            )}
-          </div>
-
-          {legacyOptionsEntries.length > 0 && (
-            <div className="space-y-1">
-              <p className="text-sm font-medium text-muted-foreground">{t("adminPurchase.detail.commonOptions")}</p>
-              <OptionAttributesReadonlyList entries={legacyOptionsEntries} />
-            </div>
-          )}
-
-          <div className="rounded-lg border border-slate-200 bg-gradient-to-b from-slate-50/90 to-white p-4 space-y-4">
-            <div className="flex items-center gap-2 text-base font-semibold text-foreground">
-              <MapPin className="h-5 w-5 text-foreground shrink-0" aria-hidden />
-              {t("adminPurchase.detail.shippingInfo")}
-            </div>
-
-            {hasShippingSnapshot(data.shipping) && data.shipping ? (
-              <dl className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
-                {data.shipping.label ? (
-                  <div className="sm:col-span-2">
-                    <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{t("adminPurchase.detail.shippingLabel")}</dt>
-                    <dd className="mt-0.5 font-medium text-foreground">{data.shipping.label}</dd>
-                  </div>
-                ) : null}
-                <div>
-                  <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{t("adminPurchase.detail.recipient")}</dt>
-                  <dd className="mt-0.5 text-foreground">{data.shipping.recipientName ?? "—"}</dd>
-                </div>
-                <div>
-                  <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{t("adminPurchase.detail.phone")}</dt>
-                  <dd className="mt-0.5 text-foreground">{data.shipping.recipientPhone ?? "—"}</dd>
-                </div>
-                <div className="sm:col-span-2">
-                  <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{t("adminPurchase.detail.address")}</dt>
-                  <dd className="mt-0.5 break-words leading-relaxed text-foreground">
-                    {data.shipping.postalCode ? <span className="text-muted-foreground">({data.shipping.postalCode}) </span> : null}
-                    {data.shipping.addressLine1}
-                    {data.shipping.addressLine2 ? (
-                      <>
-                        <br />
-                        <span className="text-foreground">{data.shipping.addressLine2}</span>
-                      </>
-                    ) : null}
-                  </dd>
-                </div>
-                {data.shipping.userAddressId != null && (
-                  <div className="sm:col-span-2">
-                    <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{t("adminPurchase.detail.userAddressId")}</dt>
-                    <dd className="mt-0.5 font-mono text-xs text-muted-foreground">{data.shipping.userAddressId}</dd>
-                  </div>
-                )}
-              </dl>
-            ) : (
-              <p className="rounded-md border border-amber-200 bg-amber-50/90 px-3 py-2 text-sm text-amber-900">
-                {t("adminPurchase.detail.noShippingSnapshot")}
-              </p>
+              <p className="border-b border-border py-4 text-sm text-muted-foreground">{t("adminPurchase.detail.noItems")}</p>
             )}
 
-            <div className="border-t border-slate-200 pt-3">
-              <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                <Truck className="h-3.5 w-3.5" aria-hidden />
-                {t("adminPurchase.detail.tracking")}
+            {legacyOptionsEntries.length > 0 && (
+              <div className="pt-4">
+                <p className="text-sm font-medium">{t("adminPurchase.detail.commonOptions")}</p>
+                <OptionAttributesReadonlyList entries={legacyOptionsEntries} />
               </div>
-              {data.trackingNumber ? (
-                <p className="mt-1 font-mono text-sm font-semibold text-foreground">{data.trackingNumber}</p>
-              ) : (
-                <p className="mt-1 text-sm text-muted-foreground">{t("adminPurchase.detail.noTracking")}</p>
-              )}
-            </div>
-          </div>
+            )}
+          </Section>
+
+          <Section title={t("adminPurchase.detail.shippingInfo")}>
+            {shippingItems.length > 0 ? (
+              <DescriptionList columns={2} items={[...shippingItems, trackingItem]} />
+            ) : (
+              <div className="space-y-4">
+                <p className="border border-border p-4 text-sm text-muted-foreground">
+                  {t("adminPurchase.detail.noShippingSnapshot")}
+                </p>
+                <DescriptionList items={[trackingItem]} />
+              </div>
+            )}
+          </Section>
 
           {data.memo && (
-            <div className="space-y-2">
-              <p className="font-semibold">{t("adminPurchase.detail.customerMemo")}</p>
-              <p className="text-sm text-foreground/80 whitespace-pre-wrap">{data.memo}</p>
-            </div>
+            <Section title={t("adminPurchase.detail.customerMemo")}>
+              <p className="text-sm leading-relaxed whitespace-pre-wrap">{data.memo}</p>
+            </Section>
           )}
 
-          {(data.adminMemo?.trim() || adminImageAttachments.length > 0) && (
-            <div className="rounded-lg border border-slate-200 bg-slate-50/80 p-4 space-y-4">
-              {data.adminMemo?.trim() ? (
-                <div className="space-y-1">
-                  <p className="text-sm font-semibold text-foreground">{t("adminPurchase.detail.internalMemo")}</p>
-                  <p className="text-sm text-foreground whitespace-pre-wrap leading-relaxed">{data.adminMemo}</p>
-                </div>
-              ) : null}
-              {adminImageAttachments.length > 0 ? (
-                <div className={data.adminMemo?.trim() ? "space-y-2 border-t border-slate-200 pt-4" : "space-y-2"}>
-                  <p className="text-sm font-semibold text-foreground">{t("adminPurchase.detail.adminPhotos")}</p>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-                    {adminImageAttachments.map((att) => {
-                      const idx = imageAttachments.findIndex((a) => a.id === att.id);
-                      return (
-                        <div
-                          key={att.id}
-                          className="relative group cursor-pointer rounded overflow-hidden border bg-card"
-                          onClick={() => setLightboxIndex(idx)}
-                        >
-                          <img
-                            src={att.thumbnailUrl ?? att.viewUrl ?? att.storedUrl}
-                            alt={att.originalFilename}
-                            className="h-28 w-full object-cover group-hover:opacity-90 transition-opacity"
-                          />
-                          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors" />
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              ) : null}
-            </div>
-          )}
+          {data.adminMemo?.trim() ? (
+            <Section title={t("adminPurchase.detail.internalMemo")}>
+              <p className="bg-muted/40 p-4 text-sm leading-relaxed whitespace-pre-wrap md:p-5">{data.adminMemo}</p>
+            </Section>
+          ) : null}
+
+          {adminImageAttachments.length > 0 ? (
+            <Section title={t("adminPurchase.detail.adminPhotos")}>
+              <AttachmentImageGrid images={adminImageAttachments} onOpen={openImage} />
+            </Section>
+          ) : null}
 
           {(userImageAttachments.length > 0 || userOtherAttachments.length > 0) && (
-            <div className="pt-4 border-t border-border space-y-3">
-              <p className="text-sm font-medium text-foreground/80">{t("adminPurchase.detail.customerAttachments")}</p>
-              {userImageAttachments.length > 0 ? (
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-                  {userImageAttachments.map((att) => {
-                    const idx = imageAttachments.findIndex((a) => a.id === att.id);
-                    return (
-                      <div
-                        key={att.id}
-                        className="relative group cursor-pointer rounded overflow-hidden border"
-                        onClick={() => setLightboxIndex(idx)}
-                      >
-                        <img
-                          src={att.thumbnailUrl ?? att.viewUrl ?? att.storedUrl}
-                          alt={att.originalFilename}
-                          className="h-28 w-full object-cover group-hover:opacity-90 transition-opacity"
-                        />
-                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors" />
-                      </div>
-                    );
-                  })}
-                </div>
-              ) : null}
-              {userOtherAttachments.length > 0 ? (
-                <ul className="space-y-1.5 text-sm">
-                  {userOtherAttachments.map((att) => (
-                    <li key={att.id}>
-                      <a
-                        href={att.viewUrl ?? att.storedUrl}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="text-foreground underline break-all"
-                      >
-                        {att.originalFilename}
-                      </a>
-                      <span className="text-muted-foreground/70"> ({att.mimeType})</span>
-                    </li>
-                  ))}
-                </ul>
-              ) : null}
-            </div>
+            <Section title={t("adminPurchase.detail.customerAttachments")}>
+              <div className="space-y-4">
+                {userImageAttachments.length > 0 ? (
+                  <AttachmentImageGrid images={userImageAttachments} onOpen={openImage} />
+                ) : null}
+                {userOtherAttachments.length > 0 ? (
+                  <ul className="border-t border-border">
+                    {userOtherAttachments.map((att) => (
+                      <li key={att.id} className="flex items-center gap-3 border-b border-border py-3 text-sm">
+                        <Paperclip className="size-4 shrink-0 text-muted-foreground" strokeWidth={1.5} aria-hidden />
+                        <a
+                          href={att.viewUrl ?? att.storedUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className={cn("min-w-0", LINK_CLASS)}
+                        >
+                          {att.originalFilename}
+                        </a>
+                        <span className="shrink-0 text-xs text-muted-foreground">({att.mimeType})</span>
+                      </li>
+                    ))}
+                  </ul>
+                ) : null}
+              </div>
+            </Section>
           )}
+        </div>
 
-        </CardContent>
-      </Card>
+        <aside className="lg:sticky lg:top-24 lg:self-start">
+          <div className="border border-border p-5 md:p-6">
+            <p className="text-xs text-muted-foreground">{t("adminPurchase.detail.totalKrw")}</p>
+            <p className="mt-2 text-3xl font-light figure md:text-4xl">₩{(data.totalAmountKrw ?? 0).toLocaleString()}</p>
+            <DescriptionList
+              dense
+              className="mt-6"
+              items={[
+                {
+                  key: "quantity",
+                  label: t("adminPurchase.detail.quantity"),
+                  value: <span className="figure">{t("adminPurchase.detail.quantityUnit", { n: data.quantity })}</span>,
+                },
+                {
+                  key: "createdAt",
+                  label: t("adminPurchase.detail.createdAt"),
+                  value: <span className="figure">{new Date(data.createdAt).toLocaleString(dateLocale)}</span>,
+                },
+                {
+                  key: "updatedAt",
+                  label: t("adminPurchase.detail.updatedAt"),
+                  value: <span className="figure">{new Date(data.updatedAt).toLocaleString(dateLocale)}</span>,
+                },
+              ]}
+            />
+          </div>
+        </aside>
+      </div>
 
       {lightboxIndex !== null && imageAttachments.length > 0 && (
         <ImageLightbox

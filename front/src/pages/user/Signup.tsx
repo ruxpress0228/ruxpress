@@ -1,11 +1,11 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router";
+import { ArrowLeft } from "lucide-react";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
-import { Label } from "../../components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../components/ui/card";
-import { Separator } from "../../components/ui/separator";
+import { cn } from "../../components/ui/utils";
 import { Mark } from "../../components/brand/BrandMark";
+import { Field, Steps } from "../../components/page";
 import { toast } from "sonner";
 import { api } from "../../utils/api";
 import { useTranslation } from "../../hooks/useTranslation";
@@ -15,6 +15,8 @@ import {
 } from "../../components/legal/LegalConsentSection";
 
 type SignupStep = "legal" | "email" | "profile";
+
+const STEP_ORDER: SignupStep[] = ["legal", "email", "profile"];
 
 function initialStep(): SignupStep {
   try {
@@ -202,19 +204,27 @@ export default function Signup() {
         ? t("signup.hint")
         : t("signup.description");
 
+  const stepLabels = [
+    t("signup.step.legalTitle"),
+    t("signup.step.emailTitle"),
+    t("signup.step.profileTitle"),
+  ];
+  const stepIndex = STEP_ORDER.indexOf(step);
+
+  const backButtonClass =
+    "inline-flex items-center gap-1.5 text-xs font-normal text-muted-foreground transition-colors hover:text-foreground";
+
   return (
-    <div className="min-h-[80vh] flex items-center justify-center px-4 py-8">
-      <Card className={`w-full ${step === "legal" ? "max-w-lg" : "max-w-md"}`}>
-        <CardHeader className="space-y-1">
-          <div className="flex items-center justify-center mb-4">
-            <Mark size="lg" />
-          </div>
-          <CardTitle className="text-2xl text-center">{stepTitle}</CardTitle>
-          <CardDescription className="text-center">{stepDescription}</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
+    <div className="flex justify-center py-4 md:min-h-[68vh] md:items-center md:py-10">
+      <div className={cn("w-full", step === "legal" ? "max-w-lg" : "max-w-md")}>
+        <Mark size="md" />
+        <h1 className="mt-8">{stepTitle}</h1>
+        <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{stepDescription}</p>
+        <Steps className="mt-6" steps={stepLabels} current={stepIndex} />
+
+        <div className="mt-8">
           {step === "legal" && (
-            <>
+            <div className="space-y-6">
               <LegalConsentSection
                 agreedTerms={agreedTerms}
                 agreedPrivacy={agreedPrivacy}
@@ -235,28 +245,22 @@ export default function Signup() {
               >
                 {t("signup.step.legalNext")}
               </Button>
-            </>
+            </div>
           )}
 
           {step === "email" && (
-            <>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="px-0 text-muted-foreground"
-                onClick={() => setStep("legal")}
-              >
-                ← {t("signup.step.back")}
-              </Button>
-              <div className="space-y-2">
-                <Label htmlFor="signup-email">{t("signup.emailLabel")}</Label>
-                <div className="flex space-x-2">
+            <div className="space-y-5">
+              <button type="button" className={backButtonClass} onClick={() => setStep("legal")}>
+                <ArrowLeft className="size-3.5" strokeWidth={1.5} aria-hidden />
+                {t("signup.step.back")}
+              </button>
+              <Field htmlFor="signup-email" label={t("signup.emailLabel")}>
+                <div className="flex gap-2">
                   <Input
                     id="signup-email"
                     type="email"
                     placeholder="email@example.com"
-                    className="flex-1"
+                    className="min-w-0 flex-1"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     onKeyDown={(e) => e.key === "Enter" && sendEmailVerification()}
@@ -268,45 +272,46 @@ export default function Signup() {
                     </Button>
                   )}
                 </div>
-              </div>
+              </Field>
               {!emailVerified && (
-                <div className="space-y-2">
-                  <Label htmlFor="email-code">{t("signup.codeLabel")}</Label>
-                  <div className="flex space-x-2">
+                <>
+                  <Field htmlFor="email-code" label={t("signup.codeLabel")} hint={t("signup.codeValidity")}>
                     <Input
                       id="email-code"
                       placeholder={t("signup.codePlaceholder")}
                       value={emailCode}
                       onChange={(e) => setEmailCode(e.target.value)}
                       onKeyDown={(e) => e.key === "Enter" && verifyEmailCode()}
-                      className="flex-1"
                     />
-                    <Button type="button" onClick={verifyEmailCode} disabled={emailVerifying}>
-                      {emailVerifying ? t("signup.codeVerifying") : t("signup.codeVerify")}
-                    </Button>
-                  </div>
-                  <p className="text-xs text-muted-foreground">{t("signup.codeValidity")}</p>
-                </div>
+                  </Field>
+                  <Button
+                    type="button"
+                    className="w-full"
+                    size="lg"
+                    onClick={verifyEmailCode}
+                    disabled={emailVerifying}
+                  >
+                    {emailVerifying ? t("signup.codeVerifying") : t("signup.codeVerify")}
+                  </Button>
+                </>
               )}
-            </>
+            </div>
           )}
 
           {step === "profile" && (
-            <>
-              <Button
+            <div className="space-y-5">
+              <button
                 type="button"
-                variant="ghost"
-                size="sm"
-                className="px-0 text-muted-foreground"
+                className={backButtonClass}
                 onClick={() => {
                   setEmailVerified(false);
                   setStep("email");
                 }}
               >
-                ← {t("signup.step.back")}
-              </Button>
-              <div className="space-y-2">
-                <Label htmlFor="password">{t("signup.password")}</Label>
+                <ArrowLeft className="size-3.5" strokeWidth={1.5} aria-hidden />
+                {t("signup.step.back")}
+              </button>
+              <Field htmlFor="password" label={t("signup.password")}>
                 <Input
                   id="password"
                   type="password"
@@ -315,9 +320,8 @@ export default function Signup() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                 />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="password-confirm">{t("signup.passwordConfirm")}</Label>
+              </Field>
+              <Field htmlFor="password-confirm" label={t("signup.passwordConfirm")}>
                 <Input
                   id="password-confirm"
                   type="password"
@@ -326,47 +330,46 @@ export default function Signup() {
                   value={passwordConfirm}
                   onChange={(e) => setPasswordConfirm(e.target.value)}
                 />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="nickname">{t("signup.nickname")}</Label>
+              </Field>
+              <Field htmlFor="nickname" label={t("signup.nickname")}>
                 <Input
                   id="nickname"
                   placeholder={t("signup.nicknamePlaceholder")}
                   value={nickname}
                   onChange={(e) => setNickname(e.target.value)}
                 />
+              </Field>
+
+              <div className="space-y-5 border-t border-border pt-5">
+                <p className="text-sm font-medium">{t("signup.shippingAddress")}</p>
+                <Field htmlFor="addr-postal" label={t("signup.postalCode")}>
+                  <Input
+                    id="addr-postal"
+                    placeholder={t("signup.postalCodePlaceholder")}
+                    value={addressPostalCode}
+                    onChange={(e) => setAddressPostalCode(e.target.value)}
+                    maxLength={10}
+                  />
+                </Field>
+                <Field htmlFor="addr-line1" label={t("signup.addressLine1")}>
+                  <Input
+                    id="addr-line1"
+                    placeholder={t("signup.addressLine1Placeholder")}
+                    value={addressLine1}
+                    onChange={(e) => setAddressLine1(e.target.value)}
+                  />
+                </Field>
+                <Field htmlFor="addr-line2" label={t("signup.addressLine2")}>
+                  <Input
+                    id="addr-line2"
+                    placeholder={t("signup.addressLine2Placeholder")}
+                    value={addressLine2}
+                    onChange={(e) => setAddressLine2(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && submitSignup()}
+                  />
+                </Field>
               </div>
-              <Separator className="my-2" />
-              <p className="text-sm font-medium text-foreground">{t("signup.shippingAddress")}</p>
-              <div className="space-y-2">
-                <Label htmlFor="addr-postal">{t("signup.postalCode")}</Label>
-                <Input
-                  id="addr-postal"
-                  placeholder={t("signup.postalCodePlaceholder")}
-                  value={addressPostalCode}
-                  onChange={(e) => setAddressPostalCode(e.target.value)}
-                  maxLength={10}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="addr-line1">{t("signup.addressLine1")}</Label>
-                <Input
-                  id="addr-line1"
-                  placeholder={t("signup.addressLine1Placeholder")}
-                  value={addressLine1}
-                  onChange={(e) => setAddressLine1(e.target.value)}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="addr-line2">{t("signup.addressLine2")}</Label>
-                <Input
-                  id="addr-line2"
-                  placeholder={t("signup.addressLine2Placeholder")}
-                  value={addressLine2}
-                  onChange={(e) => setAddressLine2(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && submitSignup()}
-                />
-              </div>
+
               <Button
                 type="button"
                 className="w-full"
@@ -376,17 +379,20 @@ export default function Signup() {
               >
                 {signupLoading ? t("signup.submitting") : t("signup.submit")}
               </Button>
-            </>
+            </div>
           )}
+        </div>
 
-          <div className="text-center text-sm text-muted-foreground mt-6">
-            {t("signup.haveAccount")}{" "}
-            <Link to="/login" className="text-foreground hover:underline font-medium">
-              {t("signup.loginLink")}
-            </Link>
-          </div>
-        </CardContent>
-      </Card>
+        <p className="mt-8 text-sm text-muted-foreground">
+          {t("signup.haveAccount")}{" "}
+          <Link
+            to="/login"
+            className="font-medium text-foreground underline underline-offset-4 decoration-foreground/30 transition-colors hover:decoration-foreground"
+          >
+            {t("signup.loginLink")}
+          </Link>
+        </p>
+      </div>
     </div>
   );
 }

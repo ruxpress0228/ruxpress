@@ -1,10 +1,11 @@
-import { useState, useEffect, useMemo, type ReactNode } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Link } from "react-router";
 import { ShoppingCart, Package, Truck, CheckCircle2, Ban, type LucideIcon } from "lucide-react";
 import { Button } from "../../components/ui/button";
 import { Badge } from "../../components/ui/badge";
 import { Label } from "../../components/ui/label";
 import { cn } from "../../components/ui/utils";
+import { Section, SectionLink } from "../../components/page";
 import { purchaseStatusBadgeClass } from "../../utils/purchaseStatusStyle";
 import { api, readAuthValue } from "../../utils/api";
 import { unwrap } from "../../utils/exception";
@@ -58,44 +59,6 @@ function formatKrwLine(amount: unknown, localeTag: string): string {
   const n = typeof amount === "number" ? amount : Number(amount);
   const v = Number.isFinite(n) ? n : 0;
   return `₩${v.toLocaleString(localeTag, { maximumFractionDigits: 0 })}`;
-}
-
-/** Section header: letter-spaced title on a black rule, optional link on the right. */
-function SectionHeading({
-  id,
-  title,
-  action,
-  inverted = false,
-}: {
-  id?: string;
-  title: string;
-  action?: ReactNode;
-  inverted?: boolean;
-}) {
-  return (
-    <div
-      className={cn(
-        "flex items-baseline justify-between gap-4 border-b pb-3",
-        inverted ? "border-background/30" : "border-foreground",
-      )}
-    >
-      <h2 id={id} className="text-sm font-medium uppercase tracking-[0.18em]">
-        {title}
-      </h2>
-      {action}
-    </div>
-  );
-}
-
-function ViewAllLink({ to, children }: { to: string; children: ReactNode }) {
-  return (
-    <Link
-      to={to}
-      className="text-xs text-muted-foreground underline-offset-4 transition-colors hover:text-foreground hover:underline"
-    >
-      {children}
-    </Link>
-  );
 }
 
 export default function Home() {
@@ -315,12 +278,12 @@ export default function Home() {
       {/* Activity + exchange */}
       <div className="grid gap-14 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] lg:gap-12">
         <div className="min-w-0 space-y-14">
-          <section aria-labelledby="home-recent-heading">
-            <SectionHeading
-              id="home-recent-heading"
-              title={t("home.recentRequests.title")}
-              action={<ViewAllLink to="/purchase">{t("home.recentRequests.viewAll")}</ViewAllLink>}
-            />
+          <Section
+            id="home-recent-heading"
+            title={t("home.recentRequests.title")}
+            action={<SectionLink to="/purchase">{t("home.recentRequests.viewAll")}</SectionLink>}
+            flush
+          >
             {myRequests.length > 0 ? (
               <ul>
                 {myRequests.map((request) => (
@@ -355,14 +318,14 @@ export default function Home() {
                 </Button>
               </div>
             )}
-          </section>
+          </Section>
 
-          <section aria-labelledby="home-notices-heading">
-            <SectionHeading
-              id="home-notices-heading"
-              title={t("home.recentNotices.title")}
-              action={<ViewAllLink to="/notice">{t("home.recentNotices.viewAll")}</ViewAllLink>}
-            />
+          <Section
+            id="home-notices-heading"
+            title={t("home.recentNotices.title")}
+            action={<SectionLink to="/notice">{t("home.recentNotices.viewAll")}</SectionLink>}
+            flush
+          >
             {recentNotices.length > 0 ? (
               <ul>
                 {recentNotices.map((notice) => (
@@ -392,27 +355,24 @@ export default function Home() {
                 {t("home.recentNotices.empty")}
               </p>
             )}
-          </section>
+          </Section>
         </div>
 
         {/* Exchange panel: the one dark block on the page */}
-        <section
-          aria-labelledby="home-exchange-heading"
+        <Section
+          id="home-exchange-heading"
+          title={t("home.exchange.title")}
+          tone="inverted"
+          flush
           className="bg-foreground p-5 text-background md:p-7"
+          action={
+            ratesData?.fetchedAt ? (
+              <span className="text-background/60 figure">
+                {formatDate(ratesData.fetchedAt, locale)} {t("home.exchange.asOf")}
+              </span>
+            ) : null
+          }
         >
-          <SectionHeading
-            id="home-exchange-heading"
-            title={t("home.exchange.title")}
-            inverted
-            action={
-              ratesData?.fetchedAt ? (
-                <span className="text-xs text-background/60 figure">
-                  {formatDate(ratesData.fetchedAt, locale)} {t("home.exchange.asOf")}
-                </span>
-              ) : null
-            }
-          />
-
           {ratesData && ratesData.quotes.length > 0 ? (
             <>
               <div className="mt-7">
@@ -489,7 +449,7 @@ export default function Home() {
           ) : (
             <p className="mt-7 text-sm text-background/60">{t("home.exchange.loading")}</p>
           )}
-        </section>
+        </Section>
       </div>
     </div>
   );

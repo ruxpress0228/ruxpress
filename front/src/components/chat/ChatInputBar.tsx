@@ -1,5 +1,5 @@
 import { useRef } from 'react';
-import { Paperclip } from 'lucide-react';
+import { ArrowUp, Ellipsis, Paperclip } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
@@ -51,7 +51,7 @@ export function ChatInputBar({
   };
 
   return (
-    <div className="flex gap-2">
+    <div className="flex items-center gap-1 border-t border-border p-3 transition-colors focus-within:border-foreground">
       <input
         ref={fileInputRef}
         type="file"
@@ -61,26 +61,38 @@ export function ChatInputBar({
       />
       <Button
         type="button"
-        variant="outline"
+        variant="ghost"
         size="icon"
         disabled={disabled || uploading}
         onClick={() => fileInputRef.current?.click()}
         title={attachLabel}
         aria-label={attachLabel}
       >
-        <Paperclip className="w-4 h-4" />
+        <Paperclip className="size-4" strokeWidth={1.5} aria-hidden />
       </Button>
       <Input
         value={input}
         onChange={(e) => onInputChange(e.target.value)}
         onKeyDown={handleKeyDown}
         placeholder={placeholder}
+        aria-label={placeholder}
         disabled={disabled || uploading}
         maxLength={2000}
-        className="flex-1"
+        className="h-9 min-w-0 flex-1 border-0 bg-transparent px-2 focus-visible:border-transparent focus-visible:ring-0 dark:bg-transparent"
       />
-      <Button onClick={onSend} disabled={disabled || uploading || !input.trim()}>
-        {uploading ? '...' : sendLabel}
+      <Button
+        type="button"
+        size="icon"
+        onClick={onSend}
+        disabled={disabled || uploading || !input.trim()}
+        title={sendLabel}
+        aria-label={sendLabel}
+      >
+        {uploading ? (
+          <Ellipsis className="size-4" strokeWidth={1.5} aria-hidden />
+        ) : (
+          <ArrowUp className="size-4" strokeWidth={1.5} aria-hidden />
+        )}
       </Button>
     </div>
   );

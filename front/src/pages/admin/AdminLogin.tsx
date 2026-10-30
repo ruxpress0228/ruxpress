@@ -1,12 +1,13 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router";
-import { Globe } from "lucide-react";
+import { Globe, Check } from "lucide-react";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import { Label } from "../../components/ui/label";
 import { Checkbox } from "../../components/ui/checkbox";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../components/ui/card";
+import { cn } from "../../components/ui/utils";
 import { Mark } from "../../components/brand/BrandMark";
+import { Field } from "../../components/page";
 import { toast } from "sonner";
 import { api, notifyUserAuthChange } from "../../utils/api";
 import { unwrap } from "../../utils/exception";
@@ -77,8 +78,8 @@ export default function AdminLogin() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-muted/60 relative">
-      <div className="absolute top-4 right-4" ref={langRef}>
+    <div className="relative flex min-h-screen flex-col bg-background text-foreground">
+      <div className="absolute right-4 top-4" ref={langRef}>
         <Button
           type="button"
           variant="ghost"
@@ -88,74 +89,78 @@ export default function AdminLogin() {
           aria-expanded={langOpen}
           aria-haspopup="listbox"
         >
-          <Globe className="w-5 h-5" />
+          <Globe className="size-[18px]" strokeWidth={1.5} />
         </Button>
         {langOpen && (
           <div
-            className="absolute right-0 top-full mt-1 min-w-[10rem] rounded-md border border-border bg-card py-1 shadow-lg z-10"
+            className="absolute right-0 top-full z-[100] mt-2 min-w-[10rem] border border-border bg-popover py-1"
             role="listbox"
+            aria-label={t("common.language")}
           >
-            {LOCALES.map((loc) => (
-              <button
-                key={loc}
-                type="button"
-                role="option"
-                aria-selected={locale === loc}
-                className={`block w-full px-3 py-2 text-left text-sm hover:bg-muted ${locale === loc ? "bg-muted text-foreground font-medium" : "text-foreground"}`}
-                onClick={() => {
-                  setLocale(loc);
-                  setLangOpen(false);
-                }}
-              >
-                {t(`locale.${loc}`)}
-              </button>
-            ))}
+            {LOCALES.map((loc) => {
+              const selected = locale === loc;
+              return (
+                <button
+                  key={loc}
+                  type="button"
+                  role="option"
+                  aria-selected={selected}
+                  className={cn(
+                    "flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-sm transition-colors hover:bg-muted",
+                    selected ? "text-foreground" : "text-muted-foreground",
+                  )}
+                  onClick={() => {
+                    setLocale(loc);
+                    setLangOpen(false);
+                  }}
+                >
+                  {t(`locale.${loc}`)}
+                  {selected ? <Check className="size-3.5" aria-hidden /> : null}
+                </button>
+              );
+            })}
           </div>
         )}
       </div>
-      <Card className="w-full max-w-md">
-        <CardHeader className="space-y-1">
-          <div className="flex items-center justify-center mb-4">
-            <Mark size="lg" />
-          </div>
-          <CardTitle className="text-2xl text-center">{t("admin.login.title")}</CardTitle>
-          <CardDescription className="text-center">
-            {t("admin.login.subtitle")}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="admin-email">{t("admin.login.email")}</Label>
+
+      <main className="flex flex-1 items-center justify-center px-5 py-16 md:px-6">
+        <div className="mx-auto w-full max-w-md">
+          <Mark size="md" />
+          <h1 className="mt-8">{t("admin.login.title")}</h1>
+          <p className="mt-2 text-sm text-muted-foreground">{t("admin.login.subtitle")}</p>
+
+          <form onSubmit={handleSubmit} className="mt-8 space-y-5">
+            <Field htmlFor="admin-email" label={t("admin.login.email")}>
               <Input
                 id="admin-email"
                 type="email"
+                autoComplete="email"
                 placeholder="admin@main-proxy.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
                 disabled={loading}
               />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="admin-password">{t("admin.login.password")}</Label>
+            </Field>
+            <Field htmlFor="admin-password" label={t("admin.login.password")}>
               <Input
                 id="admin-password"
                 type="password"
+                autoComplete="current-password"
                 placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 disabled={loading}
               />
-            </div>
-            <div className="flex items-center space-x-2">
+            </Field>
+            <div className="flex items-center gap-2">
               <Checkbox
                 id="admin-remember-me"
                 checked={rememberMe}
                 onCheckedChange={(v) => setRememberMe(v === true)}
               />
-              <Label htmlFor="admin-remember-me" className="text-sm font-normal cursor-pointer">
+              <Label htmlFor="admin-remember-me" className="cursor-pointer text-sm font-normal">
                 {t("admin.login.rememberMe")}
               </Label>
             </div>
@@ -163,8 +168,8 @@ export default function AdminLogin() {
               {loading ? t("admin.login.submitting") : t("admin.login.submit")}
             </Button>
           </form>
-        </CardContent>
-      </Card>
+        </div>
+      </main>
     </div>
   );
 }

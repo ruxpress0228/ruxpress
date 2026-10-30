@@ -1,17 +1,19 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router";
-import { ArrowLeft, X, Download, ChevronLeft, ChevronRight, MessageSquare, ExternalLink } from "lucide-react";
+import { X, Download, ChevronLeft, ChevronRight, MessageSquare, ExternalLink } from "lucide-react";
 import { Button } from "../../components/ui/button";
 import { Badge } from "../../components/ui/badge";
 import { cn } from "../../components/ui/utils";
 import { purchaseStatusBadgeClass } from "../../utils/purchaseStatusStyle";
-import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card";
-import { Separator } from "../../components/ui/separator";
+import { DescriptionList, EmptyState, LoadingState, PageHeader, Section } from "../../components/page";
 import { usePurchase } from "../../hooks/purchase/usePurchase";
 import { useTranslation } from "../../hooks/useTranslation";
+import type { PurchaseRequestStatus } from "../../types";
 import type { PurchaseAttachment, PurchaseRequestDetail as PurchaseRequestDetailType, PurchaseShipping } from "../../types/purchase";
 
 type TFunc = (key: string, vars?: Record<string, string | number>) => string;
+
+const TIMELINE_STEPS: PurchaseRequestStatus[] = ["REQUESTED", "PURCHASING", "SHIPPING", "COMPLETED"];
 
 function hasShippingSnapshot(s?: PurchaseShipping | null): boolean {
   if (!s) return false;
@@ -30,19 +32,58 @@ function itemUrls(it: { url: string; urls?: string[] }): string[] {
   return it.url ? [it.url] : [];
 }
 
+/** Ordered status steps for the timeline; a cancelled request shows only "received" and "cancelled". */
+function timelineFor(status: PurchaseRequestStatus): { status: PurchaseRequestStatus; done: boolean; current: boolean }[] {
+  const steps: PurchaseRequestStatus[] = status === "CANCELLED" ? ["REQUESTED", "CANCELLED"] : TIMELINE_STEPS;
+  const idx = steps.indexOf(status);
+  return steps.map((s, i) => ({ status: s, done: i <= idx, current: i === idx }));
+}
+
+function StatusTimeline({ status, t }: { status: PurchaseRequestStatus; t: TFunc }) {
+  return (
+    <ol className="space-y-4">
+      {timelineFor(status).map((step) => (
+        <li key={step.status} className="flex items-start gap-3">
+          <span
+            aria-hidden
+            className={cn(
+              "mt-[5px] size-2.5 shrink-0 rounded-full border",
+              step.done
+                ? step.status === "CANCELLED"
+                  ? "border-destructive bg-destructive"
+                  : "border-foreground bg-foreground"
+                : "border-foreground/30 bg-background",
+            )}
+          />
+          <div className="min-w-0">
+            <p
+              className={cn("text-sm", step.current ? "font-medium" : step.done ? "" : "text-muted-foreground")}
+              aria-current={step.current ? "step" : undefined}
+            >
+              {t(`purchase.status.${step.status}`)}
+            </p>
+            {step.current ? (
+              <p className="mt-0.5 text-xs text-muted-foreground">{t(`home.recentRequests.hint.${step.status}`)}</p>
+            ) : null}
+          </div>
+        </li>
+      ))}
+    </ol>
+  );
+}
+
 function ProductUrlBlock({ shop, urls, t }: { shop?: string | null; urls: string[]; t: TFunc }) {
   return (
-    <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
-      <div className="min-w-0 flex-1 space-y-2">
+    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-6">
+      <div className="min-w-0 flex-1 space-y-1">
         {shop ? (
-          <p className="text-xs font-medium text-muted-foreground">
+          <p className="text-xs text-muted-foreground">
             {t("purchaseDetail.shop")} <span className="text-foreground">{shop}</span>
           </p>
         ) : null}
         <ul className="space-y-1">
           {urls.map((url, i) => (
-            <li key={`${url}-${i}`} className="text-sm text-foreground break-all font-mono leading-relaxed">
-              {urls.length > 1 ? `${i + 1}. ` : ""}
+            <li key={`${url}-${i}`} className="break-all text-sm leading-relaxed">
               {url}
             </li>
           ))}
@@ -52,10 +93,10 @@ function ProductUrlBlock({ shop, urls, t }: { shop?: string | null; urls: string
         type="button"
         variant="outline"
         size="sm"
-        className="shrink-0 self-start gap-1.5"
+        className="shrink-0 self-start"
         onClick={() => window.open(urls[0], "_blank", "noopener,noreferrer")}
       >
-        <ExternalLink className="h-4 w-4" aria-hidden />
+        <ExternalLink strokeWidth={1.5} aria-hidden />
         {t("purchaseDetail.openInNewWindow")}
       </Button>
     </div>
@@ -65,17 +106,48 @@ function ProductUrlBlock({ shop, urls, t }: { shop?: string | null; urls: string
 function OptionAttributesReadonlyList({ entries }: { entries: [string, string][] }) {
   if (entries.length === 0) return null;
   return (
-    <ul className="mt-1 space-y-0.5 text-sm leading-relaxed text-foreground">
+    <ul className="space-y-0.5 text-sm leading-relaxed">
       {entries.map(([name, value], i) => (
-        <li key={`${name}-${i}`} className="pl-0.5">
-          <span className="text-muted-foreground/70 select-none" aria-hidden>
-            -{" "}
-          </span>
+        <li key={`${name}-${i}`}>
           <span className="text-muted-foreground">{name}</span>
-          <span className="text-muted-foreground/70">: </span>
-          <span className="text-foreground">{value}</span>
+          <span className="text-muted-foreground">: </span>
+          <span>{value}</span>
         </li>
       ))}
+    </ul>
+  );
+}
+
+function PhotoGrid({
+  items,
+  all,
+  onOpen,
+}: {
+  items: PurchaseAttachment[];
+  all: PurchaseAttachment[];
+  onOpen: (index: number) => void;
+}) {
+  return (
+    <ul className="grid grid-cols-3 gap-3 sm:grid-cols-4">
+      {items.map((att) => {
+        const idx = all.findIndex((a) => a.id === att.id);
+        return (
+          <li key={att.id} className="min-w-0">
+            <button
+              type="button"
+              className="block w-full border border-border transition-colors hover:border-foreground"
+              title={att.originalFilename}
+              onClick={() => onOpen(idx)}
+            >
+              <img
+                src={att.thumbnailUrl ?? att.viewUrl ?? att.storedUrl}
+                alt={att.originalFilename}
+                className="aspect-square w-full object-cover"
+              />
+            </button>
+          </li>
+        );
+      })}
     </ul>
   );
 }
@@ -84,10 +156,12 @@ function ImageLightbox({
   images,
   initialIndex,
   onClose,
+  t,
 }: {
   images: PurchaseAttachment[];
   initialIndex: number;
   onClose: () => void;
+  t: TFunc;
 }) {
   const [current, setCurrent] = useState(initialIndex);
   const img = images[current];
@@ -106,65 +180,73 @@ function ImageLightbox({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/90"
       onClick={onClose}
     >
       <div
-        className="relative flex flex-col items-center max-w-5xl w-full max-h-screen p-4"
+        className="relative flex max-h-screen w-full max-w-5xl flex-col items-center p-4"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between w-full mb-2">
-          <span className="text-white text-sm truncate max-w-xs">{img.originalFilename}</span>
+        <div className="mb-2 flex w-full items-center justify-between gap-4">
+          <span className="max-w-xs truncate text-sm text-background">{img.originalFilename}</span>
           <div className="flex items-center gap-2">
             <a
               href={img.viewUrl ?? img.storedUrl}
               download={img.originalFilename}
-              className="inline-flex items-center justify-center w-9 h-9 rounded-md text-white hover:bg-white/20"
+              title={img.originalFilename}
+              aria-label={img.originalFilename}
+              className="inline-flex size-9 items-center justify-center text-background transition-colors hover:bg-background/20"
               onClick={(e) => e.stopPropagation()}
             >
-              <Download className="w-5 h-5" />
+              <Download className="size-5" strokeWidth={1.5} aria-hidden />
             </a>
             <Button
               variant="ghost"
               size="icon"
-              className="text-white hover:bg-white/20"
+              className="text-background hover:bg-background/20 hover:text-background"
+              title={t("adminPurchase.modal.close")}
+              aria-label={t("adminPurchase.modal.close")}
               onClick={onClose}
             >
-              <X className="w-5 h-5" />
+              <X className="size-5" strokeWidth={1.5} aria-hidden />
             </Button>
           </div>
         </div>
 
-        <div className="relative flex items-center justify-center w-full">
+        <div className="relative flex w-full items-center justify-center">
           {hasPrev && (
             <Button
               variant="ghost"
               size="icon"
-              className="absolute left-0 text-white hover:bg-white/20 z-10"
+              className="absolute left-0 z-10 text-background hover:bg-background/20 hover:text-background"
+              title={t("admin.common.prev")}
+              aria-label={t("admin.common.prev")}
               onClick={() => setCurrent((c) => c - 1)}
             >
-              <ChevronLeft className="w-6 h-6" />
+              <ChevronLeft className="size-6" strokeWidth={1.5} aria-hidden />
             </Button>
           )}
           <img
             src={img.viewUrl ?? img.storedUrl}
             alt={img.originalFilename}
-            className="max-h-[75vh] max-w-full object-contain rounded"
+            className="max-h-[75vh] max-w-full object-contain"
           />
           {hasNext && (
             <Button
               variant="ghost"
               size="icon"
-              className="absolute right-0 text-white hover:bg-white/20 z-10"
+              className="absolute right-0 z-10 text-background hover:bg-background/20 hover:text-background"
+              title={t("admin.common.next")}
+              aria-label={t("admin.common.next")}
               onClick={() => setCurrent((c) => c + 1)}
             >
-              <ChevronRight className="w-6 h-6" />
+              <ChevronRight className="size-6" strokeWidth={1.5} aria-hidden />
             </Button>
           )}
         </div>
 
         {images.length > 1 && (
-          <p className="text-white/60 text-xs mt-2">
+          <p className="mt-2 text-xs text-background/60 figure">
             {current + 1} / {images.length}
           </p>
         )}
@@ -212,21 +294,19 @@ export default function PurchaseRequestDetail() {
   }, [numericId]);
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <p className="text-muted-foreground">{t("purchaseDetail.loading")}</p>
-      </div>
-    );
+    return <LoadingState label={t("purchaseDetail.loading")} />;
   }
 
   if (!data) {
     return (
-      <div className="text-center py-12">
-        <p className="text-muted-foreground">{t("purchaseDetail.notFound")}</p>
-        <Button variant="link" className="mt-2" onClick={() => navigate("/purchase")}>
-          {t("inquiry.detail.backToList")}
-        </Button>
-      </div>
+      <EmptyState
+        title={t("purchaseDetail.notFound")}
+        action={
+          <Button variant="outline" onClick={() => navigate("/purchase")}>
+            {t("inquiry.detail.backToList")}
+          </Button>
+        }
+      />
     );
   }
 
@@ -236,78 +316,104 @@ export default function PurchaseRequestDetail() {
   const userAttachments = imageAttachments.filter((a) => !a.uploadedByAdmin);
   const adminAttachments = imageAttachments.filter((a) => a.uploadedByAdmin);
 
-  return (
-    <div className="max-w-4xl mx-auto">
-      <div className="flex items-center justify-between mb-6">
-        <Button variant="ghost" onClick={() => navigate("/purchase")}>
-          <ArrowLeft className="w-4 h-4 mr-2" />
-          {t("inquiry.detail.backToList")}
-        </Button>
-        <Button variant="outline" onClick={() => navigate("/chat")}>
-          <MessageSquare className="w-4 h-4 mr-2" />
-          {t("purchaseDetail.chatInquiry")}
-        </Button>
-      </div>
+  const showShipping = Boolean((hasShippingSnapshot(data.shipping) && data.shipping) || data.trackingNumber);
+  const shippingItems = [
+    ...(hasShippingSnapshot(data.shipping) && data.shipping
+      ? [
+          ...(data.shipping.recipientName || data.shipping.recipientPhone
+            ? [
+                {
+                  key: "recipient",
+                  label: t("myPage.recipient"),
+                  value: (
+                    <>
+                      {data.shipping.recipientName ?? ""}
+                      {data.shipping.recipientPhone ? (
+                        <span className="text-muted-foreground figure"> · {data.shipping.recipientPhone}</span>
+                      ) : null}
+                    </>
+                  ),
+                },
+              ]
+            : []),
+          {
+            key: "address",
+            label: t("myPage.address"),
+            value: (
+              <>
+                {data.shipping.label ? <p className="font-medium">{data.shipping.label}</p> : null}
+                <p className="break-words leading-relaxed">
+                  {data.shipping.postalCode ? <span className="mr-1 figure">({data.shipping.postalCode})</span> : null}
+                  {data.shipping.addressLine1}
+                  {data.shipping.addressLine2 ? ` ${data.shipping.addressLine2}` : ""}
+                </p>
+              </>
+            ),
+          },
+        ]
+      : []),
+    ...(data.trackingNumber
+      ? [
+          {
+            key: "tracking",
+            label: t("purchaseDetail.trackingNumber"),
+            value: <span className="figure">{data.trackingNumber}</span>,
+          },
+        ]
+      : []),
+  ];
 
-      <Card className="mb-6">
-        <CardHeader className="pb-3">
-          <div className="flex items-start justify-between gap-4">
-            <div className="min-w-0">
-              <CardTitle className="text-2xl">{data.requestName}</CardTitle>
-              <p className="text-sm text-muted-foreground mt-1 break-words">
-                {t("purchaseDetail.requestNumber")}: {data.requestNumber}
-              </p>
-            </div>
-            <Badge variant="outline" className={cn("border-transparent font-semibold", purchaseStatusBadgeClass(data.status))}>
+  return (
+    <div>
+      <PageHeader
+        back={{ to: "/purchase", label: t("inquiry.detail.backToList") }}
+        title={data.requestName}
+        meta={
+          <>
+            <Badge variant="outline" className={cn("px-2 py-0.5 text-[10px] font-medium", purchaseStatusBadgeClass(data.status))}>
               {t(`purchase.status.${data.status}`)}
             </Badge>
-          </div>
-        </CardHeader>
+            <span className="figure">{data.requestNumber}</span>
+            <span aria-hidden>·</span>
+            <time dateTime={data.createdAt} className="figure">
+              {new Date(data.createdAt).toLocaleString(dateLocale)}
+            </time>
+          </>
+        }
+        actions={
+          <Button variant="outline" onClick={() => navigate("/chat")}>
+            <MessageSquare strokeWidth={1.5} aria-hidden />
+            {t("purchaseDetail.chatInquiry")}
+          </Button>
+        }
+      />
 
-        <CardContent className="space-y-5">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <p className="text-sm text-muted-foreground">{t("purchaseDetail.quantity")}</p>
-              <p className="font-semibold">{t("purchaseDetail.quantityUnit", { n: data.quantity })}</p>
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">{t("purchaseDetail.totalAmount")}</p>
-              <p className="font-semibold">₩{(data.totalAmountKrw ?? 0).toLocaleString()}</p>
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">{t("purchaseDetail.createdAt")}</p>
-              <p className="font-semibold">
-                {new Date(data.createdAt).toLocaleString(dateLocale)}
-              </p>
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">{t("purchaseDetail.updatedAt")}</p>
-              <p className="font-semibold">
-                {new Date(data.updatedAt).toLocaleString(dateLocale)}
-              </p>
-            </div>
-          </div>
+      <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_20rem] lg:gap-12">
+        <div className="min-w-0 space-y-10 md:space-y-12">
+          <Section id="purchase-status-heading" title={t("purchase.list.summaryTitle")}>
+            <StatusTimeline status={data.status} t={t} />
+          </Section>
 
-          <Separator />
-
-          <div className="space-y-2">
-            <p className="font-semibold">{t("purchaseDetail.items")}</p>
+          <Section id="purchase-items-heading" title={t("purchaseDetail.items")} flush>
             {data.items && data.items.length > 0 ? (
-              <ul className="space-y-2">
+              <ul>
                 {data.items.map((it, idx) => {
                   const itemOptions = optionRecordEntries(it.options);
                   return (
-                    <li key={`${it.url}-${idx}`} className="border rounded-lg p-3 sm:p-4 space-y-2">
+                    <li key={`${it.url}-${idx}`} className="space-y-3 border-b border-border py-4">
                       <ProductUrlBlock shop={it.shop} urls={itemUrls(it)} t={t} />
-                      <div className="text-sm text-foreground/80 pt-1 border-t border-border">
-                        {t("purchaseDetail.unitPrice")} ₩{(it.priceKrw ?? 0).toLocaleString()} × {t("purchaseDetail.quantityUnit", { n: it.quantity ?? 0 })} =
-                        <span className="font-semibold ml-1">
+                      <p className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 text-sm">
+                        <span className="text-muted-foreground figure">
+                          {t("purchaseDetail.unitPrice")} ₩{(it.priceKrw ?? 0).toLocaleString()} ×{" "}
+                          {t("purchaseDetail.quantityUnit", { n: it.quantity ?? 0 })}
+                        </span>
+                        <span className="font-medium figure">
                           ₩{((it.priceKrw ?? 0) * (it.quantity ?? 0)).toLocaleString()}
                         </span>
-                      </div>
+                      </p>
                       {itemOptions.length > 0 ? (
-                        <div className="pt-2 border-t border-border">
-                          <p className="text-sm font-medium text-muted-foreground mb-1">{t("purchaseDetail.options")}</p>
+                        <div>
+                          <p className="mb-1 text-xs text-muted-foreground">{t("purchaseDetail.options")}</p>
                           <OptionAttributesReadonlyList entries={itemOptions} />
                         </div>
                       ) : null}
@@ -316,126 +422,101 @@ export default function PurchaseRequestDetail() {
                 })}
               </ul>
             ) : data.urls && data.urls.length > 0 ? (
-              <ul className="space-y-3">
+              <ul>
                 {data.urls.map((u, idx) => (
-                  <li key={`${u}-${idx}`} className="border rounded-lg p-3">
+                  <li key={`${u}-${idx}`} className="border-b border-border py-4">
                     <ProductUrlBlock urls={[u]} t={t} />
                   </li>
                 ))}
               </ul>
             ) : (
-              <p className="text-sm text-muted-foreground">{t("purchaseDetail.noItems")}</p>
+              <p className="border-b border-border py-4 text-sm text-muted-foreground">{t("purchaseDetail.noItems")}</p>
             )}
-          </div>
+          </Section>
 
           {legacyOptionsEntries.length > 0 && (
-            <div className="space-y-1">
-              <p className="text-sm font-medium text-muted-foreground">{t("purchaseDetail.commonOptions")}</p>
+            <Section id="purchase-common-options-heading" title={t("purchaseDetail.commonOptions")}>
               <OptionAttributesReadonlyList entries={legacyOptionsEntries} />
-            </div>
+            </Section>
           )}
 
-          {(hasShippingSnapshot(data.shipping) && data.shipping) || data.trackingNumber ? (
-            <div id="purchase-shipping" className="scroll-mt-28 space-y-4">
-              {hasShippingSnapshot(data.shipping) && data.shipping && (
-                <div className="space-y-2">
-                  <p className="font-semibold">{t("purchaseDetail.shipping")}</p>
-                  <div className="rounded-lg border border-border bg-muted/60 p-3 text-sm text-foreground space-y-1">
-                    {data.shipping.label ? <p className="font-medium text-foreground">{data.shipping.label}</p> : null}
-                    {(data.shipping.recipientName || data.shipping.recipientPhone) && (
-                      <p>
-                        {data.shipping.recipientName ?? ""}
-                        {data.shipping.recipientPhone ? (
-                          <span className="text-muted-foreground"> · {data.shipping.recipientPhone}</span>
-                        ) : null}
-                      </p>
-                    )}
-                    <p className="break-words leading-relaxed">
-                      {data.shipping.postalCode ? <span className="mr-1">({data.shipping.postalCode})</span> : null}
-                      {data.shipping.addressLine1}
-                      {data.shipping.addressLine2 ? ` ${data.shipping.addressLine2}` : ""}
-                    </p>
-                  </div>
-                </div>
-              )}
-
-              {data.trackingNumber && (
-                <div className="space-y-1">
-                  <p className="font-semibold">{t("purchaseDetail.trackingNumber")}</p>
-                  <p className="text-sm font-mono text-foreground">{data.trackingNumber}</p>
-                </div>
-              )}
+          {showShipping ? (
+            <div id="purchase-shipping" className="scroll-mt-28">
+              <Section id="purchase-shipping-heading" title={t("purchaseDetail.shipping")}>
+                <DescriptionList items={shippingItems} />
+              </Section>
             </div>
           ) : null}
 
           {data.memo && (
-            <div className="space-y-2">
-              <p className="font-semibold">{t("purchaseDetail.memo")}</p>
-              <p className="text-sm text-foreground/80 whitespace-pre-wrap">{data.memo}</p>
-            </div>
+            <Section id="purchase-memo-heading" title={t("purchaseDetail.memo")}>
+              <p className="text-sm leading-relaxed whitespace-pre-wrap">{data.memo}</p>
+            </Section>
           )}
 
           {userAttachments.length > 0 && (
-            <div className="pt-4 border-t border-border">
-              <p className="text-sm font-medium text-foreground/80 mb-3">{t("purchaseDetail.myPhotos")}</p>
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-                {userAttachments.map((att) => {
-                  const idx = imageAttachments.findIndex((a) => a.id === att.id);
-                  return (
-                    <div
-                      key={att.id}
-                      className="relative group cursor-pointer rounded overflow-hidden border"
-                      onClick={() => setLightboxIndex(idx)}
-                    >
-                      <img
-                        src={att.thumbnailUrl ?? att.viewUrl ?? att.storedUrl}
-                        alt={att.originalFilename}
-                        className="h-28 w-full object-cover group-hover:opacity-90 transition-opacity"
-                      />
-                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors" />
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
+            <Section id="purchase-my-photos-heading" title={t("purchaseDetail.myPhotos")}>
+              <PhotoGrid items={userAttachments} all={imageAttachments} onOpen={setLightboxIndex} />
+            </Section>
           )}
 
           {adminAttachments.length > 0 && (
-            <div className="pt-4 border-t border-border">
-              <p className="text-sm font-medium text-foreground/80 mb-3">{t("purchaseDetail.adminPhotos")}</p>
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-                {adminAttachments.map((att) => {
-                  const idx = imageAttachments.findIndex((a) => a.id === att.id);
-                  return (
-                    <div
-                      key={att.id}
-                      className="relative group cursor-pointer rounded overflow-hidden border"
-                      onClick={() => setLightboxIndex(idx)}
-                    >
-                      <img
-                        src={att.thumbnailUrl ?? att.viewUrl ?? att.storedUrl}
-                        alt={att.originalFilename}
-                        className="h-28 w-full object-cover group-hover:opacity-90 transition-opacity"
-                      />
-                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors" />
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
+            <Section id="purchase-admin-photos-heading" title={t("purchaseDetail.adminPhotos")}>
+              <PhotoGrid items={adminAttachments} all={imageAttachments} onOpen={setLightboxIndex} />
+            </Section>
           )}
+        </div>
 
-        </CardContent>
-      </Card>
+        <aside className="min-w-0 lg:sticky lg:top-24 lg:self-start">
+          <div className="border border-border p-5 md:p-6">
+            <p className="text-xs text-muted-foreground">{t("purchaseDetail.totalAmount")}</p>
+            <p className="mt-2 text-3xl font-light figure md:text-4xl">₩{(data.totalAmountKrw ?? 0).toLocaleString()}</p>
+            <DescriptionList
+              dense
+              className="mt-6"
+              items={[
+                {
+                  key: "number",
+                  label: t("purchaseDetail.requestNumber"),
+                  value: <span className="figure">{data.requestNumber}</span>,
+                },
+                {
+                  key: "quantity",
+                  label: t("purchaseDetail.quantity"),
+                  value: <span className="figure">{t("purchaseDetail.quantityUnit", { n: data.quantity })}</span>,
+                },
+                {
+                  key: "createdAt",
+                  label: t("purchaseDetail.createdAt"),
+                  value: (
+                    <time dateTime={data.createdAt} className="figure">
+                      {new Date(data.createdAt).toLocaleString(dateLocale)}
+                    </time>
+                  ),
+                },
+                {
+                  key: "updatedAt",
+                  label: t("purchaseDetail.updatedAt"),
+                  value: (
+                    <time dateTime={data.updatedAt} className="figure">
+                      {new Date(data.updatedAt).toLocaleString(dateLocale)}
+                    </time>
+                  ),
+                },
+              ]}
+            />
+          </div>
+        </aside>
+      </div>
 
       {lightboxIndex !== null && imageAttachments.length > 0 && (
         <ImageLightbox
           images={imageAttachments}
           initialIndex={lightboxIndex}
           onClose={() => setLightboxIndex(null)}
+          t={t}
         />
       )}
     </div>
   );
 }
-

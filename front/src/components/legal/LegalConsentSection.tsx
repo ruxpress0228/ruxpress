@@ -2,7 +2,6 @@ import { useEffect, useRef } from "react";
 import { ExternalLink } from "lucide-react";
 import { Checkbox } from "../ui/checkbox";
 import { Label } from "../ui/label";
-import { Separator } from "../ui/separator";
 import { useTranslation } from "../../hooks/useTranslation";
 
 type LegalConsentSectionProps = {
@@ -17,6 +16,14 @@ type LegalConsentSectionProps = {
   onPrivacyViewed: () => void;
   inline?: boolean;
 };
+
+const TERMS_BODY_ID = "legal-terms-body";
+const PRIVACY_BODY_ID = "legal-privacy-body";
+
+const bodyClass =
+  "mt-3 max-h-56 overflow-y-auto scroll-mt-24 whitespace-pre-wrap border border-border p-4 text-xs leading-relaxed text-muted-foreground";
+const textLinkClass =
+  "underline underline-offset-4 decoration-foreground/30 transition-colors hover:decoration-foreground";
 
 export function LegalConsentSection({
   agreedTerms,
@@ -46,17 +53,18 @@ export function LegalConsentSection({
   }, [onTermsViewed, onPrivacyViewed]);
 
   return (
-    <div className="space-y-4">
-      <div className="space-y-3">
-        <div>
-          <h3 className="text-sm font-semibold text-foreground">{t("signup.terms.dialogTitle")}</h3>
+    <div className="space-y-8">
+      <div className="space-y-8">
+        <section>
+          <h2>{t("signup.terms.dialogTitle")}</h2>
           {t("signup.terms.dialogDescription") ? (
-            <p className="text-xs text-muted-foreground mt-0.5">{t("signup.terms.dialogDescription")}</p>
+            <p className="mt-1 text-xs text-muted-foreground">{t("signup.terms.dialogDescription")}</p>
           ) : null}
           {inline ? (
             <div
+              id={TERMS_BODY_ID}
               ref={termsRef}
-              className="mt-2 max-h-56 overflow-y-auto rounded-md border bg-muted/60 p-3 whitespace-pre-wrap text-xs text-foreground/80"
+              className={bodyClass}
               onScroll={(e) => {
                 const el = e.currentTarget;
                 if (el.scrollTop + el.clientHeight >= el.scrollHeight - 8) onTermsViewed();
@@ -65,31 +73,32 @@ export function LegalConsentSection({
               {t("signup.terms.body")}
             </div>
           ) : null}
-          <a
-            href={t("signup.terms.telegramUrl")}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="mt-2 inline-flex items-center gap-1 text-xs text-foreground hover:underline"
-          >
-            <ExternalLink className="h-3 w-3" />
-            {t("signup.terms.telegramLabel")}
-          </a>
-          {!termsViewed && inline && (
-            <p className="mt-1 text-xs text-amber-600">{t("signup.viewRequired")}</p>
-          )}
-        </div>
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-x-4 gap-y-1 text-xs">
+            <a
+              href={t("signup.terms.telegramUrl")}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={`inline-flex items-center gap-1.5 ${textLinkClass}`}
+            >
+              <ExternalLink className="size-3.5" strokeWidth={1.5} aria-hidden />
+              {t("signup.terms.telegramLabel")}
+            </a>
+            {!termsViewed && inline && (
+              <p className="text-muted-foreground">{t("signup.viewRequired")}</p>
+            )}
+          </div>
+        </section>
 
-        <Separator />
-
-        <div>
-          <h3 className="text-sm font-semibold text-foreground">{t("signup.privacy.dialogTitle")}</h3>
+        <section>
+          <h2>{t("signup.privacy.dialogTitle")}</h2>
           {t("signup.privacy.dialogDescription") ? (
-            <p className="text-xs text-muted-foreground mt-0.5">{t("signup.privacy.dialogDescription")}</p>
+            <p className="mt-1 text-xs text-muted-foreground">{t("signup.privacy.dialogDescription")}</p>
           ) : null}
           {inline ? (
             <div
+              id={PRIVACY_BODY_ID}
               ref={privacyRef}
-              className="mt-2 max-h-56 overflow-y-auto rounded-md border bg-muted/60 p-3 whitespace-pre-wrap text-xs text-foreground/80"
+              className={bodyClass}
               onScroll={(e) => {
                 const el = e.currentTarget;
                 if (el.scrollTop + el.clientHeight >= el.scrollHeight - 8) onPrivacyViewed();
@@ -99,55 +108,56 @@ export function LegalConsentSection({
             </div>
           ) : null}
           {!privacyViewed && inline && (
-            <p className="mt-1 text-xs text-amber-600">{t("signup.viewRequired")}</p>
+            <p className="mt-3 text-xs text-muted-foreground">{t("signup.viewRequired")}</p>
           )}
-        </div>
+        </section>
       </div>
 
-      <div className="space-y-2">
-        <div className="flex items-center space-x-2">
+      <ul className="border-t border-border">
+        <li className="flex items-center gap-3 border-b border-foreground py-3.5">
           <Checkbox
             id="agree-all"
             checked={agreedAll}
             disabled={!canAgreeAll}
             onCheckedChange={(v) => onToggleAgreeAll(Boolean(v))}
           />
-          <Label
-            htmlFor="agree-all"
-            className={`text-sm font-medium ${canAgreeAll ? "cursor-pointer" : "cursor-not-allowed text-muted-foreground/70"}`}
-          >
+          <Label htmlFor="agree-all" className="min-w-0 flex-1 cursor-pointer text-sm">
             {t("signup.agreeAll")}
           </Label>
-        </div>
-        <div className="flex items-center space-x-2 pl-1">
+        </li>
+        <li className="flex items-center gap-3 border-b border-border py-3.5">
           <Checkbox
             id="agree-terms"
             checked={agreedTerms}
             disabled={!termsViewed}
             onCheckedChange={(v) => onAgreeTerms(Boolean(v))}
           />
-          <Label
-            htmlFor="agree-terms"
-            className={`text-sm ${termsViewed ? "cursor-pointer" : "cursor-not-allowed text-muted-foreground/70"}`}
-          >
-            <span className="text-red-500">{t("signup.required")}</span> {t("signup.agreeTerms")}
+          <Label htmlFor="agree-terms" className="min-w-0 flex-1 cursor-pointer text-sm font-normal">
+            <span className="text-destructive">{t("signup.required")}</span> {t("signup.agreeTerms")}
           </Label>
-        </div>
-        <div className="flex items-center space-x-2 pl-1">
+          {inline ? (
+            <a href={`#${TERMS_BODY_ID}`} className={`shrink-0 text-xs ${textLinkClass}`}>
+              {t("admin.common.view")}
+            </a>
+          ) : null}
+        </li>
+        <li className="flex items-center gap-3 border-b border-border py-3.5">
           <Checkbox
             id="agree-privacy"
             checked={agreedPrivacy}
             disabled={!privacyViewed}
             onCheckedChange={(v) => onAgreePrivacy(Boolean(v))}
           />
-          <Label
-            htmlFor="agree-privacy"
-            className={`text-sm ${privacyViewed ? "cursor-pointer" : "cursor-not-allowed text-muted-foreground/70"}`}
-          >
-            <span className="text-red-500">{t("signup.required")}</span> {t("signup.agreePrivacy")}
+          <Label htmlFor="agree-privacy" className="min-w-0 flex-1 cursor-pointer text-sm font-normal">
+            <span className="text-destructive">{t("signup.required")}</span> {t("signup.agreePrivacy")}
           </Label>
-        </div>
-      </div>
+          {inline ? (
+            <a href={`#${PRIVACY_BODY_ID}`} className={`shrink-0 text-xs ${textLinkClass}`}>
+              {t("admin.common.view")}
+            </a>
+          ) : null}
+        </li>
+      </ul>
     </div>
   );
 }

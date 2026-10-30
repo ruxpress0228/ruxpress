@@ -2,21 +2,28 @@ import { useCallback, useEffect, useState } from "react";
 import { Plus } from "lucide-react";
 import { Button } from "../../components/ui/button";
 import { Badge } from "../../components/ui/badge";
-import { Card, CardContent } from "../../components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../components/ui/table";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../../components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "../../components/ui/dialog";
 import { Input } from "../../components/ui/input";
-import { Label } from "../../components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../components/ui/select";
+import { Field, LoadingState, PageHeader } from "../../components/page";
 import { toast } from "sonner";
 import { api } from "../../utils/api";
 import { unwrap } from "../../utils/exception";
 import type { Admin, AdminRole, AdminStatus } from "../../types";
 import { useTranslation } from "../../hooks/useTranslation";
 
-const adminStatusVariants: Record<AdminStatus, "default" | "destructive"> = {
+/** Active is a black fill, inactive is grey. */
+const adminStatusVariants: Record<AdminStatus, "default" | "secondary"> = {
   ACTIVE: "default",
-  INACTIVE: "destructive",
+  INACTIVE: "secondary",
 };
 
 function adminRoleKey(role: AdminRole) {
@@ -77,101 +84,129 @@ export default function AdminAdmins() {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">{t("admin.admin.title")}</h1>
-          <p className="text-muted-foreground mt-1">{t("admin.admin.subtitle")}</p>
-        </div>
-        <Button onClick={openCreate}><Plus className="w-4 h-4 mr-2" />{t("admin.admin.add")}</Button>
-      </div>
+    <div className="space-y-10 md:space-y-12">
+      <PageHeader
+        title={t("admin.admin.title")}
+        description={t("admin.admin.subtitle")}
+        actions={
+          <Button type="button" onClick={openCreate}>
+            <Plus className="size-4" strokeWidth={1.5} aria-hidden />
+            {t("admin.admin.add")}
+          </Button>
+        }
+      />
 
-      <Card>
-        <CardContent className="p-0">
-          {loading ? (
-            <div className="py-12 text-center text-muted-foreground">{t("admin.common.loading")}</div>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>{t("admin.common.col.email")}</TableHead>
-                  <TableHead>{t("admin.common.col.name")}</TableHead>
-                  <TableHead>{t("admin.common.col.role")}</TableHead>
-                  <TableHead>{t("admin.common.col.status")}</TableHead>
-                  <TableHead>{t("admin.common.col.lastLogin")}</TableHead>
-                  <TableHead>{t("admin.common.actions")}</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {admins.length === 0 ? (
-                  <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-8">{t("admin.admin.empty")}</TableCell></TableRow>
-                ) : admins.map((a) => (
-                  <TableRow key={a.id}>
-                    <TableCell>{a.email}</TableCell>
-                    <TableCell className="font-medium">{a.name}</TableCell>
-                    <TableCell>
-                      <Badge variant={a.role === "SUPER_ADMIN" ? "default" : "secondary"}>
-                        {t(adminRoleKey(a.role))}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={adminStatusVariants[a.status]}>
-                        {t(adminStatusKey(a.status))}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      {a.lastLoginAt ? new Date(a.lastLoginAt).toLocaleDateString(dateLocale) : "-"}
-                    </TableCell>
-                    <TableCell>
-                      <Button variant="outline" size="sm" onClick={() => toggleStatus(a.id, a.status)}>
-                        {a.status === "ACTIVE" ? t("admin.admin.deactivate") : t("admin.admin.activate")}
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
+      {loading ? (
+        <LoadingState label={t("admin.common.loading")} />
+      ) : (
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>{t("admin.common.col.email")}</TableHead>
+              <TableHead>{t("admin.common.col.name")}</TableHead>
+              <TableHead>{t("admin.common.col.role")}</TableHead>
+              <TableHead>{t("admin.common.col.status")}</TableHead>
+              <TableHead>{t("admin.common.col.lastLogin")}</TableHead>
+              <TableHead className="text-right">{t("admin.common.actions")}</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {admins.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={6} className="py-10 text-center text-muted-foreground">
+                  {t("admin.admin.empty")}
+                </TableCell>
+              </TableRow>
+            ) : admins.map((a) => (
+              <TableRow key={a.id}>
+                <TableCell>{a.email}</TableCell>
+                <TableCell className="font-medium">{a.name}</TableCell>
+                <TableCell>
+                  <Badge variant="outline">{t(adminRoleKey(a.role))}</Badge>
+                </TableCell>
+                <TableCell>
+                  <Badge variant={adminStatusVariants[a.status]}>
+                    {t(adminStatusKey(a.status))}
+                  </Badge>
+                </TableCell>
+                <TableCell className="text-xs text-muted-foreground figure">
+                  {a.lastLoginAt ? new Date(a.lastLoginAt).toLocaleDateString(dateLocale) : "-"}
+                </TableCell>
+                <TableCell className="text-right">
+                  <Button variant="ghost" size="sm" onClick={() => toggleStatus(a.id, a.status)}>
+                    {a.status === "ACTIVE" ? t("admin.admin.deactivate") : t("admin.admin.activate")}
+                  </Button>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      )}
 
       <Dialog open={formOpen} onOpenChange={setFormOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>{t("admin.admin.createTitle")}</DialogTitle>
             <DialogDescription>{t("admin.admin.createDesc")}</DialogDescription>
           </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label>{t("admin.common.col.email")} *</Label>
-              <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="admin@main-proxy.com" disabled={submitting} />
-            </div>
-            <div className="space-y-2">
-              <Label>{t("admin.login.password")} *</Label>
-              <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder={t("admin.admin.passwordHint")} disabled={submitting} />
-            </div>
-            <div className="space-y-2">
-              <Label>{t("admin.common.col.name")} *</Label>
-              <Input value={name} onChange={(e) => setName(e.target.value)} placeholder={t("admin.admin.namePlaceholder")} disabled={submitting} />
-            </div>
-            <div className="space-y-2">
-              <Label>{t("admin.admin.phone")}</Label>
-              <Input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="010-0000-0000" disabled={submitting} />
-            </div>
-            <div className="space-y-2">
-              <Label>{t("admin.common.col.role")} *</Label>
+          <div className="space-y-5">
+            <Field htmlFor="admin-email" label={t("admin.common.col.email")} required>
+              <Input
+                id="admin-email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="admin@main-proxy.com"
+                disabled={submitting}
+              />
+            </Field>
+            <Field htmlFor="admin-password" label={t("admin.login.password")} required>
+              <Input
+                id="admin-password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder={t("admin.admin.passwordHint")}
+                disabled={submitting}
+              />
+            </Field>
+            <Field htmlFor="admin-name" label={t("admin.common.col.name")} required>
+              <Input
+                id="admin-name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder={t("admin.admin.namePlaceholder")}
+                disabled={submitting}
+              />
+            </Field>
+            <Field htmlFor="admin-phone" label={t("admin.admin.phone")}>
+              <Input
+                id="admin-phone"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                placeholder="010-0000-0000"
+                disabled={submitting}
+              />
+            </Field>
+            <Field htmlFor="admin-role" label={t("admin.common.col.role")} required>
               <Select value={role} onValueChange={(v) => setRole(v as AdminRole)}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectTrigger id="admin-role">
+                  <SelectValue />
+                </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="SUPER_ADMIN">{t("nav.admin.roleSuper")}</SelectItem>
                   <SelectItem value="COUNSELOR">{t("nav.admin.roleCounselor")}</SelectItem>
                 </SelectContent>
               </Select>
-            </div>
+            </Field>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setFormOpen(false)} disabled={submitting}>{t("admin.common.cancel")}</Button>
-            <Button onClick={handleCreate} disabled={submitting}>{submitting ? t("admin.common.creating") : t("admin.common.create")}</Button>
+            <Button type="button" variant="ghost" onClick={() => setFormOpen(false)} disabled={submitting}>
+              {t("admin.common.cancel")}
+            </Button>
+            <Button type="button" onClick={handleCreate} disabled={submitting}>
+              {submitting ? t("admin.common.creating") : t("admin.common.create")}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

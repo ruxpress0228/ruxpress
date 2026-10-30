@@ -4,9 +4,9 @@ import { Link, useNavigate } from "react-router";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import { Badge } from "../../components/ui/badge";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../components/ui/card";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "../../components/ui/accordion";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../components/ui/select";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../components/ui/table";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -15,14 +15,9 @@ import {
   DropdownMenuTrigger,
 } from "../../components/ui/dropdown-menu";
 import { cn } from "../../components/ui/utils";
-import {
-  purchaseListSummaryChipActiveClasses,
-  purchaseStatusAccent,
-  purchaseStatusBadgeClass,
-} from "../../utils/purchaseStatusStyle";
+import { purchaseStatusBadgeClass } from "../../utils/purchaseStatusStyle";
 import type { PurchaseRequestStatus } from "../../types";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "../../components/ui/dialog";
-import { Label } from "../../components/ui/label";
 import { Textarea } from "../../components/ui/textarea";
 import { toast } from "sonner";
 import type { PurchaseRequestDetail, PurchaseShipping } from "../../types/purchase";
@@ -36,6 +31,18 @@ import { useTranslation } from "../../hooks/useTranslation";
 import { formatNumber } from "../../utils/format";
 import { readAuthValue } from "../../utils/api";
 import { DEFAULT_PAGE_SIZE, PAGE_SIZE_OPTIONS } from "../../utils/constants";
+import {
+  DescriptionList,
+  EmptyState,
+  Field,
+  LoadingState,
+  PageHeader,
+  Pager,
+  Section,
+  StatStrip,
+  Toolbar,
+  type DescriptionItem,
+} from "../../components/page";
 
 const ADMIN_STORAGE_KEY = "ruxpress_admin";
 
@@ -118,6 +125,33 @@ function shippingSummaryLines(
   return { title, subtitle };
 }
 
+/** Rows for the shipping snapshot panel in the manage dialog. */
+function shippingDescriptionItems(s: PurchaseShipping, tr: (key: string) => string): DescriptionItem[] {
+  const items: DescriptionItem[] = [];
+  if (s.label) {
+    items.push({ key: "label", label: tr("adminPurchase.modal.label"), value: s.label });
+  }
+  if (s.recipientName || s.recipientPhone) {
+    items.push({
+      key: "recipient",
+      label: tr("adminPurchase.modal.recipient"),
+      value: [s.recipientName, s.recipientPhone].filter(Boolean).join(" · "),
+    });
+  }
+  items.push({
+    key: "address",
+    label: tr("adminPurchase.modal.address"),
+    value: (
+      <span className="leading-relaxed">
+        {s.postalCode ? `(${s.postalCode}) ` : null}
+        {s.addressLine1}
+        {s.addressLine2 ? ` ${s.addressLine2}` : ""}
+      </span>
+    ),
+  });
+  return items;
+}
+
 const ALL_STATUSES: PurchaseRequestStatus[] = [
   "REQUESTED",
   "PURCHASING",
@@ -147,16 +181,17 @@ function AdminRowQuickMenu({
           type="button"
           variant="ghost"
           size="icon"
-          className="h-8 w-8 text-muted-foreground"
+          className="size-8 text-muted-foreground hover:text-foreground"
+          title={t("adminPurchase.list.quickActions")}
           aria-label={t("adminPurchase.list.quickActions")}
           onClick={(e) => e.stopPropagation()}
         >
-          <MoreHorizontal className="h-4 w-4" />
+          <MoreHorizontal className="size-4" strokeWidth={1.5} aria-hidden />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-48" onClick={(e) => e.stopPropagation()}>
         <DropdownMenuItem className="cursor-pointer" onSelect={onManage}>
-          <Pencil className="mr-2 h-4 w-4 shrink-0" />
+          <Pencil className="size-4" strokeWidth={1.5} aria-hidden />
           {t("adminPurchase.list.actionManage")}
         </DropdownMenuItem>
         <DropdownMenuItem asChild>
@@ -165,13 +200,13 @@ function AdminRowQuickMenu({
             className="flex cursor-pointer items-center"
             onClick={(e) => e.stopPropagation()}
           >
-            <ExternalLink className="mr-2 h-4 w-4 shrink-0" />
+            <ExternalLink className="size-4" strokeWidth={1.5} aria-hidden />
             {t("adminPurchase.list.actionDetail")}
           </Link>
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem className="cursor-pointer" onSelect={copyNumber}>
-          <ClipboardCopy className="mr-2 h-4 w-4 shrink-0" />
+          <ClipboardCopy className="size-4" strokeWidth={1.5} aria-hidden />
           {t("adminPurchase.list.actionCopyNumber")}
         </DropdownMenuItem>
       </DropdownMenuContent>
@@ -387,278 +422,251 @@ export default function AdminPurchaseRequests() {
   }, [rows, search]);
 
   return (
-    <div className="space-y-4 md:space-y-5">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-        <div className="min-w-0">
-          <h1 className="text-2xl font-bold tracking-tight text-foreground md:text-3xl">{t("nav.admin.purchaseRequests")}</h1>
-          <p className="mt-0.5 text-sm text-muted-foreground md:text-base">{t("adminPurchase.list.subtitle")}</p>
-          <p className="mt-1 text-xs text-muted-foreground">{fillTpl(t("adminPurchase.list.countLine"), { total: totalElements })}</p>
-        </div>
-        <div className="flex shrink-0 items-center gap-2 self-start sm:self-auto">
+    <div className="space-y-10 md:space-y-12">
+      <PageHeader
+        title={t("nav.admin.purchaseRequests")}
+        description={t("adminPurchase.list.subtitle")}
+        meta={<span className="figure">{fillTpl(t("adminPurchase.list.countLine"), { total: totalElements })}</span>}
+        actions={
           <Button
             type="button"
             variant="outline"
-            size="sm"
-            className="gap-1.5"
             onClick={() => {
               void loadSummary();
               void fetchPage(page, size, statusFilter, userKeyword);
             }}
           >
-            <RefreshCw className="h-4 w-4" aria-hidden />
+            <RefreshCw className="size-4" strokeWidth={1.5} aria-hidden />
             {t("adminPurchase.list.refresh")}
           </Button>
-        </div>
-      </div>
+        }
+      />
 
-      <div className="rounded-xl border border-border bg-card p-3 md:p-3.5">
-        <div className="mb-2 flex items-center justify-between gap-2">
-          <p className="text-xs font-semibold text-foreground/80 md:text-sm">{t("adminPurchase.list.summaryTitle")}</p>
-          <Package className="h-4 w-4 text-muted-foreground/70" aria-hidden />
-        </div>
-        <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-6 sm:gap-2">
-          {FILTER_CHIPS.map((chip) => {
+      <Section title={t("adminPurchase.list.summaryTitle")} flush>
+        <StatStrip
+          size="sm"
+          columns={6}
+          className="border-t-0"
+          items={FILTER_CHIPS.map((chip) => {
             const key = chip.summaryKey ?? "ALL";
             const count = summaryCounts?.[key];
-            const active = statusFilter === chip.value;
-            const activeChip = purchaseListSummaryChipActiveClasses(chip.value);
-            return (
-              <button
-                key={chip.value}
-                type="button"
-                onClick={() => setStatusFilter(chip.value)}
-                className={cn(
-                  "flex min-h-[52px] flex-col items-center justify-center rounded-lg border px-1 py-1.5 text-center transition-all sm:min-h-[56px]",
-                  active ? activeChip.shell : "border-transparent bg-muted/60 hover:bg-muted",
-                )}
-              >
-                <span
-                  className={cn(
-                    "text-lg font-bold tabular-nums leading-none sm:text-xl",
-                    active ? activeChip.countClass : "text-foreground",
-                  )}
-                >
-                  {count == null ? "–" : count}
-                </span>
-                <span className="mt-0.5 line-clamp-2 text-[10px] font-medium text-muted-foreground sm:text-xs">
-                  {chip.value === "all"
-                    ? t("adminPurchase.list.filterAll")
-                    : t(`purchase.status.${chip.value}` as `purchase.status.${PurchaseRequestStatus}`)}
-                </span>
-              </button>
-            );
+            return {
+              key: chip.value,
+              label:
+                chip.value === "all"
+                  ? t("adminPurchase.list.filterAll")
+                  : t(`purchase.status.${chip.value}` as `purchase.status.${PurchaseRequestStatus}`),
+              value: count == null ? "–" : count,
+              onClick: () => setStatusFilter(chip.value),
+              active: statusFilter === chip.value,
+            };
           })}
-        </div>
-      </div>
+        />
+      </Section>
 
-      <div className="flex flex-col gap-2 rounded-xl border border-border bg-card p-3 lg:flex-row lg:items-center lg:gap-3">
-        <div className="relative min-w-0 flex-1">
-          <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground/70" aria-hidden />
+      <div>
+        <Toolbar
+          trailing={
+            <div className="flex items-center gap-0.5 border border-border p-0.5">
+              <Button
+                type="button"
+                variant={sort === "createdAt,desc" ? "default" : "ghost"}
+                size="sm"
+                className="h-7 px-3 text-xs"
+                onClick={() => setSort("createdAt,desc")}
+              >
+                {t("adminPurchase.list.sortLatest")}
+              </Button>
+              <Button
+                type="button"
+                variant={sort === "createdAt,asc" ? "default" : "ghost"}
+                size="sm"
+                className="h-7 px-3 text-xs"
+                onClick={() => setSort("createdAt,asc")}
+              >
+                {t("adminPurchase.list.sortOldest")}
+              </Button>
+            </div>
+          }
+        >
+          <div className="relative min-w-0 flex-1 sm:max-w-sm">
+            <Search
+              className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
+              strokeWidth={1.5}
+              aria-hidden
+            />
+            <Input
+              className="pl-9"
+              placeholder={t("adminPurchase.list.searchClientPlaceholder")}
+              aria-label={t("adminPurchase.list.searchClientPlaceholder")}
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
           <Input
-            placeholder={t("adminPurchase.list.searchClientPlaceholder")}
-            className="h-9 border-border pl-9 text-sm"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-        </div>
-        <div className="relative min-w-0 flex-1 lg:max-w-xs">
-          <Input
+            className="min-w-0 flex-1 sm:max-w-xs"
             placeholder={t("adminPurchase.list.userKeywordPlaceholder")}
-            className="h-9 border-border text-sm"
+            aria-label={t("adminPurchase.list.userKeywordPlaceholder")}
             value={userKeyword}
             onChange={(e) => setUserKeyword(e.target.value)}
           />
-        </div>
-        <div className="flex shrink-0 items-center gap-1 rounded-lg border border-border bg-muted/60 p-0.5">
-          <Button
-            type="button"
-            variant={sort === "createdAt,desc" ? "default" : "ghost"}
-            size="sm"
-            className="h-8 flex-1 px-2 text-xs lg:flex-none lg:px-3"
-            onClick={() => setSort("createdAt,desc")}
-          >
-            {t("adminPurchase.list.sortLatest")}
-          </Button>
-          <Button
-            type="button"
-            variant={sort === "createdAt,asc" ? "default" : "ghost"}
-            size="sm"
-            className="h-8 flex-1 px-2 text-xs lg:flex-none lg:px-3"
-            onClick={() => setSort("createdAt,asc")}
-          >
-            {t("adminPurchase.list.sortOldest")}
-          </Button>
-        </div>
-      </div>
+        </Toolbar>
 
-      <div className="space-y-2 md:space-y-2.5">
         {loading ? (
-          <div className="rounded-lg border border-dashed border-border py-10 text-center text-sm text-muted-foreground">
-            {t("adminPurchase.list.loading")}
-          </div>
+          <LoadingState label={t("adminPurchase.list.loading")} className="mt-4" />
         ) : filtered.length === 0 ? (
-          <div className="rounded-lg border border-dashed border-border py-10 text-center text-sm text-muted-foreground">
-            {t("adminPurchase.list.empty")}
-          </div>
+          <EmptyState icon={Package} title={t("adminPurchase.list.empty")} className="mt-4" />
         ) : (
-          filtered.map((request) => {
-            const accent = purchaseStatusAccent(request.status);
-            const sh = request.shipping;
-            const shipLines = hasShippingSnapshot(sh) && sh ? shippingSummaryLines(sh, t) : null;
-            const shipTitle =
-              hasShippingSnapshot(sh) && sh
-                ? [sh.label, sh.recipientName, sh.recipientPhone, sh.postalCode, sh.addressLine1, sh.addressLine2]
-                    .filter(Boolean)
-                    .join("\n")
-                : undefined;
-            const total = toAmountNumber(request.totalAmountKrw);
-            const charged =
-              request.chargedAmountKrw != null ? toAmountNumber(request.chargedAmountKrw) : null;
-            const progressKey = listProgressKey(request);
-            const refundStyle = isRefundPending(request);
+          <div className="mt-2">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>{t("admin.common.col.status")}</TableHead>
+                  <TableHead>{t("admin.common.col.title")}</TableHead>
+                  <TableHead>{t("adminPurchase.modal.shipping")}</TableHead>
+                  <TableHead>{t("admin.common.col.createdAt")}</TableHead>
+                  <TableHead className="text-right">{t("adminPurchase.list.chargedShort")}</TableHead>
+                  <TableHead className="text-right">{t("adminPurchase.modal.totalKrw")}</TableHead>
+                  <TableHead className="text-right">{t("admin.common.actions")}</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filtered.map((request) => {
+                  const sh = request.shipping;
+                  const shipLines = hasShippingSnapshot(sh) && sh ? shippingSummaryLines(sh, t) : null;
+                  const shipTitle =
+                    hasShippingSnapshot(sh) && sh
+                      ? [sh.label, sh.recipientName, sh.recipientPhone, sh.postalCode, sh.addressLine1, sh.addressLine2]
+                          .filter(Boolean)
+                          .join("\n")
+                      : undefined;
+                  const total = toAmountNumber(request.totalAmountKrw);
+                  const charged =
+                    request.chargedAmountKrw != null ? toAmountNumber(request.chargedAmountKrw) : null;
+                  const progressKey = listProgressKey(request);
+                  const refundStyle = isRefundPending(request);
 
-            return (
-              <article
-                key={request.id}
-                role="button"
-                tabIndex={0}
-                onClick={() => openManage(request)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault();
-                    openManage(request);
-                  }
-                }}
-                className={cn(
-                  "relative flex cursor-pointer rounded-lg border border-border border-l-4 bg-card py-2.5 pl-2 pr-2 outline-none transition-colors hover:border-border hover:bg-muted/60 md:py-3 md:pl-2.5 md:pr-3",
-                  accent.bar,
-                  accent.softBg,
-                )}
-              >
-                <div className="flex min-w-0 flex-1 flex-col gap-1 pr-10 md:gap-1.5 md:pr-3">
-                  <div className="flex items-start justify-between gap-2">
-                    <Badge variant="outline" className={cn("px-2 py-0 text-[11px] font-semibold md:text-xs", accent.badgeClass)}>
-                      {t(`purchase.status.${request.status}` as `purchase.status.${PurchaseRequestStatus}`)}
-                    </Badge>
-                    <span className="shrink-0 text-right text-base font-bold tabular-nums text-foreground md:hidden">
-                      ₩{total.toLocaleString(dateLocale)}
-                    </span>
-                  </div>
+                  return (
+                    <TableRow
+                      key={request.id}
+                      tabIndex={0}
+                      onClick={() => openManage(request)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          openManage(request);
+                        }
+                      }}
+                      className="cursor-pointer"
+                    >
+                      <TableCell className="whitespace-normal">
+                        <Badge
+                          variant="outline"
+                          className={cn("px-2 py-0.5 text-[10px] font-medium", purchaseStatusBadgeClass(request.status))}
+                        >
+                          {t(`purchase.status.${request.status}` as `purchase.status.${PurchaseRequestStatus}`)}
+                        </Badge>
+                        <p
+                          className={cn(
+                            "mt-1.5 max-w-[12rem] text-[11px] leading-snug",
+                            refundStyle ? "font-medium text-foreground" : "text-muted-foreground",
+                          )}
+                        >
+                          {t(progressKey)}
+                        </p>
+                      </TableCell>
 
-                  <h2 className="line-clamp-2 text-[15px] font-semibold leading-snug text-foreground md:text-base">
-                    {request.requestName}
-                  </h2>
+                      <TableCell className="max-w-xs">
+                        <p className="truncate text-sm font-medium">{request.requestName}</p>
+                        <p className="mt-0.5 truncate text-xs text-muted-foreground">
+                          <span className="figure">{request.requestNumber}</span>
+                          <span aria-hidden> · </span>
+                          <span title={request.userEmail ?? undefined}>
+                            {request.userNickname ?? "—"}
+                            {request.userEmail ? ` · ${request.userEmail}` : ` · #${request.userId}`}
+                          </span>
+                        </p>
+                      </TableCell>
 
-                  <p className="truncate text-xs text-foreground/80 md:text-[13px]">
-                    <span className="font-medium text-foreground">{request.requestNumber}</span>
-                    <span className="text-muted-foreground/40"> · </span>
-                    <span title={request.userEmail ?? undefined}>
-                      {request.userNickname ?? "—"}
-                      {request.userEmail ? ` · ${request.userEmail}` : ` · #${request.userId}`}
-                    </span>
-                  </p>
+                      <TableCell className="max-w-xs">
+                        {shipLines ? (
+                          <div className="flex min-w-0 items-start gap-1.5 text-xs" title={shipTitle}>
+                            <MapPin className="mt-0.5 size-3.5 shrink-0" strokeWidth={1.5} aria-hidden />
+                            <span className="min-w-0">
+                              <span className="block truncate">{shipLines.title}</span>
+                              <span className="block truncate text-muted-foreground">{shipLines.subtitle}</span>
+                            </span>
+                          </div>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">{t("adminPurchase.list.noShipping")}</span>
+                        )}
+                      </TableCell>
 
-                  <p
-                    className={cn(
-                      "text-xs leading-snug md:text-[13px]",
-                      refundStyle ? "font-medium text-amber-800" : "text-muted-foreground",
-                    )}
-                  >
-                    {t(progressKey)}
-                  </p>
+                      <TableCell className="text-xs text-muted-foreground figure">
+                        <time dateTime={request.createdAt}>{formatShortDate(request.createdAt, dateLocale)}</time>
+                        <span aria-hidden> · </span>
+                        <span>{fillTpl(t("adminPurchase.list.qtyTpl"), { n: request.quantity })}</span>
+                      </TableCell>
 
-                  {shipLines ? (
-                    <div className="flex min-w-0 gap-1.5 text-[11px] text-muted-foreground md:text-xs" title={shipTitle}>
-                      <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-foreground" aria-hidden />
-                      <span className="min-w-0 truncate">{shipLines.title}</span>
-                      <span className="text-muted-foreground/40">·</span>
-                      <span className="min-w-0 truncate">{shipLines.subtitle}</span>
-                    </div>
-                  ) : (
-                    <p className="text-[11px] text-muted-foreground/70 md:text-xs">{t("adminPurchase.list.noShipping")}</p>
-                  )}
+                      <TableCell className="text-right text-sm figure">
+                        {charged != null ? `₩${charged.toLocaleString(dateLocale)}` : "—"}
+                      </TableCell>
 
-                  <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] text-muted-foreground md:text-xs">
-                    <time dateTime={request.createdAt}>{formatShortDate(request.createdAt, dateLocale)}</time>
-                    <span className="text-muted-foreground/40" aria-hidden>
-                      ·
-                    </span>
-                    <span>{fillTpl(t("adminPurchase.list.qtyTpl"), { n: request.quantity })}</span>
-                    {charged != null ? (
-                      <>
-                        <span className="text-muted-foreground/40" aria-hidden>
-                          ·
-                        </span>
-                        <span>
-                          {t("adminPurchase.list.chargedShort")} ₩{charged.toLocaleString(dateLocale)}
-                        </span>
-                      </>
-                    ) : null}
-                  </div>
-                </div>
+                      <TableCell className="text-right text-sm font-medium figure">
+                        ₩{total.toLocaleString(dateLocale)}
+                      </TableCell>
 
-                <div className="flex shrink-0 flex-col items-end gap-1 border-border md:border-l md:pl-3">
-                  <span className="hidden text-lg font-bold tabular-nums text-foreground md:inline">
-                    ₩{total.toLocaleString(dateLocale)}
-                  </span>
-                  <div className="absolute right-1.5 top-1.5 md:relative md:right-auto md:top-auto">
-                    <AdminRowQuickMenu
-                      request={request}
-                      t={t}
-                      onManage={() => openManage(request)}
-                      onCopied={() => toast.success(t("adminPurchase.list.copied"))}
-                    />
-                  </div>
-                </div>
-              </article>
-            );
-          })
+                      <TableCell className="text-right">
+                        <AdminRowQuickMenu
+                          request={request}
+                          t={t}
+                          onManage={() => openManage(request)}
+                          onCopied={() => toast.success(t("adminPurchase.list.copied"))}
+                        />
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </div>
+        )}
+
+        {(totalPages > 1 || rows.length > 0) && (
+          <Pager
+            page={page}
+            totalPages={totalPages}
+            onPrev={() => changePage(page - 1)}
+            onNext={() => changePage(page + 1)}
+            prevLabel={t("adminPurchase.list.prev")}
+            nextLabel={t("adminPurchase.list.next")}
+            leading={
+              <>
+                <span>{t("adminPurchase.list.perPage")}</span>
+                <Select
+                  value={String(size)}
+                  onValueChange={(v) => {
+                    const s = Number(v);
+                    setSize(s);
+                    setPage(0);
+                  }}
+                >
+                  <SelectTrigger size="sm" className="w-[6.5rem] text-xs" aria-label={t("adminPurchase.list.perPage")}>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {PAGE_SIZE_OPTIONS.map((s) => (
+                      <SelectItem key={s} value={String(s)}>
+                        {fillTpl(t("adminPurchase.list.perPageOption"), { n: s })}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </>
+            }
+          />
         )}
       </div>
-
-      {(totalPages > 1 || rows.length > 0) && (
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="flex items-center gap-2 text-xs text-muted-foreground md:text-sm">
-            <span>{t("adminPurchase.list.perPage")}</span>
-            <Select
-              value={String(size)}
-              onValueChange={(v) => {
-                const s = Number(v);
-                setSize(s);
-                setPage(0);
-              }}
-            >
-              <SelectTrigger className="h-8 w-[76px] text-xs">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {PAGE_SIZE_OPTIONS.map((s) => (
-                  <SelectItem key={s} value={String(s)}>
-                    {fillTpl(t("adminPurchase.list.perPageOption"), { n: s })}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button type="button" variant="outline" size="sm" disabled={page <= 0} onClick={() => changePage(page - 1)}>
-              {t("adminPurchase.list.prev")}
-            </Button>
-            <span className="text-xs text-muted-foreground md:text-sm">
-              {page + 1} / {Math.max(1, totalPages)}
-            </span>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              disabled={totalPages <= 0 || page >= totalPages - 1}
-              onClick={() => changePage(page + 1)}
-            >
-              {t("adminPurchase.list.next")}
-            </Button>
-          </div>
-        </div>
-      )}
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent
@@ -673,26 +681,26 @@ export default function AdminPurchaseRequests() {
         >
           {selected && (
             <>
-              <div className="shrink-0 space-y-3 border-b bg-muted/20 px-5 pb-4 pt-5 pr-12 sm:px-6 sm:pr-14">
-                <div className="flex flex-wrap items-start justify-between gap-2">
-                  <div className="min-w-0 flex-1 space-y-1">
-                    <DialogTitle className="line-clamp-2 text-left text-base font-semibold leading-snug text-foreground sm:text-lg">
+              <div className="shrink-0 border-b border-border px-5 pb-4 pr-12 pt-5 sm:px-6 sm:pr-14">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div className="min-w-0 flex-1">
+                    <DialogTitle className="line-clamp-2 text-left leading-snug">
                       {selected.requestName}
                     </DialogTitle>
-                    <DialogDescription className="text-left text-xs text-muted-foreground sm:text-sm">
+                    <DialogDescription className="mt-1 text-left text-xs figure">
                       {selected.requestNumber}
                     </DialogDescription>
                   </div>
                   <Badge
                     variant="outline"
-                    className={cn("shrink-0 border-transparent px-2 py-0 text-xs font-semibold", purchaseStatusBadgeClass(selected.status))}
+                    className={cn("shrink-0 px-2 py-0.5 text-[10px] font-medium", purchaseStatusBadgeClass(selected.status))}
                   >
                     {t(`purchase.status.${selected.status}` as `purchase.status.${PurchaseRequestStatus}`)}
                   </Badge>
                 </div>
-                <div className="flex flex-wrap items-center justify-between gap-2 text-sm text-muted-foreground">
+                <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-sm text-muted-foreground">
                   <p className="min-w-0 truncate">
-                    <span className="text-muted-foreground">{t("adminPurchase.modal.member")}</span>{" "}
+                    <span>{t("adminPurchase.modal.member")}</span>{" "}
                     <span className="font-medium text-foreground">{selected.userNickname ?? `#${selected.userId}`}</span>
                     {selected.userEmail ? (
                       <span className="hidden sm:inline"> · {selected.userEmail}</span>
@@ -702,114 +710,90 @@ export default function AdminPurchaseRequests() {
                     type="button"
                     variant="ghost"
                     size="sm"
-                    className="h-8 shrink-0 gap-1 text-xs text-muted-foreground hover:text-foreground"
+                    className="shrink-0 text-xs text-muted-foreground hover:text-foreground"
                     onClick={() => navigate(`/admin/purchase-requests/${selected.id}`)}
                   >
                     {t("adminPurchase.modal.fullDetail")}
-                    <ExternalLink className="h-3.5 w-3.5" aria-hidden />
+                    <ExternalLink className="size-3.5" strokeWidth={1.5} aria-hidden />
                   </Button>
                 </div>
               </div>
 
-              <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-4 sm:px-6">
-                <div className="mx-auto max-w-3xl space-y-4">
-                  <Card className="border-border shadow-none">
-                    <CardHeader className="space-y-1 pb-2">
-                      <CardTitle className="text-sm font-semibold text-foreground">{t("adminPurchase.modal.orderSummary")}</CardTitle>
-                      <CardDescription className="text-xs">{t("adminPurchase.modal.orderSummaryDesc")}</CardDescription>
-                    </CardHeader>
-                    <CardContent className="grid gap-3 text-sm sm:grid-cols-2">
-                      <div>
-                        <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{t("adminPurchase.modal.quantity")}</p>
-                        <p className="mt-0.5 font-semibold text-foreground">{t("adminPurchase.modal.quantityUnit", { n: selected.quantity })}</p>
-                      </div>
-                      <div>
-                        <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{t("adminPurchase.modal.totalKrw")}</p>
-                        <p className="mt-0.5 font-semibold text-foreground">
-                          {selected.totalAmountKrw != null
-                            ? `₩${formatNumber(selected.totalAmountKrw, locale, num0)}`
-                            : "—"}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{t("adminPurchase.modal.charged")}</p>
-                        <p className="mt-0.5 font-semibold text-foreground">
-                          {selected.chargedAmountKrw != null
-                            ? `₩${formatNumber(selected.chargedAmountKrw, locale, num0)}`
-                            : "—"}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{t("adminPurchase.modal.createdAt")}</p>
-                        <p className="mt-0.5 text-foreground">
-                          {new Date(selected.createdAt).toLocaleString(dateLocale, {
-                            month: "short",
-                            day: "numeric",
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })}
-                        </p>
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  {hasShippingSnapshot(selected.shipping) && selected.shipping ? (
-                    <Accordion type="single" collapsible className="rounded-lg border border-border bg-card px-3">
-                      <AccordionItem value="shipping" className="border-0">
-                        <AccordionTrigger className="py-3 text-sm hover:no-underline">
-                          <span className="flex min-w-0 flex-1 items-start gap-2 text-left">
-                            <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-foreground" aria-hidden />
-                            <span className="min-w-0">
-                              <span className="block font-semibold text-foreground">{t("adminPurchase.modal.shipping")}</span>
-                              <span className="mt-0.5 block truncate text-xs font-normal text-muted-foreground">
-                                {shippingSummaryLines(selected.shipping, t).title} ·{" "}
-                                {shippingSummaryLines(selected.shipping, t).subtitle}
-                              </span>
+              <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-5 sm:px-6">
+                <div className="mx-auto max-w-3xl space-y-8">
+                  <Section
+                    title={t("adminPurchase.modal.orderSummary")}
+                    description={t("adminPurchase.modal.orderSummaryDesc")}
+                  >
+                    <DescriptionList
+                      columns={2}
+                      dense
+                      items={[
+                        {
+                          key: "quantity",
+                          label: t("adminPurchase.modal.quantity"),
+                          value: <span className="figure">{t("adminPurchase.modal.quantityUnit", { n: selected.quantity })}</span>,
+                        },
+                        {
+                          key: "total",
+                          label: t("adminPurchase.modal.totalKrw"),
+                          value: (
+                            <span className="font-medium figure">
+                              {selected.totalAmountKrw != null
+                                ? `₩${formatNumber(selected.totalAmountKrw, locale, num0)}`
+                                : "—"}
                             </span>
-                          </span>
-                        </AccordionTrigger>
-                        <AccordionContent className="pb-3 pt-0">
-                          <div className="space-y-2 rounded-md border border-border bg-muted p-3 text-sm text-foreground">
-                            {selected.shipping.label ? (
-                              <p>
-                                <span className="text-muted-foreground">{t("adminPurchase.modal.label")}</span> {selected.shipping.label}
-                              </p>
-                            ) : null}
-                            {(selected.shipping.recipientName || selected.shipping.recipientPhone) && (
-                              <p>
-                                <span className="text-muted-foreground">{t("adminPurchase.modal.recipient")}</span>{" "}
-                                {[selected.shipping.recipientName, selected.shipping.recipientPhone]
-                                  .filter(Boolean)
-                                  .join(" · ")}
-                              </p>
-                            )}
-                            <p className="break-words leading-relaxed">
-                              <span className="text-muted-foreground">{t("adminPurchase.modal.address")}</span>{" "}
-                              {selected.shipping.postalCode ? `(${selected.shipping.postalCode}) ` : null}
-                              {selected.shipping.addressLine1}
-                              {selected.shipping.addressLine2 ? ` ${selected.shipping.addressLine2}` : ""}
-                            </p>
-                            {selected.shipping.userAddressId != null && (
-                              <p className="text-xs text-muted-foreground">{t("adminPurchase.modal.userAddressId", { id: selected.shipping.userAddressId })}</p>
-                            )}
-                          </div>
-                        </AccordionContent>
-                      </AccordionItem>
-                    </Accordion>
-                  ) : (
-                    <p className="rounded-lg border border-amber-200 bg-amber-50/90 px-3 py-2.5 text-xs text-amber-900">
-                      {t("adminPurchase.modal.noShippingSnapshot")}
-                    </p>
-                  )}
+                          ),
+                        },
+                        {
+                          key: "charged",
+                          label: t("adminPurchase.modal.charged"),
+                          value: (
+                            <span className="font-medium figure">
+                              {selected.chargedAmountKrw != null
+                                ? `₩${formatNumber(selected.chargedAmountKrw, locale, num0)}`
+                                : "—"}
+                            </span>
+                          ),
+                        },
+                        {
+                          key: "createdAt",
+                          label: t("adminPurchase.modal.createdAt"),
+                          value: (
+                            <span className="figure">
+                              {new Date(selected.createdAt).toLocaleString(dateLocale, {
+                                month: "short",
+                                day: "numeric",
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              })}
+                            </span>
+                          ),
+                        },
+                      ]}
+                    />
+                  </Section>
 
-                  <Card className="border-foreground/10 ring-1 ring-gray-900/5">
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-sm font-semibold text-foreground">{t("adminPurchase.modal.process")}</CardTitle>
-                      <CardDescription className="text-xs">{t("adminPurchase.modal.processDesc")}</CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="purchase-admin-status">{t("adminPurchase.modal.status")}</Label>
+                  <Section title={t("adminPurchase.modal.shipping")}>
+                    {hasShippingSnapshot(selected.shipping) && selected.shipping ? (
+                      <div className="bg-muted/40 p-4 md:p-5">
+                        <DescriptionList dense items={shippingDescriptionItems(selected.shipping, t)} />
+                        {selected.shipping.userAddressId != null && (
+                          <p className="mt-2 text-xs text-muted-foreground figure">
+                            {t("adminPurchase.modal.userAddressId", { id: selected.shipping.userAddressId })}
+                          </p>
+                        )}
+                      </div>
+                    ) : (
+                      <p className="border border-border p-4 text-sm text-muted-foreground">
+                        {t("adminPurchase.modal.noShippingSnapshot")}
+                      </p>
+                    )}
+                  </Section>
+
+                  <Section title={t("adminPurchase.modal.process")} description={t("adminPurchase.modal.processDesc")}>
+                    <div className="space-y-5">
+                      <Field htmlFor="purchase-admin-status" label={t("adminPurchase.modal.status")}>
                         <Select value={newStatus} onValueChange={(v) => setNewStatus(v as PurchaseRequestStatus)}>
                           <SelectTrigger id="purchase-admin-status" className="w-full">
                             <SelectValue />
@@ -822,9 +806,8 @@ export default function AdminPurchaseRequests() {
                             ))}
                           </SelectContent>
                         </Select>
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="purchase-admin-tracking">{t("adminPurchase.modal.tracking")}</Label>
+                      </Field>
+                      <Field htmlFor="purchase-admin-tracking" label={t("adminPurchase.modal.tracking")}>
                         <Input
                           id="purchase-admin-tracking"
                           value={trackingNumber}
@@ -832,9 +815,8 @@ export default function AdminPurchaseRequests() {
                           placeholder={t("adminPurchase.modal.trackingPlaceholder")}
                           autoComplete="off"
                         />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="purchase-admin-memo">{t("adminPurchase.modal.adminMemo")}</Label>
+                      </Field>
+                      <Field htmlFor="purchase-admin-memo" label={t("adminPurchase.modal.adminMemo")}>
                         <Textarea
                           id="purchase-admin-memo"
                           rows={2}
@@ -843,80 +825,88 @@ export default function AdminPurchaseRequests() {
                           className="min-h-[72px] resize-y"
                           placeholder={t("adminPurchase.modal.adminMemoPlaceholder")}
                         />
-                      </div>
-                    </CardContent>
-                  </Card>
+                      </Field>
+                    </div>
+                  </Section>
 
-                  <Accordion type="multiple" className="space-y-2">
-                    <AccordionItem
-                      value="attachments"
-                      className="rounded-lg border border-border bg-card px-3 data-[state=open]:shadow-sm"
-                    >
-                      <AccordionTrigger className="py-3 text-sm hover:no-underline">
-                        <span className="font-semibold text-foreground">{t("adminPurchase.modal.adminPhotos")}</span>
-                        <span className="ml-2 text-xs font-normal text-muted-foreground">{t("adminPurchase.modal.adminPhotosHint")}</span>
+                  <Accordion type="multiple" className="border-t border-border">
+                    <AccordionItem value="attachments" className="border-b border-border last:border-b">
+                      <AccordionTrigger className="py-4 text-sm hover:no-underline">
+                        <span className="flex min-w-0 flex-col gap-0.5 text-left sm:flex-row sm:items-baseline sm:gap-2">
+                          <span className="font-medium">{t("adminPurchase.modal.adminPhotos")}</span>
+                          <span className="text-xs font-normal text-muted-foreground">{t("adminPurchase.modal.adminPhotosHint")}</span>
+                        </span>
                       </AccordionTrigger>
                       <AccordionContent>
-                        <div className="space-y-3 pb-1">
+                        <div className="space-y-3">
                           <Input
                             type="file"
                             accept="image/jpeg,image/png,image/webp"
                             multiple
+                            aria-label={t("adminPurchase.modal.adminPhotos")}
                             onChange={(e) => setAdminFiles(Array.from(e.target.files || []))}
                           />
                           {adminFiles.length > 0 ? (
-                            <p className="text-xs text-muted-foreground">{t("adminPurchase.modal.filesSelected", { n: adminFiles.length })}</p>
+                            <p className="text-xs text-muted-foreground figure">{t("adminPurchase.modal.filesSelected", { n: adminFiles.length })}</p>
                           ) : null}
-                          <Button
-                            type="button"
-                            variant="secondary"
-                            className="w-full"
-                            disabled={adminFiles.length === 0 || uploadingFiles}
-                            onClick={() => void uploadAdminFiles()}
-                          >
-                            {uploadingFiles ? t("adminPurchase.modal.uploading") : t("adminPurchase.modal.uploadPhotos", { n: adminFiles.length })}
-                          </Button>
+                          <div className="flex justify-end">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              disabled={adminFiles.length === 0 || uploadingFiles}
+                              onClick={() => void uploadAdminFiles()}
+                            >
+                              {uploadingFiles ? t("adminPurchase.modal.uploading") : t("adminPurchase.modal.uploadPhotos", { n: adminFiles.length })}
+                            </Button>
+                          </div>
                         </div>
                       </AccordionContent>
                     </AccordionItem>
 
                     {isSuper ? (
-                      <AccordionItem
-                        value="wallet"
-                        className="rounded-lg border border-amber-200/80 bg-amber-50/40 px-3 data-[state=open]:shadow-sm"
-                      >
-                        <AccordionTrigger className="py-3 text-sm hover:no-underline">
-                          <span className="font-semibold text-amber-950">{t("adminPurchase.modal.walletRefund")}</span>
-                          <span className="ml-2 text-xs font-normal text-amber-900/80">{t("adminPurchase.modal.walletRefundHint")}</span>
+                      <AccordionItem value="wallet" className="border-b border-border last:border-b">
+                        <AccordionTrigger className="py-4 text-sm hover:no-underline">
+                          <span className="flex min-w-0 flex-col gap-0.5 text-left sm:flex-row sm:items-baseline sm:gap-2">
+                            <span className="font-medium">{t("adminPurchase.modal.walletRefund")}</span>
+                            <span className="text-xs font-normal text-muted-foreground">{t("adminPurchase.modal.walletRefundHint")}</span>
+                          </span>
                         </AccordionTrigger>
                         <AccordionContent>
-                          <div className="space-y-3 pb-1">
-                            <p className="text-sm font-semibold text-amber-950">{t("adminPurchase.walletCreditTitle")}</p>
-                            <div className="rounded-md border border-amber-200/90 bg-card px-3 py-2 text-sm">
-                              <span className="text-muted-foreground">{t("adminPurchase.modal.currentCharged")}</span>{" "}
-                              <span className="font-semibold text-foreground">
-                                {selected.chargedAmountKrw != null
-                                  ? `₩${formatNumber(selected.chargedAmountKrw, locale, num0)}`
-                                  : "—"}
-                              </span>
-                            </div>
-                            <p className="hidden text-xs text-amber-900/90">{t("adminPurchase.walletIdempotencyHint")}</p>
-                            <div className="space-y-2">
-                              <Label>{t("adminPurchase.walletAmount")}</Label>
-                              <p className="text-xs text-muted-foreground">
-                                {t("adminPurchase.modal.walletRefundNote")}
-                              </p>
+                          <div className="space-y-5">
+                            <p className="text-sm font-medium">{t("adminPurchase.walletCreditTitle")}</p>
+                            <DescriptionList
+                              dense
+                              items={[
+                                {
+                                  key: "currentCharged",
+                                  label: t("adminPurchase.modal.currentCharged"),
+                                  value: (
+                                    <span className="font-medium figure">
+                                      {selected.chargedAmountKrw != null
+                                        ? `₩${formatNumber(selected.chargedAmountKrw, locale, num0)}`
+                                        : "—"}
+                                    </span>
+                                  ),
+                                },
+                              ]}
+                            />
+                            <p className="hidden text-xs text-muted-foreground">{t("adminPurchase.walletIdempotencyHint")}</p>
+                            <Field
+                              htmlFor="purchase-admin-wallet-amount"
+                              label={t("adminPurchase.walletAmount")}
+                              hint={t("adminPurchase.modal.walletRefundNote")}
+                            >
                               <Input
+                                id="purchase-admin-wallet-amount"
                                 type="number"
                                 min="0"
                                 step="1"
                                 value={walletAmount}
                                 onChange={(e) => setWalletAmount(e.target.value)}
                               />
-                            </div>
-                            <div className="space-y-2">
-                              <Label>{t("adminPurchase.walletSettled")}</Label>
-                              <p className="rounded-md border bg-card px-3 py-2 text-sm font-semibold text-foreground">
+                            </Field>
+                            <Field label={t("adminPurchase.walletSettled")}>
+                              <p className="border border-border px-3 py-2 text-sm font-medium figure">
                                 {selected.chargedAmountKrw != null && walletAmount !== ""
                                   ? `₩${formatNumber(
                                       selected.chargedAmountKrw -
@@ -926,23 +916,29 @@ export default function AdminPurchaseRequests() {
                                     )}`
                                   : "—"}
                               </p>
+                            </Field>
+                            <div className="hidden">
+                              <Field htmlFor="purchase-admin-wallet-idem" label="Idempotency key">
+                                <Input
+                                  id="purchase-admin-wallet-idem"
+                                  value={walletIdem}
+                                  onChange={(e) => setWalletIdem(e.target.value)}
+                                />
+                              </Field>
                             </div>
-                            <div className="hidden space-y-2">
-                              <Label>Idempotency key</Label>
-                              <Input value={walletIdem} onChange={(e) => setWalletIdem(e.target.value)} />
+                            <Field htmlFor="purchase-admin-wallet-memo" label={t("adminPurchase.walletMemo")}>
+                              <Textarea
+                                id="purchase-admin-wallet-memo"
+                                rows={2}
+                                value={walletMemo}
+                                onChange={(e) => setWalletMemo(e.target.value)}
+                              />
+                            </Field>
+                            <div className="flex justify-end">
+                              <Button type="button" variant="destructive" onClick={() => void submitWallet()}>
+                                {t("adminPurchase.walletSubmit")}
+                              </Button>
                             </div>
-                            <div className="space-y-2">
-                              <Label>{t("adminPurchase.walletMemo")}</Label>
-                              <Textarea rows={2} value={walletMemo} onChange={(e) => setWalletMemo(e.target.value)} />
-                            </div>
-                            <Button
-                              type="button"
-                              variant="destructive"
-                              className="w-full"
-                              onClick={() => void submitWallet()}
-                            >
-                              {t("adminPurchase.walletSubmit")}
-                            </Button>
                           </div>
                         </AccordionContent>
                       </AccordionItem>
@@ -950,20 +946,20 @@ export default function AdminPurchaseRequests() {
                   </Accordion>
 
                   {!isSuper ? (
-                    <p className="text-center text-xs text-amber-800">{t("admin.bank.superOnly")}</p>
+                    <p className="text-xs text-muted-foreground">{t("admin.bank.superOnly")}</p>
                   ) : null}
                 </div>
               </div>
 
-              <div className="flex shrink-0 flex-col gap-2 border-t bg-background/95 px-4 py-3 backdrop-blur-sm supports-[backdrop-filter]:bg-background/80 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+              <div className="flex shrink-0 flex-col gap-2 border-t border-border bg-background px-5 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-6">
                 <p className="hidden text-[11px] text-muted-foreground sm:block">
                   {t("adminPurchase.modal.saveShortcut")}
                 </p>
                 <div className="flex w-full justify-end gap-2 sm:w-auto">
-                  <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
+                  <Button type="button" variant="ghost" onClick={() => setDialogOpen(false)}>
                     {t("adminPurchase.modal.close")}
                   </Button>
-                  <Button type="button" className="min-w-[8.5rem] font-semibold" onClick={() => void saveStatus()}>
+                  <Button type="button" onClick={() => void saveStatus()}>
                     {t("adminPurchase.modal.saveStatus")}
                   </Button>
                 </div>

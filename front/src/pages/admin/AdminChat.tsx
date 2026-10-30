@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { ChevronLeft, RefreshCw } from 'lucide-react';
+import { Fragment, useCallback, useEffect, useRef, useState } from 'react';
+import { ArrowLeft, MessageSquare, RefreshCw } from 'lucide-react';
 import {
   getAdminChatRooms,
   adminJoinRoom,
@@ -11,19 +11,21 @@ import { useChat } from '@/hooks/chat/useChat';
 import { useTranslation } from '@/hooks/useTranslation';
 import { readAuthValue } from '@/utils/api';
 import { DEFAULT_PAGE_SIZE, PAGE_SIZE_OPTIONS } from '@/utils/constants';
+import { formatDate } from '@/utils/format';
 import { Button } from '@/components/ui/button';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ChatMessageBubble } from '@/components/chat/ChatMessageBubble';
+import { cn } from '@/components/ui/utils';
+import { PageHeader, Pager } from '@/components/page';
+import { ChatDaySeparator, ChatMessageBubble, startsNewDay } from '@/components/chat/ChatMessageBubble';
 import { ChatInputBar } from '@/components/chat/ChatInputBar';
 import { toast } from 'sonner';
 import type { ChatRoom, ChatRoomStatus, ChatCleanupSettings, ChatRetentionPeriod } from '@/types/chat';
 
 const ROOM_LIST_POLL_MS = 15_000;
 const ADMIN_STORAGE_KEY = 'ruxpress_admin';
+const DAY_LABEL: Intl.DateTimeFormatOptions = { year: 'numeric', month: 'short', day: 'numeric' };
 
 function readAdminRole(): string | null {
   try {
@@ -35,7 +37,7 @@ function readAdminRole(): string | null {
 }
 
 export default function AdminChat() {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const [rooms, setRooms] = useState<ChatRoom[]>([]);
   const [selectedRoomId, setSelectedRoomId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<ChatRoomStatus>('OPEN');
@@ -163,38 +165,141 @@ export default function AdminChat() {
 
   const filteredRooms = rooms.filter((r) => r.status === activeTab);
 
+  const dayLabel = (iso: string) => formatDate(iso, locale, DAY_LABEL);
+
   return (
-    <div className="flex flex-col lg:flex-row h-[calc(100dvh-7rem)] min-h-[480px] gap-3">
-      <div
-        className={`flex-col gap-2 lg:w-80 ${
-          selectedRoom ? 'hidden lg:flex' : 'flex'
-        }`}
-      >
-        <div className="flex items-center justify-between gap-2">
-          <h2 className="font-semibold text-lg">{t('admin.chat.roomList')}</h2>
+    <div className="flex h-[calc(100dvh-7rem)] min-h-[30rem] flex-col">
+      <PageHeader
+        title={t('admin.chat.roomList')}
+        className="mb-5 md:mb-6"
+        actions={
           <Button
             variant="outline"
             size="sm"
-            className="h-8 gap-1"
             disabled={roomsRefreshing}
             onClick={() => void handleRefresh()}
           >
-            <RefreshCw className={`w-3.5 h-3.5 ${roomsRefreshing ? 'animate-spin' : ''}`} />
+            <RefreshCw className={cn('size-4', roomsRefreshing && 'animate-spin')} strokeWidth={1.5} aria-hidden />
             {t('admin.chat.refresh')}
           </Button>
-        </div>
-        <Card>
-          <CardHeader className="py-3 px-4">
-            <CardTitle className="text-sm">{t('admin.chat.retention.title')}</CardTitle>
-            <CardDescription className="text-xs">{t('admin.chat.retention.desc')}</CardDescription>
-          </CardHeader>
-          <CardContent className="px-4 pb-4 pt-0">
+        }
+      />
+
+      <div className="flex min-h-0 flex-1 border border-border">
+        {/* Conversation list */}
+        <aside
+          className={cn(
+            'w-full min-w-0 flex-col md:w-80 md:shrink-0 md:border-r md:border-border',
+            selectedRoom ? 'hidden md:flex' : 'flex',
+          )}
+        >
+          <div className="border-b border-border p-3">
+            <Tabs
+              value={activeTab}
+              onValueChange={(v) => setActiveTab(v as ChatRoomStatus)}
+            >
+              <TabsList className="w-full">
+                <TabsTrigger value="OPEN" className="flex-1">
+                  {t('admin.chat.tab.open')}
+                </TabsTrigger>
+                <TabsTrigger value="CLOSED" className="flex-1">
+                  {t('admin.chat.tab.closed')}
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+          </div>
+
+          <div className="min-h-0 flex-1 overflow-y-auto">
+            {filteredRooms.length === 0 && (
+              <p className="px-4 py-10 text-center text-sm text-muted-foreground">
+                {activeTab === 'OPEN'
+                  ? t('admin.chat.empty.open')
+                  : t('admin.chat.empty.closed')}
+              </p>
+            )}
+            <ul>
+              {filteredRooms.map((room) => {
+                const selected = selectedRoomId === room.id;
+                return (
+                  <li key={room.id}>
+                    <button
+                      type="button"
+                      onClick={() => handleSelectRoom(room)}
+                      aria-current={selected ? 'true' : undefined}
+                      className={cn(
+                        'block w-full border-b border-border px-4 py-3 text-left transition-colors hover:bg-muted/60',
+                        selected && 'bg-muted',
+                      )}
+                    >
+                      <span className="flex items-baseline justify-between gap-3">
+                        <span className="min-w-0 truncate text-sm font-medium">
+                          {t('admin.chat.userLabel')} <span className="figure">#{room.userId}</span>
+                        </span>
+                        <span className="shrink-0 text-[11px] text-muted-foreground figure">
+                          {new Date(room.updatedAt).toLocaleString()}
+                        </span>
+                      </span>
+                      <span className="mt-1 flex items-center justify-between gap-3">
+                        <span className="min-w-0 truncate text-xs text-muted-foreground">
+                          {room.adminId
+                            ? `${t('admin.chat.assigned')} ${room.adminId}`
+                            : t('admin.chat.unassigned')}
+                        </span>
+                        <Badge
+                          variant={room.status === 'OPEN' ? 'default' : 'secondary'}
+                          className="px-1.5 py-0 text-[10px]"
+                        >
+                          {room.status === 'OPEN' ? t('admin.chat.status.open') : t('admin.chat.status.closed')}
+                        </Badge>
+                      </span>
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+
+          <div className="border-t border-border px-3 pb-3">
+            <div className="flex items-center justify-between gap-3 pt-3">
+              <label htmlFor="admin-chat-page-size" className="text-xs font-normal text-muted-foreground">
+                {t('admin.chat.pageSize')}
+              </label>
+              <Select
+                value={String(roomsSize)}
+                onValueChange={(v) => { setRoomsSize(Number(v)); setRoomsPage(0); }}
+              >
+                <SelectTrigger id="admin-chat-page-size" size="sm" className="w-[4.5rem] text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {PAGE_SIZE_OPTIONS.map((s) => (
+                    <SelectItem key={s} value={String(s)}>{s}{t('admin.chat.pageSizeSuffix')}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <Pager
+              page={roomsPage}
+              totalPages={roomsTotalPages}
+              onPrev={() => setRoomsPage((p) => p - 1)}
+              onNext={() => setRoomsPage((p) => p + 1)}
+              prevLabel={t('admin.chat.prev')}
+              nextLabel={t('admin.chat.next')}
+              className="pt-2"
+            />
+          </div>
+
+          <div className="border-t border-border p-3">
+            <label htmlFor="admin-chat-retention" className="block text-xs font-medium">
+              {t('admin.chat.retention.title')}
+            </label>
+            <p className="mt-1 text-[11px] leading-snug text-muted-foreground">{t('admin.chat.retention.desc')}</p>
             <Select
               value={cleanupSettings?.retentionPeriod ?? 'PERMANENT'}
               onValueChange={(v) => void handleRetentionChange(v as ChatRetentionPeriod)}
               disabled={!isSuperAdmin || retentionSaving || !cleanupSettings}
             >
-              <SelectTrigger className="h-9 text-sm">
+              <SelectTrigger id="admin-chat-retention" size="sm" className="mt-2 text-xs">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -206,167 +311,96 @@ export default function AdminChat() {
               </SelectContent>
             </Select>
             {!isSuperAdmin && (
-              <p className="text-xs text-muted-foreground mt-2">{t('admin.chat.retention.superOnly')}</p>
+              <p className="mt-1.5 text-[11px] text-muted-foreground">{t('admin.chat.retention.superOnly')}</p>
             )}
-          </CardContent>
-        </Card>
-        <Tabs
-          value={activeTab}
-          onValueChange={(v) => setActiveTab(v as ChatRoomStatus)}
-        >
-          <TabsList className="w-full">
-            <TabsTrigger value="OPEN" className="flex-1">
-              {t('admin.chat.tab.open')}
-            </TabsTrigger>
-            <TabsTrigger value="CLOSED" className="flex-1">
-              {t('admin.chat.tab.closed')}
-            </TabsTrigger>
-          </TabsList>
-        </Tabs>
-        <ScrollArea className="flex-1 min-h-0 border rounded-lg">
-          {filteredRooms.length === 0 && (
-            <p className="text-center text-muted-foreground text-sm p-4">
-              {activeTab === 'OPEN'
-                ? t('admin.chat.empty.open')
-                : t('admin.chat.empty.closed')}
-            </p>
-          )}
-          {filteredRooms.map((room) => (
-            <button
-              key={room.id}
-              onClick={() => handleSelectRoom(room)}
-              className={`w-full text-left p-3 border-b last:border-b-0 hover:bg-accent transition-colors ${
-                selectedRoomId === room.id ? 'bg-accent' : ''
-              }`}
-            >
-              <div className="flex items-center justify-between gap-2">
-                <span className="text-sm font-medium truncate">
-                  {t('admin.chat.userLabel')} #{room.userId}
-                </span>
-                <Badge
-                  variant={room.status === 'OPEN' ? 'default' : 'secondary'}
-                  className="text-xs shrink-0"
-                >
-                  {room.status === 'OPEN' ? t('admin.chat.status.open') : t('admin.chat.status.closed')}
-                </Badge>
-              </div>
-              <p className="text-xs text-muted-foreground mt-1">
-                {room.adminId
-                  ? `${t('admin.chat.assigned')} ${room.adminId}`
-                  : t('admin.chat.unassigned')}
-              </p>
-              <p className="text-xs text-muted-foreground">
-                {new Date(room.updatedAt).toLocaleString()}
-              </p>
-            </button>
-          ))}
-        </ScrollArea>
-        <div className="flex items-center justify-between pt-2 flex-wrap gap-1">
-          <div className="flex items-center gap-1 text-xs text-muted-foreground">
-            <span>{t('admin.chat.pageSize')}</span>
-            <Select
-              value={String(roomsSize)}
-              onValueChange={(v) => { setRoomsSize(Number(v)); setRoomsPage(0); }}
-            >
-              <SelectTrigger className="w-[70px] h-7 text-xs"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                {PAGE_SIZE_OPTIONS.map((s) => (
-                  <SelectItem key={s} value={String(s)}>{s}{t('admin.chat.pageSizeSuffix')}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
           </div>
-          <div className="flex items-center gap-1">
-            <Button variant="outline" size="sm" className="h-7 px-2 text-xs" disabled={roomsPage <= 0} onClick={() => setRoomsPage((p) => p - 1)}>{t('admin.chat.prev')}</Button>
-            <span className="text-xs text-muted-foreground">{roomsPage + 1} / {Math.max(1, roomsTotalPages)}</span>
-            <Button variant="outline" size="sm" className="h-7 px-2 text-xs" disabled={roomsPage >= roomsTotalPages - 1} onClick={() => setRoomsPage((p) => p + 1)}>{t('admin.chat.next')}</Button>
-          </div>
-        </div>
-      </div>
+        </aside>
 
-      <div
-        className={`flex-1 flex-col min-h-0 ${
-          selectedRoom ? 'flex' : 'hidden lg:flex'
-        }`}
-      >
-        {!selectedRoom ? (
-          <div className="flex-1 flex items-center justify-center text-muted-foreground border rounded-lg">
-            {t('admin.chat.selectRoom')}
-          </div>
-        ) : (
-          <div className="flex-1 flex flex-col border rounded-lg overflow-hidden bg-card min-h-0">
-            <div className="py-3 px-4 border-b flex items-center justify-between gap-2">
-              <div className="flex items-center gap-2 min-w-0">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="lg:hidden h-8 w-8"
-                  onClick={() => setSelectedRoomId(null)}
-                >
-                  <ChevronLeft className="w-4 h-4" />
-                </Button>
-                <h3 className="font-semibold truncate">
-                  {t('admin.chat.userLabel')} #{selectedRoom.userId}
-                </h3>
-              </div>
-              <div className="flex items-center gap-2 shrink-0">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8"
-                  disabled={roomsRefreshing}
-                  title={t('admin.chat.refresh')}
-                  onClick={() => void handleRefresh()}
-                >
-                  <RefreshCw className={`w-4 h-4 ${roomsRefreshing ? 'animate-spin' : ''}`} />
-                </Button>
-                {isLive && (
-                  <Badge
-                    variant={connected ? 'default' : 'secondary'}
-                    className="text-xs"
-                  >
-                    {connected ? t('chat.connected') : t('chat.connecting')}
-                  </Badge>
-                )}
-                {!isLive && (
-                  <Badge variant="secondary" className="text-xs">
-                    {t('chat.history.readonly')}
-                  </Badge>
-                )}
-                {isLive && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleCloseRoom(selectedRoom.id)}
-                  >
-                    {t('admin.chat.close')}
-                  </Button>
-                )}
-              </div>
+        {/* Conversation */}
+        <div className={cn('min-w-0 flex-1 flex-col', selectedRoom ? 'flex' : 'hidden md:flex')}>
+          {!selectedRoom ? (
+            <div className="flex flex-1 flex-col items-center justify-center gap-3 p-6 text-center">
+              <MessageSquare className="size-6 text-muted-foreground" strokeWidth={1.25} aria-hidden />
+              <p className="text-sm text-muted-foreground">{t('admin.chat.selectRoom')}</p>
             </div>
+          ) : (
+            <>
+              <div className="flex items-center justify-between gap-3 border-b border-border py-2 pl-2 pr-3 md:px-4 md:py-3">
+                <div className="flex min-w-0 items-center gap-1">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="md:hidden"
+                    onClick={() => setSelectedRoomId(null)}
+                    title={t('chat.history.back')}
+                    aria-label={t('chat.history.back')}
+                  >
+                    <ArrowLeft className="size-4" strokeWidth={1.5} />
+                  </Button>
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium">
+                      {t('admin.chat.userLabel')} <span className="figure">#{selectedRoom.userId}</span>
+                    </p>
+                    <p className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <span
+                        className={cn(
+                          'size-1.5 rounded-full',
+                          isLive && connected ? 'bg-foreground' : 'bg-muted-foreground/40',
+                        )}
+                        aria-hidden
+                      />
+                      {isLive
+                        ? connected
+                          ? t('chat.connected')
+                          : t('chat.connecting')
+                        : t('chat.history.readonly')}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex shrink-0 items-center gap-1">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    disabled={roomsRefreshing}
+                    title={t('admin.chat.refresh')}
+                    aria-label={t('admin.chat.refresh')}
+                    onClick={() => void handleRefresh()}
+                  >
+                    <RefreshCw className={cn('size-4', roomsRefreshing && 'animate-spin')} strokeWidth={1.5} />
+                  </Button>
+                  {isLive && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleCloseRoom(selectedRoom.id)}
+                    >
+                      {t('admin.chat.close')}
+                    </Button>
+                  )}
+                </div>
+              </div>
 
-            <ScrollArea className="flex-1 min-h-0 bg-muted/30">
-              <div className="p-3 sm:p-4">
+              <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-4">
                 {messages.length === 0 && (
-                  <p className="text-center text-muted-foreground text-sm py-8">
+                  <p className="py-10 text-center text-sm text-muted-foreground">
                     {t('chat.history.noMessages')}
                   </p>
                 )}
-                {messages.map((msg) => (
-                  <ChatMessageBubble
-                    key={msg.id}
-                    msg={msg}
-                    mineType="ADMIN"
-                    otherLabel={t('admin.chat.userShort')}
-                    fileLabel={t('chat.fileUnavailable')}
-                  />
+                {messages.map((msg, i) => (
+                  <Fragment key={msg.id}>
+                    {startsNewDay(messages[i - 1], msg) && <ChatDaySeparator label={dayLabel(msg.createdAt)} />}
+                    <ChatMessageBubble
+                      msg={msg}
+                      mineType="ADMIN"
+                      otherLabel={t('admin.chat.userShort')}
+                      fileLabel={t('chat.fileUnavailable')}
+                    />
+                  </Fragment>
                 ))}
                 <div ref={bottomRef} />
               </div>
-            </ScrollArea>
 
-            {isLive ? (
-              <div className="p-3 border-t">
+              {isLive ? (
                 <ChatInputBar
                   input={input}
                   onInputChange={setInput}
@@ -379,14 +413,14 @@ export default function AdminChat() {
                   attachLabel={t('chat.attach')}
                   fileTooLargeLabel={t('chat.upload.fileTooLarge')}
                 />
-              </div>
-            ) : (
-              <p className="text-center text-muted-foreground text-sm py-3 border-t">
-                {t('admin.chat.closedRoom')}
-              </p>
-            )}
-          </div>
-        )}
+              ) : (
+                <p className="border-t border-border px-4 py-3 text-center text-sm text-muted-foreground">
+                  {t('admin.chat.closedRoom')}
+                </p>
+              )}
+            </>
+          )}
+        </div>
       </div>
     </div>
   );

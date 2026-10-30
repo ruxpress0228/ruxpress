@@ -1,13 +1,12 @@
 import { useCallback, useEffect, useState } from "react";
-import { Plus, Pin, PinOff, Pencil, Trash2 } from "lucide-react";
+import { Plus, Pin, PinOff, Pencil, Trash2, FileText } from "lucide-react";
 import { Button } from "../../components/ui/button";
 import { Badge } from "../../components/ui/badge";
-import { Card, CardContent } from "../../components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../components/ui/table";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "../../components/ui/dialog";
 import { Input } from "../../components/ui/input";
-import { Label } from "../../components/ui/label";
 import { Textarea } from "../../components/ui/textarea";
+import { Switch } from "../../components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../components/ui/select";
 import { toast } from "sonner";
 import { api } from "../../utils/api";
@@ -16,13 +15,17 @@ import type { Notice, NoticeStatus, PageResponse } from "../../types";
 import { useTranslation } from "../../hooks/useTranslation";
 import { DEFAULT_PAGE_SIZE, PAGE_SIZE_OPTIONS } from "../../utils/constants";
 import { renderTextWithLinks } from "../../utils/linkify";
+import { DescriptionList, EmptyState, Field, LoadingState, PageHeader, Pager } from "../../components/page";
 
-const statusVariants: Record<NoticeStatus, "default" | "secondary" | "outline" | "destructive"> = {
+/** published → black fill; draft/scheduled → outline; hidden → grey. */
+const statusVariants: Record<NoticeStatus, "default" | "secondary" | "outline"> = {
   DRAFT: "outline",
-  SCHEDULED: "secondary",
+  SCHEDULED: "outline",
   PUBLISHED: "default",
-  HIDDEN: "destructive",
+  HIDDEN: "secondary",
 };
+
+const BADGE_CLASS = "px-2 py-0.5 text-[10px] font-medium";
 
 function noticeStatusKey(status: NoticeStatus) {
   return `admin.notice.status.${status}` as "admin.notice.status.DRAFT" | "admin.notice.status.SCHEDULED" | "admin.notice.status.PUBLISHED" | "admin.notice.status.HIDDEN";
@@ -180,91 +183,132 @@ export default function AdminNotices() {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">{t("admin.notices.title")}</h1>
-          <p className="text-muted-foreground mt-1">{t("admin.notices.subtitle")}</p>
-        </div>
-        <Button onClick={openCreate}><Plus className="w-4 h-4 mr-2" />{t("admin.notices.create")}</Button>
-      </div>
+    <div className="space-y-10 md:space-y-12">
+      <PageHeader
+        title={t("admin.notices.title")}
+        description={t("admin.notices.subtitle")}
+        actions={
+          <Button onClick={openCreate}>
+            <Plus className="size-4" strokeWidth={1.5} aria-hidden />
+            {t("admin.notices.create")}
+          </Button>
+        }
+      />
 
-      <Card>
-        <CardContent className="p-0">
-          {loading ? (
-            <div className="py-12 text-center text-muted-foreground">{t("admin.common.loading")}</div>
-          ) : (
-            <>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-10"></TableHead>
-                  <TableHead>{t("admin.common.col.title")}</TableHead>
-                  <TableHead>{t("admin.common.col.status")}</TableHead>
-                  <TableHead>{t("admin.common.col.views")}</TableHead>
-                  <TableHead>{t("admin.common.col.createdAt")}</TableHead>
-                  <TableHead>{t("admin.common.actions")}</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {notices.length === 0 ? (
-                  <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-8">{t("admin.notices.empty")}</TableCell></TableRow>
-                ) : notices.map((n) => (
-                  <TableRow
-                    key={n.id}
-                    className="cursor-pointer hover:bg-muted/60"
-                    onClick={() => openDetailView(n)}
-                  >
-                    <TableCell>{n.isPinned && <Pin className="w-4 h-4 text-foreground" />}</TableCell>
-                    <TableCell className="font-medium max-w-md truncate text-foreground">{n.title}</TableCell>
-                    <TableCell><Badge variant={statusVariants[n.status]}>{t(noticeStatusKey(n.status))}</Badge></TableCell>
-                    <TableCell className="text-sm text-muted-foreground">{n.viewCount}</TableCell>
-                    <TableCell className="text-sm text-muted-foreground">{new Date(n.createdAt).toLocaleDateString(dateLocale)}</TableCell>
-                    <TableCell>
-                      <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
-                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => togglePin(n.id)} title={n.isPinned ? t("admin.common.unpin") : t("admin.common.pin")}>
-                          {n.isPinned ? <PinOff className="w-4 h-4" /> : <Pin className="w-4 h-4" />}
-                        </Button>
-                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openDetailEdit(n)} title={t("admin.common.edit")}>
-                          <Pencil className="w-4 h-4" />
-                        </Button>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-red-500" onClick={() => handleDelete(n.id)} title={t("admin.common.delete")}>
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
+      <div>
+        {loading ? (
+          <LoadingState label={t("admin.common.loading")} />
+        ) : (
+          <>
+            {notices.length === 0 ? (
+              <EmptyState compact icon={FileText} title={t("admin.notices.empty")} />
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>{t("admin.common.col.title")}</TableHead>
+                    <TableHead>{t("admin.common.col.status")}</TableHead>
+                    <TableHead className="text-right">{t("admin.common.col.views")}</TableHead>
+                    <TableHead>{t("admin.common.col.createdAt")}</TableHead>
+                    <TableHead className="text-right">{t("admin.common.actions")}</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-            <div className="flex items-center justify-between p-4 border-t flex-wrap gap-2">
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <span>{t("admin.common.pageSize")}</span>
-                <Select value={String(size)} onValueChange={(v) => { setSize(Number(v)); setPage(0); }}>
-                  <SelectTrigger className="w-[80px] h-8 text-xs"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {PAGE_SIZE_OPTIONS.map((s) => (
-                      <SelectItem key={s} value={String(s)}>{t("admin.common.pageSizeSuffix", { n: s })}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="flex items-center gap-2">
-                <Button variant="outline" size="sm" disabled={page <= 0} onClick={() => setPage((p) => p - 1)}>{t("admin.common.prev")}</Button>
-                <span className="text-sm text-muted-foreground">{t("admin.common.pageOf", { page: page + 1, total: Math.max(1, totalPages) })}</span>
-                <Button variant="outline" size="sm" disabled={page >= totalPages - 1} onClick={() => setPage((p) => p + 1)}>{t("admin.common.next")}</Button>
-              </div>
-            </div>
-            </>
-          )}
-        </CardContent>
-      </Card>
+                </TableHeader>
+                <TableBody>
+                  {notices.map((n) => (
+                    <TableRow
+                      key={n.id}
+                      className="cursor-pointer"
+                      onClick={() => openDetailView(n)}
+                    >
+                      <TableCell className="max-w-md truncate font-medium">
+                        {n.isPinned && (
+                          <Badge className="mr-2 px-1.5 py-0 align-middle text-[10px] font-medium">{t("home.notice.pinned")}</Badge>
+                        )}
+                        {n.title}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={statusVariants[n.status]} className={BADGE_CLASS}>{t(noticeStatusKey(n.status))}</Badge>
+                      </TableCell>
+                      <TableCell className="text-right text-sm figure">{n.viewCount}</TableCell>
+                      <TableCell className="text-sm text-muted-foreground figure">
+                        {new Date(n.createdAt).toLocaleDateString(dateLocale)}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-1" onClick={(e) => e.stopPropagation()}>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="size-8"
+                            onClick={() => togglePin(n.id)}
+                            title={n.isPinned ? t("admin.common.unpin") : t("admin.common.pin")}
+                            aria-label={n.isPinned ? t("admin.common.unpin") : t("admin.common.pin")}
+                          >
+                            {n.isPinned ? (
+                              <PinOff className="size-4" strokeWidth={1.5} aria-hidden />
+                            ) : (
+                              <Pin className="size-4" strokeWidth={1.5} aria-hidden />
+                            )}
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="size-8"
+                            onClick={() => openDetailEdit(n)}
+                            title={t("admin.common.edit")}
+                            aria-label={t("admin.common.edit")}
+                          >
+                            <Pencil className="size-4" strokeWidth={1.5} aria-hidden />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="size-8 text-destructive hover:text-destructive"
+                            onClick={() => handleDelete(n.id)}
+                            title={t("admin.common.delete")}
+                            aria-label={t("admin.common.delete")}
+                          >
+                            <Trash2 className="size-4" strokeWidth={1.5} aria-hidden />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
+
+            <Pager
+              page={page}
+              totalPages={totalPages}
+              onPrev={() => setPage((p) => p - 1)}
+              onNext={() => setPage((p) => p + 1)}
+              prevLabel={t("admin.common.prev")}
+              nextLabel={t("admin.common.next")}
+              leading={
+                <>
+                  <span>{t("admin.common.pageSize")}</span>
+                  <Select value={String(size)} onValueChange={(v) => { setSize(Number(v)); setPage(0); }}>
+                    <SelectTrigger size="sm" className="w-[5.5rem] text-xs" aria-label={t("admin.common.pageSize")}>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {PAGE_SIZE_OPTIONS.map((s) => (
+                        <SelectItem key={s} value={String(s)}>{t("admin.common.pageSizeSuffix", { n: s })}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </>
+              }
+            />
+          </>
+        )}
+      </div>
 
       {/* 공지 상세 / 편집 팝업 */}
       <Dialog open={detailOpen} onOpenChange={(o) => { if (!o) closeDetail(); else setDetailOpen(true); }}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
           <DialogHeader>
-            <DialogTitle>
+            <DialogTitle className="break-words">
               {detailEditing ? t("admin.notices.editTitle") : (detailNotice?.title ?? t("admin.common.detail"))}
             </DialogTitle>
             <DialogDescription>
@@ -273,27 +317,42 @@ export default function AdminNotices() {
           </DialogHeader>
 
           {detailNotice && !detailEditing && (
-            <div className="space-y-4">
+            <div className="space-y-5">
               <div className="flex flex-wrap items-center gap-2">
                 {detailNotice.isPinned && (
-                  <Badge variant="secondary" className="gap-1">
-                    <Pin className="w-3 h-3" />
+                  <Badge className={BADGE_CLASS}>
+                    <Pin className="size-3" strokeWidth={1.5} aria-hidden />
                     {t("admin.notices.pinned")}
                   </Badge>
                 )}
-                <Badge variant={statusVariants[detailNotice.status]}>{t(noticeStatusKey(detailNotice.status))}</Badge>
-                <span className="text-sm text-muted-foreground">
-                  {t("admin.common.col.views")}: {detailNotice.viewCount}
-                </span>
+                <Badge variant={statusVariants[detailNotice.status]} className={BADGE_CLASS}>{t(noticeStatusKey(detailNotice.status))}</Badge>
               </div>
-              <div className="text-xs text-muted-foreground space-y-1">
-                <p>{t("admin.common.col.createdAt")}: {formatDateTime(detailNotice.createdAt, dateLocale)}</p>
-                {detailNotice.publishedAt && (
-                  <p>{t("admin.notices.publishedAtLabel")}: {formatDateTime(detailNotice.publishedAt, dateLocale)}</p>
-                )}
-              </div>
-              <div className="rounded-lg border bg-muted/60 p-4 max-h-[50vh] overflow-y-auto">
-                <p className="text-foreground whitespace-pre-wrap leading-relaxed">
+              <DescriptionList
+                dense
+                items={[
+                  {
+                    key: "views",
+                    label: t("admin.common.col.views"),
+                    value: <span className="figure">{detailNotice.viewCount}</span>,
+                  },
+                  {
+                    key: "createdAt",
+                    label: t("admin.common.col.createdAt"),
+                    value: <span className="figure">{formatDateTime(detailNotice.createdAt, dateLocale)}</span>,
+                  },
+                  ...(detailNotice.publishedAt
+                    ? [
+                        {
+                          key: "publishedAt",
+                          label: t("admin.notices.publishedAtLabel"),
+                          value: <span className="figure">{formatDateTime(detailNotice.publishedAt, dateLocale)}</span>,
+                        },
+                      ]
+                    : []),
+                ]}
+              />
+              <div className="max-h-[50vh] overflow-y-auto bg-muted/40 p-4 md:p-5">
+                <p className="text-sm leading-relaxed whitespace-pre-wrap">
                   {renderTextWithLinks(detailNotice.content)}
                 </p>
               </div>
@@ -301,35 +360,52 @@ export default function AdminNotices() {
           )}
 
           {detailNotice && detailEditing && (
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label>{t("admin.notices.titleLabel")}</Label>
-                <Input value={formTitle} onChange={(e) => setFormTitle(e.target.value)} placeholder={t("admin.notices.titlePlaceholder")} disabled={submitting} />
+            <div className="space-y-5">
+              <Field htmlFor="notice-edit-title" label={t("admin.notices.titleLabel")}>
+                <Input
+                  id="notice-edit-title"
+                  value={formTitle}
+                  onChange={(e) => setFormTitle(e.target.value)}
+                  placeholder={t("admin.notices.titlePlaceholder")}
+                  disabled={submitting}
+                />
+              </Field>
+              <Field htmlFor="notice-edit-content" label={t("admin.notices.contentLabel")}>
+                <Textarea
+                  id="notice-edit-content"
+                  className="min-h-40"
+                  value={formContent}
+                  onChange={(e) => setFormContent(e.target.value)}
+                  placeholder={t("admin.notices.contentPlaceholder")}
+                  rows={12}
+                  disabled={submitting}
+                />
+              </Field>
+              <div className="flex items-center justify-between gap-4 border-y border-border py-3">
+                <label htmlFor="notice-edit-pinned" className="text-sm font-medium">{t("admin.notices.pinned")}</label>
+                <Switch
+                  id="notice-edit-pinned"
+                  checked={formPinned}
+                  onCheckedChange={(checked) => setFormPinned(checked)}
+                  disabled={submitting}
+                />
               </div>
-              <div className="space-y-2">
-                <Label>{t("admin.notices.contentLabel")}</Label>
-                <Textarea value={formContent} onChange={(e) => setFormContent(e.target.value)} placeholder={t("admin.notices.contentPlaceholder")} rows={12} disabled={submitting} />
-              </div>
-              <label className="flex items-center gap-2 text-sm">
-                <input type="checkbox" checked={formPinned} onChange={(e) => setFormPinned(e.target.checked)} disabled={submitting} />
-                {t("admin.notices.pinned")}
-              </label>
             </div>
           )}
 
-          <DialogFooter className="gap-2 sm:gap-0">
+          <DialogFooter>
             {!detailEditing ? (
               <>
-                <Button variant="outline" onClick={closeDetail}>{t("admin.common.cancel")}</Button>
+                <Button variant="ghost" onClick={closeDetail}>{t("admin.common.cancel")}</Button>
                 <Button variant="destructive" onClick={() => handleDelete(detailNotice!.id, true)}>{t("admin.common.delete")}</Button>
                 <Button onClick={() => setDetailEditing(true)}>
-                  <Pencil className="w-4 h-4 mr-2" />
+                  <Pencil className="size-4" strokeWidth={1.5} aria-hidden />
                   {t("admin.common.edit")}
                 </Button>
               </>
             ) : (
               <>
-                <Button variant="outline" onClick={cancelDetailEdit} disabled={submitting}>{t("admin.common.cancel")}</Button>
+                <Button variant="ghost" onClick={cancelDetailEdit} disabled={submitting}>{t("admin.common.cancel")}</Button>
                 <Button onClick={handleDetailSave} disabled={submitting}>
                   {submitting ? t("admin.common.saving") : t("admin.common.save")}
                 </Button>
@@ -341,30 +417,45 @@ export default function AdminNotices() {
 
       {/* 공지 작성 팝업 */}
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
           <DialogHeader>
             <DialogTitle>{t("admin.notices.createTitle")}</DialogTitle>
             <DialogDescription>{t("admin.notices.createDesc")}</DialogDescription>
           </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label>{t("admin.notices.titleLabel")}</Label>
-              <Input value={formTitle} onChange={(e) => setFormTitle(e.target.value)} placeholder={t("admin.notices.titlePlaceholder")} disabled={submitting} />
+          <div className="space-y-5">
+            <Field htmlFor="notice-create-title" label={t("admin.notices.titleLabel")}>
+              <Input
+                id="notice-create-title"
+                value={formTitle}
+                onChange={(e) => setFormTitle(e.target.value)}
+                placeholder={t("admin.notices.titlePlaceholder")}
+                disabled={submitting}
+              />
+            </Field>
+            <Field htmlFor="notice-create-content" label={t("admin.notices.contentLabel")}>
+              <Textarea
+                id="notice-create-content"
+                className="min-h-40"
+                value={formContent}
+                onChange={(e) => setFormContent(e.target.value)}
+                placeholder={t("admin.notices.contentPlaceholder")}
+                rows={10}
+                disabled={submitting}
+              />
+            </Field>
+            <div className="flex items-center justify-between gap-4 border-y border-border py-3">
+              <label htmlFor="notice-create-pinned" className="text-sm font-medium">{t("admin.notices.pinned")}</label>
+              <Switch
+                id="notice-create-pinned"
+                checked={formPinned}
+                onCheckedChange={(checked) => setFormPinned(checked)}
+              />
             </div>
-            <div className="space-y-2">
-              <Label>{t("admin.notices.contentLabel")}</Label>
-              <Textarea value={formContent} onChange={(e) => setFormContent(e.target.value)} placeholder={t("admin.notices.contentPlaceholder")} rows={10} disabled={submitting} />
-            </div>
-            <div className="flex items-center gap-4">
-              <label className="flex items-center gap-2 text-sm">
-                <input type="checkbox" checked={formPinned} onChange={(e) => setFormPinned(e.target.checked)} />
-                {t("admin.notices.pinned")}
-              </label>
-            </div>
-            <div className="space-y-2">
-              <Label>{t("admin.notices.publishMethod")}</Label>
+            <Field htmlFor="notice-create-publish" label={t("admin.notices.publishMethod")}>
               <Select value={formStatus} onValueChange={setFormStatus}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectTrigger id="notice-create-publish" className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="PUBLISHED">{t("admin.notices.publishNow")}</SelectItem>
                   <SelectItem value="SCHEDULED">{t("admin.notices.publishScheduled")}</SelectItem>
@@ -372,12 +463,18 @@ export default function AdminNotices() {
                 </SelectContent>
               </Select>
               {formStatus === "SCHEDULED" && (
-                <Input type="datetime-local" value={formScheduledAt} onChange={(e) => setFormScheduledAt(e.target.value)} disabled={submitting} />
+                <Input
+                  type="datetime-local"
+                  aria-label={t("admin.notices.publishScheduled")}
+                  value={formScheduledAt}
+                  onChange={(e) => setFormScheduledAt(e.target.value)}
+                  disabled={submitting}
+                />
               )}
-            </div>
+            </Field>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setCreateOpen(false)} disabled={submitting}>{t("admin.common.cancel")}</Button>
+            <Button variant="ghost" onClick={() => setCreateOpen(false)} disabled={submitting}>{t("admin.common.cancel")}</Button>
             <Button onClick={handleCreate} disabled={submitting}>{submitting ? t("admin.common.saving") : t("admin.common.save")}</Button>
           </DialogFooter>
         </DialogContent>

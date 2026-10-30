@@ -8,16 +8,27 @@ import {
   TrendingUp,
   Users,
   LogOut,
-  Menu,
   Shield,
   Landmark,
   Wallet,
   Coins,
   Bell,
   Globe,
+  Check,
 } from "lucide-react";
 import { Button } from "../ui/button";
-import { Sidebar, SidebarContent, SidebarHeader, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarProvider, SidebarTrigger } from "../ui/sidebar";
+import { cn } from "../ui/utils";
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarHeader,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarProvider,
+  SidebarTrigger,
+} from "../ui/sidebar";
 import { useTranslation } from "../../hooks/useTranslation";
 import { LOCALES, STORAGE_KEYS } from "../../utils/constants";
 import { notifyUserAuthChange, readAuthValue } from "../../utils/api";
@@ -94,101 +105,118 @@ export default function AdminLayout() {
 
   return (
     <SidebarProvider>
-      <div className="min-h-screen flex w-full bg-muted/60">
-        <Sidebar>
-          <SidebarHeader className="border-b border-border p-4">
-            <div className="flex items-center gap-3">
-              <Mark size="sm" />
-              <div>
-                <Wordmark size="sm" />
-                <p className="mt-1 text-xs text-muted-foreground">{t("nav.admin.label")}</p>
-              </div>
+      <Sidebar>
+        <SidebarHeader className="h-16 justify-center border-b border-border px-4 py-0">
+          <div className="flex items-center gap-3">
+            <Mark size="sm" />
+            <div className="min-w-0">
+              <Wordmark size="sm" />
+              <p className="mt-0.5 text-xs text-muted-foreground">{t("nav.admin.label")}</p>
             </div>
-          </SidebarHeader>
-          <SidebarContent>
-            <SidebarMenu>
-              {navigation.map((item) => {
-                const Icon = item.icon;
-                return (
-                  <SidebarMenuItem key={item.path}>
-                    <SidebarMenuButton asChild isActive={isActive(item.path)}>
-                      <Link to={item.path}>
-                        <Icon className="w-4 h-4" />
-                        <span>{t(item.nameKey)}</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                );
-              })}
-            </SidebarMenu>
-            <div className="mt-auto p-4 border-t border-border">
-              <Button
-                variant="ghost"
-                className="w-full justify-start text-destructive hover:text-destructive hover:bg-destructive/10"
-                onClick={handleLogout}
-              >
-                <LogOut className="w-4 h-4 mr-2" />
-                {t("nav.admin.logout")}
-              </Button>
-            </div>
-          </SidebarContent>
-        </Sidebar>
+          </div>
+        </SidebarHeader>
 
-        <div className="flex-1 flex flex-col">
-          <header className="bg-card border-b border-border h-16 flex items-center px-6 sticky top-0 z-40">
-            <SidebarTrigger>
-              <Button variant="ghost" size="icon">
-                <Menu className="w-5 h-5" />
-              </Button>
-            </SidebarTrigger>
-            <div className="ml-auto flex items-center space-x-4">
-              <div className="relative" ref={langRef}>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  title={t("common.language")}
-                  onClick={() => setLangOpen((v) => !v)}
-                  aria-expanded={langOpen}
-                  aria-haspopup="listbox"
-                >
-                  <Globe className="w-5 h-5" />
-                </Button>
-                {langOpen && (
-                  <div
-                    className="absolute right-0 top-full mt-1 min-w-[10rem] rounded-md border border-border bg-card py-1 shadow-lg z-[100]"
-                    role="listbox"
+        <SidebarContent>
+          <SidebarMenu className="px-2 py-3">
+            {navigation.map((item) => {
+              const Icon = item.icon;
+              const active = isActive(item.path);
+              return (
+                <SidebarMenuItem key={item.path}>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={active}
+                    className="h-9 px-3 text-[13px] hover:bg-muted/60 data-[active=true]:bg-muted data-[active=true]:font-medium"
                   >
-                    {LOCALES.map((loc) => (
+                    <Link to={item.path} aria-current={active ? "page" : undefined}>
+                      <Icon className="size-4" strokeWidth={1.5} aria-hidden />
+                      <span>{t(item.nameKey)}</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              );
+            })}
+          </SidebarMenu>
+        </SidebarContent>
+
+        <SidebarFooter className="border-t border-border p-2">
+          <Button
+            type="button"
+            variant="ghost"
+            className="w-full justify-start text-muted-foreground hover:text-foreground"
+            onClick={handleLogout}
+          >
+            <LogOut className="size-4" strokeWidth={1.5} aria-hidden />
+            {t("nav.admin.logout")}
+          </Button>
+        </SidebarFooter>
+      </Sidebar>
+
+      <div className="flex min-h-svh min-w-0 flex-1 flex-col">
+        <header className="sticky top-0 z-40 flex h-16 items-center gap-2 border-b border-border bg-background/85 px-4 backdrop-blur-md md:px-6">
+          <SidebarTrigger className="size-9" title={t("nav.menu")} aria-label={t("nav.menu")} />
+
+          <div className="ml-auto flex min-w-0 items-center gap-0.5">
+            <div className="relative" ref={langRef}>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                title={t("common.language")}
+                onClick={() => setLangOpen((v) => !v)}
+                aria-expanded={langOpen}
+                aria-haspopup="listbox"
+              >
+                <Globe className="size-[18px]" strokeWidth={1.5} />
+              </Button>
+              {langOpen && (
+                <div
+                  className="absolute right-0 top-full z-[100] mt-2 min-w-[10rem] border border-border bg-popover py-1"
+                  role="listbox"
+                  aria-label={t("common.language")}
+                >
+                  {LOCALES.map((loc) => {
+                    const selected = locale === loc;
+                    return (
                       <button
                         key={loc}
                         type="button"
                         role="option"
-                        aria-selected={locale === loc}
-                        className={`block w-full px-3 py-2 text-left text-sm hover:bg-muted ${locale === loc ? "bg-muted text-foreground font-medium" : "text-foreground"}`}
+                        aria-selected={selected}
+                        className={cn(
+                          "flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-sm transition-colors hover:bg-muted",
+                          selected ? "text-foreground" : "text-muted-foreground",
+                        )}
                         onClick={() => {
                           setLocale(loc);
                           setLangOpen(false);
                         }}
                       >
                         {t(`locale.${loc}`)}
+                        {selected ? <Check className="size-3.5" aria-hidden /> : null}
                       </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-              <AdminNotificationBell />
-              <div className="text-right">
-                <p className="text-sm font-medium text-foreground">{admin.name}</p>
-                <p className="text-xs text-muted-foreground">{admin.email} ({roleLabel})</p>
-              </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
-          </header>
 
-          <main className="flex-1 p-6 overflow-auto">
+            <AdminNotificationBell />
+
+            <div className="ml-2 min-w-0 text-right">
+              <p className="max-w-[10rem] truncate text-sm sm:max-w-[16rem]">{admin.name}</p>
+              <p className="max-w-[10rem] truncate text-xs text-muted-foreground sm:max-w-[16rem]">
+                {admin.email} ({roleLabel})
+              </p>
+            </div>
+          </div>
+        </header>
+
+        <main className="flex-1 overflow-auto">
+          <div className="mx-auto w-full max-w-7xl p-5 md:p-8">
             <Outlet />
-          </main>
-        </div>
+          </div>
+        </main>
       </div>
     </SidebarProvider>
   );

@@ -1,16 +1,25 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router";
-import { ArrowLeft, MessageSquare, Paperclip, X, ChevronLeft, ChevronRight, Download } from "lucide-react";
+import { MessageSquare, Paperclip, X, ChevronLeft, ChevronRight, Download } from "lucide-react";
 import { Button } from "../../components/ui/button";
 import { Badge } from "../../components/ui/badge";
-import { Card, CardContent } from "../../components/ui/card";
-import { Separator } from "../../components/ui/separator";
+import { EmptyState, LoadingState, PageHeader, Section } from "../../components/page";
 import { api } from "../../utils/api";
 import { unwrap } from "../../utils/exception";
 import { useTranslation } from "../../hooks/useTranslation";
 import type { InquiryStatus, InquiryCategory, Inquiry, Attachment } from "../../types";
 
 const LOCALE_MAP: Record<string, string> = { ko: "ko-KR", ru: "ru-RU", en: "en-US" };
+
+const BADGE_CLASS = "px-2 py-0.5 text-[10px] font-medium";
+
+const DATE_OPTIONS: Intl.DateTimeFormatOptions = {
+  year: 'numeric',
+  month: 'long',
+  day: 'numeric',
+  hour: '2-digit',
+  minute: '2-digit'
+};
 
 function isImageAttachment(att: Attachment): boolean {
   return att.mimeType.startsWith("image/");
@@ -25,6 +34,7 @@ function ImageLightbox({
   initialIndex: number;
   onClose: () => void;
 }) {
+  const { t } = useTranslation();
   const [current, setCurrent] = useState(initialIndex);
   const img = images[current];
   const hasPrev = current > 0;
@@ -40,65 +50,77 @@ function ImageLightbox({
     return () => window.removeEventListener("keydown", handler);
   }, [hasPrev, hasNext, onClose]);
 
+  const ghostOnDark = "text-background hover:bg-background/20 hover:text-background";
+
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/85"
       onClick={onClose}
     >
       <div
-        className="relative flex flex-col items-center max-w-5xl w-full max-h-screen p-4"
+        role="dialog"
+        aria-modal="true"
+        aria-label={img.originalFilename}
+        className="relative flex max-h-screen w-full max-w-5xl flex-col items-center p-4"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between w-full mb-2">
-          <span className="text-white text-sm truncate max-w-xs">{img.originalFilename}</span>
-          <div className="flex items-center gap-2">
+        <div className="mb-2 flex w-full items-center justify-between gap-3">
+          <span className="min-w-0 truncate text-sm text-background">{img.originalFilename}</span>
+          <div className="flex shrink-0 items-center gap-1">
             <a
               href={img.viewUrl ?? img.storedUrl}
               download={img.originalFilename}
-              className="inline-flex items-center justify-center w-9 h-9 rounded-md text-white hover:bg-white/20"
+              title={img.originalFilename}
+              className="inline-flex size-9 items-center justify-center text-background transition-colors hover:bg-background/20"
               onClick={(e) => e.stopPropagation()}
             >
-              <Download className="w-5 h-5" />
+              <Download className="size-5" strokeWidth={1.5} aria-hidden />
             </a>
             <Button
               variant="ghost"
               size="icon"
-              className="text-white hover:bg-white/20"
+              className={ghostOnDark}
+              title={t("adminPurchase.modal.close")}
+              aria-label={t("adminPurchase.modal.close")}
               onClick={onClose}
             >
-              <X className="w-5 h-5" />
+              <X className="size-5" strokeWidth={1.5} aria-hidden />
             </Button>
           </div>
         </div>
-        <div className="relative flex items-center justify-center w-full">
+        <div className="relative flex w-full items-center justify-center">
           {hasPrev && (
             <Button
               variant="ghost"
               size="icon"
-              className="absolute left-0 text-white hover:bg-white/20 z-10"
+              className={`absolute left-0 z-10 ${ghostOnDark}`}
+              title={t("purchase.list.prev")}
+              aria-label={t("purchase.list.prev")}
               onClick={() => setCurrent((c) => c - 1)}
             >
-              <ChevronLeft className="w-6 h-6" />
+              <ChevronLeft className="size-6" strokeWidth={1.5} aria-hidden />
             </Button>
           )}
           <img
             src={img.viewUrl ?? img.thumbnailUrl ?? img.storedUrl}
             alt={img.originalFilename}
-            className="max-h-[75vh] max-w-full object-contain rounded"
+            className="max-h-[75vh] max-w-full object-contain"
           />
           {hasNext && (
             <Button
               variant="ghost"
               size="icon"
-              className="absolute right-0 text-white hover:bg-white/20 z-10"
+              className={`absolute right-0 z-10 ${ghostOnDark}`}
+              title={t("purchase.list.next")}
+              aria-label={t("purchase.list.next")}
               onClick={() => setCurrent((c) => c + 1)}
             >
-              <ChevronRight className="w-6 h-6" />
+              <ChevronRight className="size-6" strokeWidth={1.5} aria-hidden />
             </Button>
           )}
         </div>
         {images.length > 1 && (
-          <p className="text-white/60 text-xs mt-2">
+          <p className="mt-2 text-xs text-background/60 figure">
             {current + 1} / {images.length}
           </p>
         )}
@@ -107,11 +129,12 @@ function ImageLightbox({
   );
 }
 
+/** Status badges: pending is outlined, replied is black, closed is grey. */
 function getStatusLabels(t: (key: string) => string): Record<InquiryStatus, { label: string; variant: 'default' | 'secondary' | 'outline' }> {
   return {
-    PENDING: { label: t("inquiry.status.pending"), variant: 'secondary' },
+    PENDING: { label: t("inquiry.status.pending"), variant: 'outline' },
     REPLIED: { label: t("inquiry.status.replied"), variant: 'default' },
-    CLOSED: { label: t("inquiry.status.closed"), variant: 'outline' },
+    CLOSED: { label: t("inquiry.status.closed"), variant: 'secondary' },
   };
 }
 
@@ -159,21 +182,19 @@ export default function InquiryDetail() {
   };
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <p className="text-muted-foreground">{t("inquiry.detail.loading")}</p>
-      </div>
-    );
+    return <LoadingState label={t("inquiry.detail.loading")} />;
   }
 
   if (!inquiry) {
     return (
-      <div className="text-center py-12">
-        <p className="text-muted-foreground">{t("inquiry.detail.notFound")}</p>
-        <Button variant="link" className="mt-2" onClick={() => navigate("/inquiry")}>
-          {t("inquiry.detail.backToList")}
-        </Button>
-      </div>
+      <EmptyState
+        title={t("inquiry.detail.notFound")}
+        action={
+          <Button variant="outline" onClick={() => navigate("/inquiry")}>
+            {t("inquiry.detail.backToList")}
+          </Button>
+        }
+      />
     );
   }
 
@@ -181,156 +202,124 @@ export default function InquiryDetail() {
   const attachments = inquiry.attachments ?? [];
   const imageAttachments = attachments.filter(isImageAttachment);
   const otherAttachments = attachments.filter((a) => !isImageAttachment(a));
+  const formatDateTime = (iso: string) => new Date(iso).toLocaleDateString(dateLocale, DATE_OPTIONS);
+
+  const attachmentRowClass =
+    "flex w-full items-center gap-3 border-b border-border py-3 text-left text-sm transition-colors hover:bg-muted/60";
 
   return (
-    <div className="max-w-4xl mx-auto">
-      <Button
-        variant="ghost"
-        className="mb-6"
-        onClick={() => navigate("/inquiry")}
-      >
-        <ArrowLeft className="w-4 h-4 mr-2" />
-        {t("inquiry.detail.backToList")}
-      </Button>
+    <div className="max-w-3xl">
+      <PageHeader
+        back={{ to: "/inquiry", label: t("inquiry.detail.backToList") }}
+        title={inquiry.title}
+        meta={
+          <>
+            <Badge variant="outline" className={BADGE_CLASS}>
+              {categoryLabels[inquiry.category]}
+            </Badge>
+            <Badge variant={statusInfo.variant} className={BADGE_CLASS}>
+              {statusInfo.label}
+            </Badge>
+            <span aria-hidden>·</span>
+            <time dateTime={inquiry.createdAt} className="figure">
+              {formatDateTime(inquiry.createdAt)}
+            </time>
+          </>
+        }
+      />
 
-      <Card className="mb-6">
-        <CardContent className="p-6">
-          <div className="flex items-start justify-between mb-4">
-            <div className="flex items-center space-x-2">
-              <Badge variant="outline">
-                {categoryLabels[inquiry.category]}
-              </Badge>
-              <Badge variant={statusInfo.variant}>
-                {statusInfo.label}
-              </Badge>
-            </div>
-            <p className="text-sm text-muted-foreground">
-              {new Date(inquiry.createdAt).toLocaleDateString(dateLocale, {
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit'
-              })}
-            </p>
-          </div>
+      <div className="space-y-10 md:space-y-12">
+        <Section title={t("inquiry.form.cardTitle")}>
+          <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">
+            {inquiry.content}
+          </p>
+        </Section>
 
-          <h1 className="text-2xl font-bold text-foreground mb-4">
-            {inquiry.title}
-          </h1>
+        {attachments.length > 0 && (
+          <Section title={t("inquiry.detail.attachments")} flush>
+            <ul>
+              {imageAttachments.map((att, idx) => (
+                <li key={att.id}>
+                  <button type="button" className={attachmentRowClass} onClick={() => setLightboxIndex(idx)}>
+                    <img
+                      src={att.thumbnailUrl ?? att.viewUrl ?? att.storedUrl}
+                      alt=""
+                      className="size-12 shrink-0 border border-border object-cover"
+                    />
+                    <span className="min-w-0 flex-1 truncate">{att.originalFilename}</span>
+                    <span className="shrink-0 text-xs text-muted-foreground figure">
+                      {(att.fileSize / 1024).toFixed(1)} KB
+                    </span>
+                  </button>
+                </li>
+              ))}
+              {otherAttachments.map((att) => (
+                <li key={att.id}>
+                  <button
+                    type="button"
+                    className={attachmentRowClass}
+                    onClick={() => handleDownload(att.id, att.originalFilename)}
+                  >
+                    <Paperclip className="size-4 shrink-0 text-muted-foreground" strokeWidth={1.5} aria-hidden />
+                    <span className="min-w-0 flex-1 truncate">{att.originalFilename}</span>
+                    <span className="shrink-0 text-xs text-muted-foreground figure">
+                      {(att.fileSize / 1024).toFixed(1)} KB
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </Section>
+        )}
 
-          <div className="prose max-w-none">
-            <p className="text-foreground/80 whitespace-pre-wrap">
-              {inquiry.content}
-            </p>
-          </div>
-
-          {attachments.length > 0 && (
-            <div className="mt-4 pt-4 border-t border-border">
-              <div className="flex items-center space-x-2 mb-3">
-                <Paperclip className="w-4 h-4 text-muted-foreground" />
-                <span className="text-sm font-medium text-foreground/80">{t("inquiry.detail.attachments")}</span>
-              </div>
-              {imageAttachments.length > 0 && (
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 mb-3">
-                  {imageAttachments.map((att) => {
-                    const idx = imageAttachments.findIndex((a) => a.id === att.id);
-                    return (
-                      <div
-                        key={att.id}
-                        className="relative group cursor-pointer rounded overflow-hidden border"
-                        onClick={() => setLightboxIndex(idx)}
-                      >
-                        <img
-                          src={att.thumbnailUrl ?? att.viewUrl ?? att.storedUrl}
-                          alt={att.originalFilename}
-                          className="h-28 w-full object-cover group-hover:opacity-90 transition-opacity"
-                        />
-                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors" />
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-              {otherAttachments.length > 0 && (
-                <ul className="space-y-1">
-                  {otherAttachments.map((att) => (
-                    <li key={att.id}>
-                      <Button
-                        variant="link"
-                        className="h-auto p-0 text-foreground"
-                        onClick={() => handleDownload(att.id, att.originalFilename)}
-                      >
-                        {att.originalFilename} ({(att.fileSize / 1024).toFixed(1)} KB)
-                      </Button>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {inquiry.replies && inquiry.replies.length > 0 && (
-        <div className="space-y-4">
-          <div className="flex items-center space-x-2">
-            <MessageSquare className="w-5 h-5 text-foreground" />
-            <h2 className="text-xl font-bold text-foreground">
-              {t("inquiry.detail.replies")} ({inquiry.replies.length})
-            </h2>
-          </div>
-
-          {inquiry.replies.map((reply) => (
-            <Card key={reply.id} className="bg-muted border-border">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center space-x-2">
-                    <div className="w-8 h-8 bg-foreground rounded-full flex items-center justify-center">
-                      <span className="text-white text-xs font-bold tracking-tight">MP</span>
+        {inquiry.replies && inquiry.replies.length > 0 && (
+          <Section
+            title={
+              <>
+                {t("inquiry.detail.replies")} <span className="figure">({inquiry.replies.length})</span>
+              </>
+            }
+          >
+            <ul className="space-y-6">
+              {inquiry.replies.map((reply) => (
+                <li key={reply.id} className="flex gap-3">
+                  <span
+                    className="flex size-7 shrink-0 items-center justify-center bg-foreground text-background"
+                    aria-hidden
+                  >
+                    <MessageSquare className="size-4" strokeWidth={1.5} />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+                      <p className="text-sm">
+                        <span className="font-medium">{t("inquiry.detail.admin")}</span>
+                        <span className="ml-2 text-xs text-muted-foreground">{t("inquiry.detail.supportTeam")}</span>
+                      </p>
+                      <time dateTime={reply.createdAt} className="text-xs text-muted-foreground figure">
+                        {formatDateTime(reply.createdAt)}
+                      </time>
                     </div>
-                    <div>
-                      <p className="font-semibold text-foreground">{t("inquiry.detail.admin")}</p>
-                      <p className="text-xs text-muted-foreground">{t("inquiry.detail.supportTeam")}</p>
+                    <div className="mt-2 bg-muted p-4 md:p-5">
+                      <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">
+                        {reply.content}
+                      </p>
                     </div>
                   </div>
-                  <p className="text-sm text-muted-foreground">
-                    {new Date(reply.createdAt).toLocaleDateString(dateLocale, {
-                      year: 'numeric',
-                      month: 'long',
-                      day: 'numeric',
-                      hour: '2-digit',
-                      minute: '2-digit'
-                    })}
-                  </p>
-                </div>
+                </li>
+              ))}
+            </ul>
+          </Section>
+        )}
 
-                <Separator className="my-3 bg-border" />
-
-                <div className="prose max-w-none">
-                  <p className="text-foreground/80 whitespace-pre-wrap">
-                    {reply.content}
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      )}
-
-      {inquiry.status === 'PENDING' && (
-        <Card className="mt-6">
-          <CardContent className="p-6 text-center">
-            <MessageSquare className="w-12 h-12 mx-auto text-muted-foreground/70 mb-3" />
-            <p className="text-muted-foreground">
-              {t("inquiry.detail.pendingMessage")}
-            </p>
-            <p className="text-sm text-muted-foreground mt-2">
-              {t("inquiry.detail.pendingNote")}
-            </p>
-          </CardContent>
-        </Card>
-      )}
+        {inquiry.status === 'PENDING' && (
+          <EmptyState
+            compact
+            icon={MessageSquare}
+            title={t("inquiry.detail.pendingMessage")}
+            description={t("inquiry.detail.pendingNote")}
+          />
+        )}
+      </div>
 
       {lightboxIndex !== null && imageAttachments.length > 0 && (
         <ImageLightbox

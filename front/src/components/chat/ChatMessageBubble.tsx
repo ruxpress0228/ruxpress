@@ -1,4 +1,6 @@
+import type { ReactNode } from 'react';
 import { Paperclip } from 'lucide-react';
+import { cn } from '@/components/ui/utils';
 import type { ChatMessage, SenderType } from '@/types/chat';
 
 function formatTime(iso: string): string {
@@ -7,6 +9,21 @@ function formatTime(iso: string): string {
 
 function attachmentUrl(att: NonNullable<ChatMessage['attachment']>): string {
   return att.viewUrl ?? att.thumbnailUrl ?? att.storedUrl;
+}
+
+/** True when `msg` falls on a different calendar day than `prev` (or there is no `prev`). */
+export function startsNewDay(prev: ChatMessage | undefined, msg: ChatMessage): boolean {
+  if (!prev) return true;
+  return new Date(prev.createdAt).toDateString() !== new Date(msg.createdAt).toDateString();
+}
+
+/** Centred day label between messages from different days. */
+export function ChatDaySeparator({ label }: { label: ReactNode }) {
+  return (
+    <p className="py-1 text-center text-[11px] uppercase tracking-[0.14em] text-muted-foreground figure">
+      {label}
+    </p>
+  );
 }
 
 export interface ChatMessageBubbleProps {
@@ -22,22 +39,26 @@ export function ChatMessageBubble({ msg, mineType, otherLabel, fileLabel }: Chat
   const att = msg.attachment;
 
   return (
-    <div className={`flex mb-3 ${isMine ? 'justify-end' : 'justify-start'}`}>
-      <div
-        className={`max-w-[80%] rounded-2xl px-4 py-2 text-sm break-words ${
-          isMine ? 'bg-primary text-primary-foreground' : 'bg-background border'
-        }`}
-      >
-        {!isMine && (
-          <p className="text-xs font-medium mb-1 opacity-60">{otherLabel}</p>
-        )}
+    <div className={cn('flex flex-col', isMine ? 'items-end' : 'items-start')}>
+      {!isMine && <p className="mb-1 text-[11px] text-muted-foreground">{otherLabel}</p>}
 
+      <div
+        className={cn(
+          'max-w-[78%] space-y-1.5 px-3.5 py-2.5 text-sm leading-relaxed break-words',
+          isMine ? 'bg-foreground text-background' : 'bg-muted text-foreground',
+        )}
+      >
         {messageType === 'IMAGE' && att && (
-          <a href={attachmentUrl(att)} target="_blank" rel="noopener noreferrer" className="block mb-1">
+          <a
+            href={attachmentUrl(att)}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={cn('block w-fit max-w-full border', isMine ? 'border-background/20' : 'border-border')}
+          >
             <img
               src={attachmentUrl(att)}
               alt={att.originalFilename}
-              className="max-w-full max-h-48 rounded object-contain"
+              className="block max-h-48 max-w-full object-contain"
             />
           </a>
         )}
@@ -47,10 +68,15 @@ export function ChatMessageBubble({ msg, mineType, otherLabel, fileLabel }: Chat
             href={attachmentUrl(att)}
             target="_blank"
             rel="noopener noreferrer"
-            className={`inline-flex items-center gap-1 underline mb-1 ${isMine ? 'text-primary-foreground' : 'text-foreground'}`}
+            className={cn(
+              'inline-flex max-w-full items-center gap-1.5 underline underline-offset-4',
+              isMine
+                ? 'text-background decoration-background/40 hover:decoration-background'
+                : 'text-foreground decoration-foreground/30 hover:decoration-foreground',
+            )}
           >
-            <Paperclip className="w-3 h-3 shrink-0" />
-            {att.originalFilename}
+            <Paperclip className="size-3.5 shrink-0" strokeWidth={1.5} aria-hidden />
+            <span className="truncate">{att.originalFilename}</span>
           </a>
         )}
 
@@ -59,11 +85,13 @@ export function ChatMessageBubble({ msg, mineType, otherLabel, fileLabel }: Chat
         )}
 
         {messageType === 'FILE' && !att && (
-          <p className="opacity-70">{fileLabel}</p>
+          <p className={isMine ? 'text-background/70' : 'text-muted-foreground'}>{fileLabel}</p>
         )}
-
-        <p className="text-[10px] opacity-50 mt-1 text-right">{formatTime(msg.createdAt)}</p>
       </div>
+
+      <time dateTime={msg.createdAt} className="mt-1 text-[11px] text-muted-foreground figure">
+        {formatTime(msg.createdAt)}
+      </time>
     </div>
   );
 }

@@ -1,16 +1,18 @@
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router";
-import {
-  Users, MessageSquare, FileText, TrendingUp, AlertCircle,
-  Send, ExternalLink, Trash2,
-} from "lucide-react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../components/ui/card";
+import { Users, MessageSquare, FileText, TrendingUp, Trash2, Pin } from "lucide-react";
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "../../components/ui/dialog";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "../../components/ui/dialog";
 import { Textarea } from "../../components/ui/textarea";
-import { Separator } from "../../components/ui/separator";
+import { PageHeader, Section, StatStrip, LoadingState, Field, type StatItem } from "../../components/page";
 import { toast } from "sonner";
 import { api } from "../../utils/api";
 import { unwrap } from "../../utils/exception";
@@ -36,11 +38,14 @@ interface UserStats {
   newUsersToday: number;
 }
 
-const userStatusVariant: Record<UserStatus, "default" | "destructive" | "outline"> = {
-  ACTIVE: "default", SUSPENDED: "destructive", WITHDRAWN: "outline",
+const userStatusVariant: Record<UserStatus, "default" | "secondary" | "outline"> = {
+  ACTIVE: "default", SUSPENDED: "outline", WITHDRAWN: "secondary",
+};
+const userStatusClass: Partial<Record<UserStatus, string>> = {
+  SUSPENDED: "border-destructive/30 bg-destructive/10 text-destructive",
 };
 const inqStatusVariant: Record<InquiryStatus, "default" | "secondary" | "outline"> = {
-  PENDING: "secondary", REPLIED: "default", CLOSED: "outline",
+  PENDING: "outline", REPLIED: "default", CLOSED: "secondary",
 };
 
 function inquiryStatusKey(status: InquiryStatus) {
@@ -192,299 +197,325 @@ export default function AdminDashboard() {
   ] : [];
 
   if (loading || !stats) {
-    return <div className="py-12 text-center text-muted-foreground">{t("admin.common.loading")}</div>;
+    return (
+      <div>
+        <PageHeader title={t("admin.dashboard.title")} description={t("admin.dashboard.subtitle")} />
+        <LoadingState label={t("admin.common.loading")} />
+      </div>
+    );
   }
 
+  const statItems: StatItem[] = [
+    {
+      key: "users",
+      label: t("admin.dashboard.totalUsers"),
+      value: t("admin.common.countUnit", { n: stats.totalUsers }),
+      hint: t("admin.common.todayPlus", { n: stats.newUsersToday }),
+      icon: Users,
+      onClick: openUsers,
+    },
+    {
+      key: "inquiries",
+      label: t("admin.dashboard.inquiries"),
+      value: t("admin.common.countCase", { n: stats.totalInquiries }),
+      hint: t("admin.common.pendingCount", { n: stats.pendingInquiries }),
+      icon: MessageSquare,
+      onClick: openInquiries,
+      emphasis: stats.pendingInquiries > 0,
+    },
+    {
+      key: "notices",
+      label: t("admin.dashboard.notices"),
+      value: t("admin.common.countCase", { n: stats.totalNotices }),
+      icon: FileText,
+      onClick: openNotices,
+    },
+    {
+      key: "exchange",
+      label: t("admin.dashboard.exchangeRate"),
+      value: "—",
+      hint: t("admin.dashboard.exchangeHint"),
+      icon: TrendingUp,
+      to: "/admin/exchange-rate",
+    },
+  ];
+
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold text-foreground">{t("admin.dashboard.title")}</h1>
-        <p className="text-muted-foreground mt-1">{t("admin.dashboard.subtitle")}</p>
-      </div>
+    <div>
+      <PageHeader title={t("admin.dashboard.title")} description={t("admin.dashboard.subtitle")} />
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={openUsers}>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">{t("admin.dashboard.totalUsers")}</CardTitle>
-            <Users className="w-4 h-4 text-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-foreground">{t("admin.common.countUnit", { n: stats.totalUsers })}</div>
-            <p className="text-xs text-green-600 mt-1">{t("admin.common.todayPlus", { n: stats.newUsersToday })}</p>
-          </CardContent>
-        </Card>
+      <div className="space-y-10 md:space-y-12">
+        <StatStrip size="md" columns={4} items={statItems} />
 
-        <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={openInquiries}>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">{t("admin.dashboard.inquiries")}</CardTitle>
-            <MessageSquare className="w-4 h-4 text-purple-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-foreground">{t("admin.common.countCase", { n: stats.totalInquiries })}</div>
-            <p className="text-xs text-orange-600 mt-1">{t("admin.common.pendingCount", { n: stats.pendingInquiries })}</p>
-          </CardContent>
-        </Card>
-
-        <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={openNotices}>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">{t("admin.dashboard.notices")}</CardTitle>
-            <FileText className="w-4 h-4 text-green-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-foreground">{t("admin.common.countCase", { n: stats.totalNotices })}</div>
-          </CardContent>
-        </Card>
-
-        <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => navigate("/admin/exchange-rate")}>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">{t("admin.dashboard.exchangeRate")}</CardTitle>
-            <TrendingUp className="w-4 h-4 text-indigo-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-foreground">-</div>
-            <p className="text-xs text-muted-foreground mt-1">{t("admin.dashboard.exchangeHint")}</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle>{t("admin.dashboard.recentInquiries")}</CardTitle>
-              <CardDescription>{t("admin.dashboard.recentInquiriesDesc")}</CardDescription>
-            </div>
-            {stats.pendingInquiries > 0 && (
-              <Badge variant="destructive" className="flex items-center">
-                <AlertCircle className="w-3 h-3 mr-1" />
-                {t("admin.common.pendingBadge", { n: stats.pendingInquiries })}
-              </Badge>
-            )}
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-3">
-            {recentInquiries.length === 0 ? (
-              <p className="text-center text-muted-foreground py-4">{t("admin.dashboard.noRecentInquiries")}</p>
-            ) : recentInquiries.map((inquiry) => (
-              <div
-                key={inquiry.id}
-                className="flex items-start justify-between p-3 border border-border rounded-lg hover:bg-muted/60 cursor-pointer"
-                onClick={() => { openInquiries().then(() => openInqDetail(inquiry.id)); }}
-              >
-                <div className="flex-1">
-                  <div className="flex items-center space-x-2 mb-1">
-                    <span className="font-medium text-foreground">{inquiry.title}</span>
+        <Section
+          title={t("admin.dashboard.recentInquiries")}
+          description={t("admin.dashboard.recentInquiriesDesc")}
+          action={
+            stats.pendingInquiries > 0 ? (
+              <Badge variant="outline">{t("admin.common.pendingBadge", { n: stats.pendingInquiries })}</Badge>
+            ) : undefined
+          }
+          flush
+        >
+          {recentInquiries.length === 0 ? (
+            <p className="border-b border-border py-8 text-sm text-muted-foreground">
+              {t("admin.dashboard.noRecentInquiries")}
+            </p>
+          ) : (
+            <ul>
+              {recentInquiries.map((inquiry) => (
+                <li key={inquiry.id}>
+                  <button
+                    type="button"
+                    onClick={() => { openInquiries().then(() => openInqDetail(inquiry.id)); }}
+                    className="grid w-full grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 border-b border-border py-4 text-left transition-colors hover:bg-muted/60 md:gap-5"
+                  >
                     <Badge variant={inqStatusVariant[inquiry.status]}>{t(inquiryStatusKey(inquiry.status))}</Badge>
-                  </div>
-                  <p className="text-sm text-muted-foreground">
-                    {t(inquiryCategoryKey(inquiry.category))} · {new Date(inquiry.createdAt).toLocaleDateString(dateLocale)}
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+                    <span className="min-w-0">
+                      <span className="block truncate text-sm font-medium">{inquiry.title}</span>
+                      <span className="mt-0.5 block truncate text-xs text-muted-foreground">
+                        {t(inquiryCategoryKey(inquiry.category))}
+                      </span>
+                    </span>
+                    <span className="text-xs text-muted-foreground figure">
+                      {new Date(inquiry.createdAt).toLocaleDateString(dateLocale)}
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Section>
+      </div>
 
       <Dialog open={popup === "users"} onOpenChange={(o) => { if (!o) closePopup(); }}>
-        <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
+        <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>{t("admin.dashboard.usersPopupTitle")}</DialogTitle>
             <DialogDescription>{t("admin.dashboard.usersPopupDesc")}</DialogDescription>
           </DialogHeader>
-          {usersLoading ? <div className="py-8 text-center text-muted-foreground">{t("admin.common.loading")}</div> : (
+          {usersLoading ? <LoadingState compact label={t("admin.common.loading")} /> : (
             <>
               {userStats && (
-                <div className="grid grid-cols-5 gap-3 mb-4">
-                  {userStatItems.map((s) => (
-                    <div key={s.key} className="text-center p-2 bg-muted/60 rounded-lg">
-                      <p className="text-xs text-muted-foreground">
-                        {s.key === "all" ? t("admin.common.all") : t(`admin.user.stats.${s.key}` as "admin.user.stats.active")}
-                      </p>
-                      <p className="text-lg font-bold">{s.v}</p>
-                    </div>
-                  ))}
-                </div>
+                <StatStrip
+                  size="sm"
+                  columns={5}
+                  items={userStatItems.map((s) => ({
+                    key: s.key,
+                    label: s.key === "all" ? t("admin.common.all") : t(`admin.user.stats.${s.key}` as "admin.user.stats.active"),
+                    value: s.v,
+                  }))}
+                />
               )}
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>{t("admin.common.col.nickname")}</TableHead>
-                    <TableHead>{t("admin.common.col.email")}</TableHead>
-                    <TableHead>{t("admin.common.col.status")}</TableHead>
-                    <TableHead>{t("admin.common.col.signupDate")}</TableHead>
-                    <TableHead>{t("admin.common.col.change")}</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {users.map((u) => (
-                    <TableRow key={u.id}>
-                      <TableCell className="font-medium">{u.nickname}</TableCell>
-                      <TableCell className="text-sm text-muted-foreground">{u.email}</TableCell>
-                      <TableCell><Badge variant={userStatusVariant[u.status]}>{t(userStatusKey(u.status))}</Badge></TableCell>
-                      <TableCell className="text-sm text-muted-foreground">{new Date(u.createdAt).toLocaleDateString(dateLocale)}</TableCell>
-                      <TableCell>
-                        <div className="flex gap-1">
-                          {u.status !== "ACTIVE" && <Button size="sm" variant="outline" onClick={() => changeUserStatus(u.id, "ACTIVE")}>{t("admin.user.status.ACTIVE")}</Button>}
-                          {u.status === "ACTIVE" && <Button size="sm" variant="destructive" onClick={() => changeUserStatus(u.id, "SUSPENDED")}>{t("admin.user.status.SUSPENDED")}</Button>}
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-              <div className="flex justify-end pt-2">
-                <Button variant="outline" size="sm" onClick={() => { closePopup(); navigate("/admin/users"); }}>
-                  <ExternalLink className="w-3 h-3 mr-1" />{t("admin.common.viewAll")}
+              <ul className="border-t border-border">
+                {users.map((u) => (
+                  <li
+                    key={u.id}
+                    className="grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-3 border-b border-border py-3"
+                  >
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium">{u.nickname}</p>
+                      <p className="mt-0.5 truncate text-xs text-muted-foreground">
+                        {u.email} · <span className="figure">{new Date(u.createdAt).toLocaleDateString(dateLocale)}</span>
+                      </p>
+                    </div>
+                    <Badge variant={userStatusVariant[u.status]} className={userStatusClass[u.status]}>
+                      {t(userStatusKey(u.status))}
+                    </Badge>
+                    <div className="flex justify-end">
+                      {u.status !== "ACTIVE" && (
+                        <Button size="sm" variant="outline" onClick={() => changeUserStatus(u.id, "ACTIVE")}>
+                          {t("admin.user.status.ACTIVE")}
+                        </Button>
+                      )}
+                      {u.status === "ACTIVE" && (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="text-destructive hover:text-destructive"
+                          onClick={() => changeUserStatus(u.id, "SUSPENDED")}
+                        >
+                          {t("admin.user.status.SUSPENDED")}
+                        </Button>
+                      )}
+                    </div>
+                  </li>
+                ))}
+              </ul>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => { closePopup(); navigate("/admin/users"); }}>
+                  {t("admin.common.viewAll")}
                 </Button>
-              </div>
+              </DialogFooter>
             </>
           )}
         </DialogContent>
       </Dialog>
 
       <Dialog open={popup === "inquiries"} onOpenChange={(o) => { if (!o) closePopup(); }}>
-        <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
+        <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>{inqDetail ? t("admin.dashboard.inquiryHash", { id: inqDetail.id }) : t("admin.dashboard.inquiriesPopupTitle")}</DialogTitle>
             <DialogDescription>{inqDetail ? inqDetail.title : t("admin.dashboard.inquiriesPopupDesc")}</DialogDescription>
           </DialogHeader>
 
-          {inqLoading ? <div className="py-8 text-center text-muted-foreground">{t("admin.common.loading")}</div> : inqDetail ? (
-            <div className="space-y-4">
-              <Button variant="ghost" size="sm" onClick={() => setInqDetail(null)}>{t("admin.common.backToList")}</Button>
-              <div className="p-4 bg-muted/60 rounded-lg">
-                <div className="flex items-center gap-2 mb-2">
-                  <Badge variant="outline">{t(inquiryCategoryKey(inqDetail.category))}</Badge>
-                  <Badge variant={inqStatusVariant[inqDetail.status]}>{t(inquiryStatusKey(inqDetail.status))}</Badge>
-                  <span className="text-xs text-muted-foreground">
-                    {inqDetail.nickname ?? t("admin.common.memberHash", { id: inqDetail.userId })}
-                    {inqDetail.email && ` (${inqDetail.email})`}
-                  </span>
-                </div>
-                <p className="whitespace-pre-wrap text-foreground/80">{inqDetail.content}</p>
+          {inqLoading ? <LoadingState compact label={t("admin.common.loading")} /> : inqDetail ? (
+            <div className="space-y-5">
+              <div>
+                <Button variant="ghost" size="sm" onClick={() => setInqDetail(null)}>{t("admin.common.backToList")}</Button>
               </div>
 
+              <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                <Badge variant="outline">{t(inquiryCategoryKey(inqDetail.category))}</Badge>
+                <Badge variant={inqStatusVariant[inqDetail.status]}>{t(inquiryStatusKey(inqDetail.status))}</Badge>
+                <span className="min-w-0 truncate">
+                  {inqDetail.nickname ?? t("admin.common.memberHash", { id: inqDetail.userId })}
+                  {inqDetail.email && ` (${inqDetail.email})`}
+                </span>
+              </div>
+
+              <p className="border border-border p-4 text-sm leading-relaxed whitespace-pre-wrap break-words">
+                {inqDetail.content}
+              </p>
+
               {inqDetail.replies && inqDetail.replies.length > 0 && (
-                <div className="space-y-2">
+                <ul className="border-t border-border">
                   {inqDetail.replies.map((r) => (
-                    <div key={r.id} className="p-3 bg-muted border border-border rounded-lg">
-                      <div className="flex justify-between text-xs text-muted-foreground mb-1">
+                    <li key={r.id} className="border-b border-border py-3">
+                      <div className="flex items-center justify-between gap-3 text-xs text-muted-foreground">
                         <span>{t("admin.common.adminLabel")}</span>
-                        <span>{new Date(r.createdAt).toLocaleDateString(dateLocale, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}</span>
+                        <span className="figure">
+                          {new Date(r.createdAt).toLocaleDateString(dateLocale, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+                        </span>
                       </div>
-                      <p className="text-sm whitespace-pre-wrap">{r.content}</p>
-                    </div>
+                      <p className="mt-1.5 text-sm leading-relaxed whitespace-pre-wrap break-words">{r.content}</p>
+                    </li>
                   ))}
-                </div>
+                </ul>
               )}
 
               {inqDetail.status !== "CLOSED" && (
-                <>
-                  <Separator />
-                  <Textarea
-                    placeholder={t("admin.dashboard.replyPlaceholder")}
-                    rows={4}
-                    value={replyText}
-                    onChange={(e) => setReplyText(e.target.value)}
-                    disabled={replying}
-                  />
-                  <div className="flex justify-end">
+                <div className="border-t border-border pt-5">
+                  <Field htmlFor="dashboard-reply" label={t("admin.common.reply")}>
+                    <Textarea
+                      id="dashboard-reply"
+                      placeholder={t("admin.dashboard.replyPlaceholder")}
+                      rows={4}
+                      value={replyText}
+                      onChange={(e) => setReplyText(e.target.value)}
+                      disabled={replying}
+                    />
+                  </Field>
+                  <DialogFooter className="mt-4">
                     <Button onClick={sendReply} disabled={replying || !replyText.trim()}>
-                      <Send className="w-4 h-4 mr-1" />{replying ? t("admin.common.registering") : t("admin.common.registerReply")}
+                      {replying ? t("admin.common.registering") : t("admin.common.registerReply")}
                     </Button>
-                  </div>
-                </>
+                  </DialogFooter>
+                </div>
               )}
             </div>
           ) : (
             <>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>{t("admin.common.col.category")}</TableHead>
-                    <TableHead>{t("admin.common.col.title")}</TableHead>
-                    <TableHead>{t("admin.common.col.author")}</TableHead>
-                    <TableHead>{t("admin.common.col.status")}</TableHead>
-                    <TableHead>{t("admin.common.col.createdAt")}</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {inquiries.length === 0 ? (
-                    <TableRow><TableCell colSpan={5} className="text-center py-6 text-muted-foreground">{t("admin.dashboard.noInquiries")}</TableCell></TableRow>
-                  ) : inquiries.map((inq) => (
-                    <TableRow key={inq.id} className="cursor-pointer hover:bg-muted/60" onClick={() => openInqDetail(inq.id)}>
-                      <TableCell><Badge variant="outline">{t(inquiryCategoryKey(inq.category))}</Badge></TableCell>
-                      <TableCell className="font-medium">{inq.title}</TableCell>
-                      <TableCell className="text-sm text-muted-foreground">{inq.nickname ?? `#${inq.userId}`}</TableCell>
-                      <TableCell><Badge variant={inqStatusVariant[inq.status]}>{t(inquiryStatusKey(inq.status))}</Badge></TableCell>
-                      <TableCell className="text-sm text-muted-foreground">{new Date(inq.createdAt).toLocaleDateString(dateLocale)}</TableCell>
-                    </TableRow>
+              {inquiries.length === 0 ? (
+                <p className="border-y border-border py-8 text-center text-sm text-muted-foreground">
+                  {t("admin.dashboard.noInquiries")}
+                </p>
+              ) : (
+                <ul className="border-t border-border">
+                  {inquiries.map((inq) => (
+                    <li key={inq.id}>
+                      <button
+                        type="button"
+                        onClick={() => openInqDetail(inq.id)}
+                        className="grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-3 border-b border-border py-3 text-left transition-colors hover:bg-muted/60"
+                      >
+                        <span className="min-w-0">
+                          <span className="flex items-center gap-2">
+                            <Badge variant="outline">{t(inquiryCategoryKey(inq.category))}</Badge>
+                            <span className="min-w-0 truncate text-sm font-medium">{inq.title}</span>
+                          </span>
+                          <span className="mt-0.5 block truncate text-xs text-muted-foreground">
+                            {inq.nickname ?? `#${inq.userId}`} · <span className="figure">{new Date(inq.createdAt).toLocaleDateString(dateLocale)}</span>
+                          </span>
+                        </span>
+                        <Badge variant={inqStatusVariant[inq.status]}>{t(inquiryStatusKey(inq.status))}</Badge>
+                      </button>
+                    </li>
                   ))}
-                </TableBody>
-              </Table>
-              <div className="flex justify-end pt-2">
-                <Button variant="outline" size="sm" onClick={() => { closePopup(); navigate("/admin/inquiries"); }}>
-                  <ExternalLink className="w-3 h-3 mr-1" />{t("admin.common.viewAll")}
+                </ul>
+              )}
+              <DialogFooter>
+                <Button variant="outline" onClick={() => { closePopup(); navigate("/admin/inquiries"); }}>
+                  {t("admin.common.viewAll")}
                 </Button>
-              </div>
+              </DialogFooter>
             </>
           )}
         </DialogContent>
       </Dialog>
 
       <Dialog open={popup === "notices"} onOpenChange={(o) => { if (!o) closePopup(); }}>
-        <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
+        <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>{t("admin.dashboard.noticesPopupTitle")}</DialogTitle>
             <DialogDescription>{t("admin.dashboard.noticesPopupDesc")}</DialogDescription>
           </DialogHeader>
-          {noticesLoading ? <div className="py-8 text-center text-muted-foreground">{t("admin.common.loading")}</div> : (
+          {noticesLoading ? <LoadingState compact label={t("admin.common.loading")} /> : (
             <>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>{t("admin.common.col.title")}</TableHead>
-                    <TableHead>{t("admin.common.col.status")}</TableHead>
-                    <TableHead>{t("admin.dashboard.col.views")}</TableHead>
-                    <TableHead>{t("admin.common.actions")}</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {notices.length === 0 ? (
-                    <TableRow><TableCell colSpan={4} className="text-center py-6 text-muted-foreground">{t("admin.notices.empty")}</TableCell></TableRow>
-                  ) : notices.map((n) => (
-                    <TableRow key={n.id}>
-                      <TableCell className="font-medium">
-                        {n.isPinned && <span className="text-yellow-600 mr-1">📌</span>}
-                        {n.title}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={n.status === "PUBLISHED" ? "default" : n.status === "DRAFT" ? "outline" : "secondary"}>
-                          {t(noticeStatusKey(n.status))}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">{n.viewCount}</TableCell>
-                      <TableCell>
-                        <div className="flex gap-1">
-                          <Button variant="ghost" size="sm" onClick={() => togglePin(n.id)} title={n.isPinned ? t("admin.common.unpin") : t("admin.common.pin")}>
-                            {n.isPinned ? t("admin.common.unpinShort") : t("admin.common.pin")}
-                          </Button>
-                          <Button variant="ghost" size="sm" className="text-red-500" onClick={() => deleteNotice(n.id)}>
-                            <Trash2 className="w-3 h-3" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
+              {notices.length === 0 ? (
+                <p className="border-y border-border py-8 text-center text-sm text-muted-foreground">
+                  {t("admin.notices.empty")}
+                </p>
+              ) : (
+                <ul className="border-t border-border">
+                  {notices.map((n) => (
+                    <li
+                      key={n.id}
+                      className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 border-b border-border py-2.5"
+                    >
+                      <div className="min-w-0">
+                        <p className="flex items-center gap-1.5 text-sm font-medium">
+                          {n.isPinned && (
+                            <Pin className="size-3.5 shrink-0 text-muted-foreground" strokeWidth={1.5} aria-hidden />
+                          )}
+                          <span className="min-w-0 truncate">{n.title}</span>
+                        </p>
+                        <p className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
+                          <Badge variant={n.status === "PUBLISHED" ? "default" : n.status === "DRAFT" ? "outline" : "secondary"}>
+                            {t(noticeStatusKey(n.status))}
+                          </Badge>
+                          <span className="figure">{t("admin.dashboard.col.views")} {n.viewCount}</span>
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => togglePin(n.id)}
+                          title={n.isPinned ? t("admin.common.unpin") : t("admin.common.pin")}
+                        >
+                          {n.isPinned ? t("admin.common.unpinShort") : t("admin.common.pin")}
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="size-8 text-destructive hover:text-destructive"
+                          onClick={() => deleteNotice(n.id)}
+                          title={t("admin.common.delete")}
+                          aria-label={t("admin.common.delete")}
+                        >
+                          <Trash2 className="size-4" strokeWidth={1.5} aria-hidden />
+                        </Button>
+                      </div>
+                    </li>
                   ))}
-                </TableBody>
-              </Table>
-              <div className="flex justify-end pt-2">
-                <Button variant="outline" size="sm" onClick={() => { closePopup(); navigate("/admin/notices"); }}>
-                  <ExternalLink className="w-3 h-3 mr-1" />{t("admin.common.viewAll")}
+                </ul>
+              )}
+              <DialogFooter>
+                <Button variant="outline" onClick={() => { closePopup(); navigate("/admin/notices"); }}>
+                  {t("admin.common.viewAll")}
                 </Button>
-              </div>
+              </DialogFooter>
             </>
           )}
         </DialogContent>

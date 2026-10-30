@@ -2,8 +2,8 @@ import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { Bell, Banknote, MessageCircle, MessageSquare, ShoppingCart, Check, AlertTriangle } from "lucide-react";
 import { Button } from "../../components/ui/button";
-import { Card, CardContent } from "../../components/ui/card";
-import { Badge } from "../../components/ui/badge";
+import { cn } from "../../components/ui/utils";
+import { PageHeader, Pager, EmptyState, LoadingState } from "../../components/page";
 import { toast } from "sonner";
 import { useTranslation } from "../../hooks/useTranslation";
 import { resolveAdminNotificationText } from "../../utils/adminNotificationI18n";
@@ -29,28 +29,17 @@ function formatRelativeTime(iso: string, t: (key: string) => string): string {
 function typeIcon(type: AdminNotificationType) {
   switch (type) {
     case "NEW_PURCHASE_REQUEST":
-      return <ShoppingCart className="w-4 h-4 text-foreground" />;
+      return <ShoppingCart className="size-4 shrink-0 text-muted-foreground" strokeWidth={1.5} aria-hidden />;
     case "NEW_DEPOSIT_REPORT":
-      return <Banknote className="w-4 h-4 text-green-600" />;
+      return <Banknote className="size-4 shrink-0 text-muted-foreground" strokeWidth={1.5} aria-hidden />;
     case "NEW_INQUIRY":
-      return <MessageCircle className="w-4 h-4 text-purple-600" />;
+      return <MessageCircle className="size-4 shrink-0 text-muted-foreground" strokeWidth={1.5} aria-hidden />;
     case "NEW_CHAT_MESSAGE":
-      return <MessageSquare className="w-4 h-4 text-orange-500" />;
+      return <MessageSquare className="size-4 shrink-0 text-muted-foreground" strokeWidth={1.5} aria-hidden />;
     case "NEGATIVE_WALLET_AFTER_REFUND":
-      return <AlertTriangle className="w-4 h-4 text-red-600" />;
+      return <AlertTriangle className="size-4 shrink-0 text-destructive" strokeWidth={1.5} aria-hidden />;
     default:
-      return <Bell className="w-4 h-4 text-muted-foreground" />;
-  }
-}
-
-function typeBgClass(type: AdminNotificationType): string {
-  switch (type) {
-    case "NEW_PURCHASE_REQUEST": return "bg-muted";
-    case "NEW_DEPOSIT_REPORT": return "bg-green-50";
-    case "NEW_INQUIRY": return "bg-purple-50";
-    case "NEW_CHAT_MESSAGE": return "bg-orange-50";
-    case "NEGATIVE_WALLET_AFTER_REFUND": return "bg-red-50";
-    default: return "bg-muted/60";
+      return <Bell className="size-4 shrink-0 text-muted-foreground" strokeWidth={1.5} aria-hidden />;
   }
 }
 
@@ -111,99 +100,72 @@ export default function AdminNotifications() {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-start justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">
-            {t("admin.notification.page.title")}
-          </h1>
-          <p className="text-muted-foreground mt-1">{t("admin.notification.page.subtitle")}</p>
-        </div>
-        {unreadCount > 0 && (
-          <Button variant="outline" size="sm" onClick={handleMarkAllRead}>
-            <Check className="w-4 h-4 mr-1.5" />
-            {t("admin.notification.markAllRead")}
-            <Badge variant="secondary" className="ml-2">{unreadCount}</Badge>
-          </Button>
-        )}
-      </div>
+    <div>
+      <PageHeader
+        title={t("admin.notification.page.title")}
+        description={t("admin.notification.page.subtitle")}
+        actions={
+          unreadCount > 0 ? (
+            <Button variant="outline" onClick={handleMarkAllRead}>
+              <Check className="size-4" strokeWidth={1.5} aria-hidden />
+              {t("admin.notification.markAllRead")}
+              <span className="rounded-full bg-foreground px-1.5 text-[10px] leading-4 text-background figure">
+                {unreadCount}
+              </span>
+            </Button>
+          ) : undefined
+        }
+      />
 
-      <Card>
-        <CardContent className="p-0">
-          {loading ? (
-            <div className="py-16 text-center text-muted-foreground text-sm">{t("admin.common.loading")}</div>
-          ) : items.length === 0 ? (
-            <div className="py-16 flex flex-col items-center gap-3 text-muted-foreground/70">
-              <Bell className="w-10 h-10" />
-              <p className="text-sm">{t("admin.notification.empty")}</p>
-            </div>
-          ) : (
-            <>
-              <ul className="divide-y divide-border">
-                {items.map((item) => {
-                  const text = resolveAdminNotificationText(item, t);
-                  return (
-                  <li key={item.id}>
-                    <button
-                      type="button"
-                      onClick={() => handleClickItem(item)}
-                      className={`w-full text-left px-5 py-4 hover:bg-muted/60 transition-colors ${
-                        item.isRead ? "" : "bg-muted"
-                      }`}
-                    >
-                      <div className="flex items-start gap-3">
-                        <div className={`mt-0.5 p-2 rounded-lg flex-shrink-0 ${typeBgClass(item.type)}`}>
-                          {typeIcon(item.type)}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <p className={`text-sm truncate ${item.isRead ? "text-foreground/80" : "font-semibold text-foreground"}`}>
-                              {text.title}
-                            </p>
-                            {!item.isRead && (
-                              <span className="w-2 h-2 rounded-full bg-foreground flex-shrink-0" />
-                            )}
-                          </div>
-                          <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{text.body}</p>
-                        </div>
-                        <p className="text-[11px] text-muted-foreground/70 flex-shrink-0 pt-0.5">
-                          {formatRelativeTime(item.createdAt, t)}
-                        </p>
-                      </div>
-                    </button>
-                  </li>
-                  );
-                })}
-              </ul>
+      {loading ? (
+        <LoadingState label={t("admin.common.loading")} />
+      ) : items.length === 0 ? (
+        <EmptyState icon={Bell} title={t("admin.notification.empty")} />
+      ) : (
+        <>
+          <ul className="border-t border-border">
+            {items.map((item) => {
+              const text = resolveAdminNotificationText(item, t);
+              return (
+                <li key={item.id}>
+                  <button
+                    type="button"
+                    onClick={() => handleClickItem(item)}
+                    className="grid w-full grid-cols-[auto_auto_minmax(0,1fr)_auto] items-center gap-3 border-b border-border py-4 text-left transition-colors hover:bg-muted/60 md:gap-4"
+                  >
+                    <span
+                      className={cn("size-1.5 rounded-full", item.isRead ? "bg-transparent" : "bg-foreground")}
+                      aria-hidden
+                    />
+                    {typeIcon(item.type)}
+                    <span className="min-w-0">
+                      <span className={cn("block truncate text-sm", !item.isRead && "font-medium")}>{text.title}</span>
+                      <span className="mt-0.5 block truncate text-xs text-muted-foreground">{text.body}</span>
+                    </span>
+                    <span className="text-xs text-muted-foreground figure">
+                      {formatRelativeTime(item.createdAt, t)}
+                    </span>
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
 
-              <div className="flex items-center justify-between p-4 border-t">
-                <p className="text-xs text-muted-foreground/70">{t("admin.notification.totalCount", { n: totalElements })}</p>
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={page <= 0}
-                    onClick={() => setPage((p) => p - 1)}
-                  >
-                    {t("admin.common.prev")}
-                  </Button>
-                  <span className="text-sm text-muted-foreground tabular-nums">
-                    {t("admin.common.pageOf", { page: page + 1, total: totalPages })}
-                  </span>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={page >= totalPages - 1}
-                    onClick={() => setPage((p) => p + 1)}
-                  >
-                    {t("admin.common.next")}
-                  </Button>
-                </div>
-              </div>
-            </>
-          )}
-        </CardContent>
-      </Card>
+          <Pager
+            page={page}
+            totalPages={totalPages}
+            onPrev={() => setPage((p) => p - 1)}
+            onNext={() => setPage((p) => p + 1)}
+            prevLabel={t("admin.common.prev")}
+            nextLabel={t("admin.common.next")}
+            leading={
+              <span className="text-xs text-muted-foreground figure">
+                {t("admin.notification.totalCount", { n: totalElements })}
+              </span>
+            }
+          />
+        </>
+      )}
     </div>
   );
 }

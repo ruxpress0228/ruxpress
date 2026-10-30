@@ -1,22 +1,27 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { ChevronLeft } from 'lucide-react';
+import { Fragment, useCallback, useEffect, useRef, useState } from 'react';
+import { ArrowLeft } from 'lucide-react';
 import { getOrCreateRoom, getMyChatRooms, getChatMessages } from '@/api/chat';
 import { useChat } from '@/hooks/chat/useChat';
 import { useI18n } from '@/i18n/I18nProvider';
+import { formatDate } from '@/utils/format';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { ChatMessageBubble } from '@/components/chat/ChatMessageBubble';
+import { cn } from '@/components/ui/utils';
+import { PageHeader } from '@/components/page';
+import { ChatDaySeparator, ChatMessageBubble, startsNewDay } from '@/components/chat/ChatMessageBubble';
 import { ChatInputBar } from '@/components/chat/ChatInputBar';
 import { toast } from 'sonner';
 import type { ChatRoom, ChatMessage } from '@/types/chat';
+
+const DAY_LABEL: Intl.DateTimeFormatOptions = { year: 'numeric', month: 'short', day: 'numeric' };
 
 function formatDateTime(iso: string): string {
   return new Date(iso).toLocaleString();
 }
 
 export default function Chat() {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const [currentRoom, setCurrentRoom] = useState<ChatRoom | null>(null);
   const [pastRooms, setPastRooms] = useState<ChatRoom[]>([]);
   const [selectedPastRoomId, setSelectedPastRoomId] = useState<string | null>(null);
@@ -113,11 +118,13 @@ export default function Chat() {
     }
   };
 
+  const dayLabel = (iso: string) => formatDate(iso, locale, DAY_LABEL);
+
   return (
-    <div className="w-full max-w-2xl mx-auto flex flex-col h-[calc(100dvh-12rem)] min-h-[400px]">
+    <div className="flex h-[calc(100dvh-10.5rem)] min-h-[25rem] w-full max-w-3xl flex-col lg:h-[calc(100dvh-9rem)]">
       <Tabs
         defaultValue="current"
-        className="flex flex-col flex-1 min-h-0"
+        className="flex min-h-0 flex-1 flex-col gap-0"
         onValueChange={(v) => {
           if (v === 'history') {
             loadPastRooms();
@@ -125,143 +132,152 @@ export default function Chat() {
           }
         }}
       >
-        <div className="flex items-center justify-between gap-2 mb-3 flex-wrap">
-          <h1 className="text-lg sm:text-xl font-semibold truncate">
-            {t('chat.title')}
-          </h1>
-          <TabsList>
-            <TabsTrigger value="current">{t('chat.tab.current')}</TabsTrigger>
-            <TabsTrigger value="history">{t('chat.tab.history')}</TabsTrigger>
-          </TabsList>
-        </div>
+        <PageHeader
+          title={t('chat.title')}
+          className="mb-5 md:mb-6"
+          actions={
+            <TabsList>
+              <TabsTrigger value="current">{t('chat.tab.current')}</TabsTrigger>
+              <TabsTrigger value="history">{t('chat.tab.history')}</TabsTrigger>
+            </TabsList>
+          }
+        />
 
         <TabsContent
           value="current"
-          className="flex-1 min-h-0 flex flex-col mt-0 data-[state=inactive]:hidden"
+          className="flex min-h-0 flex-1 flex-col border border-border data-[state=inactive]:hidden"
         >
-          <div className="flex justify-end mb-2">
-            <Badge variant={connected && !chatEnded ? 'default' : 'secondary'}>
+          <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-3">
+            <p className="min-w-0 truncate text-sm font-medium">{t('chat.admin')}</p>
+            <p className="flex shrink-0 items-center gap-2 text-xs text-muted-foreground">
+              <span
+                className={cn(
+                  'size-1.5 rounded-full',
+                  connected && !chatEnded ? 'bg-foreground' : 'bg-muted-foreground/40',
+                )}
+                aria-hidden
+              />
               {chatEnded
                 ? t('chat.status.closed')
                 : connected
                   ? t('chat.connected')
                   : t('chat.connecting')}
-            </Badge>
+            </p>
           </div>
 
           {chatEnded && (
-            <div className="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+            <div className="flex flex-col items-start gap-3 border-b border-border px-4 py-3 text-sm sm:flex-row sm:items-center sm:justify-between">
               <p>{t('chat.closedByAdmin')}</p>
-              <Button variant="outline" size="sm" className="mt-2" onClick={() => void handleStartNewChat()}>
+              <Button variant="outline" size="sm" onClick={() => void handleStartNewChat()}>
                 {t('chat.startNew')}
               </Button>
             </div>
           )}
 
-          <div ref={chatScrollRef} className="flex-1 min-h-0 overflow-y-auto border rounded-lg bg-muted/30">
-            <div className="p-3 sm:p-4">
-              {messages.length === 0 && (
-                <p className="text-center text-muted-foreground text-sm py-8">
-                  {t('chat.empty')}
-                </p>
-              )}
-              {messages.map((msg) => (
+          <div ref={chatScrollRef} className="min-h-0 flex-1 space-y-3 overflow-y-auto p-4">
+            {messages.length === 0 && (
+              <p className="py-10 text-center text-sm text-muted-foreground">{t('chat.empty')}</p>
+            )}
+            {messages.map((msg, i) => (
+              <Fragment key={msg.id}>
+                {startsNewDay(messages[i - 1], msg) && <ChatDaySeparator label={dayLabel(msg.createdAt)} />}
                 <ChatMessageBubble
-                  key={msg.id}
                   msg={msg}
                   mineType="USER"
                   otherLabel={t('chat.admin')}
                   fileLabel={t('chat.fileUnavailable')}
                 />
-              ))}
-            </div>
+              </Fragment>
+            ))}
           </div>
 
-          <div className="mt-3">
-            {chatEnded ? (
-              <p className="text-center text-muted-foreground text-sm py-2">{t('chat.closedHint')}</p>
-            ) : (
-              <ChatInputBar
-                input={input}
-                onInputChange={setInput}
-                onSend={handleSend}
-                onUpload={handleUpload}
-                disabled={!connected}
-                uploading={uploading}
-                placeholder={t('chat.inputPlaceholder')}
-                sendLabel={t('chat.send')}
-                attachLabel={t('chat.attach')}
-                fileTooLargeLabel={t('chat.upload.fileTooLarge')}
-              />
-            )}
-          </div>
+          {chatEnded ? (
+            <p className="border-t border-border px-4 py-3 text-center text-sm text-muted-foreground">
+              {t('chat.closedHint')}
+            </p>
+          ) : (
+            <ChatInputBar
+              input={input}
+              onInputChange={setInput}
+              onSend={handleSend}
+              onUpload={handleUpload}
+              disabled={!connected}
+              uploading={uploading}
+              placeholder={t('chat.inputPlaceholder')}
+              sendLabel={t('chat.send')}
+              attachLabel={t('chat.attach')}
+              fileTooLargeLabel={t('chat.upload.fileTooLarge')}
+            />
+          )}
         </TabsContent>
 
         <TabsContent
           value="history"
-          className="flex-1 min-h-0 flex flex-col mt-0 data-[state=inactive]:hidden"
+          className="flex min-h-0 flex-1 flex-col border border-border data-[state=inactive]:hidden"
         >
           {selectedPastRoomId === null ? (
-            <div className="flex-1 min-h-0 overflow-y-auto border rounded-lg">
+            <div className="min-h-0 flex-1 overflow-y-auto">
               {pastRooms.length === 0 && (
-                <p className="text-center text-muted-foreground text-sm p-6">
+                <p className="px-4 py-10 text-center text-sm text-muted-foreground">
                   {t('chat.history.empty')}
                 </p>
               )}
-              {pastRooms.map((room) => (
-                <button
-                  key={room.id}
-                  onClick={() => setSelectedPastRoomId(room.id)}
-                  className="w-full text-left p-3 border-b last:border-b-0 hover:bg-accent transition-colors"
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-sm font-medium truncate">
-                      {t('chat.history.room')} #{room.id}
-                    </span>
-                    <Badge variant="secondary" className="text-xs shrink-0">
-                      {t('chat.status.closed')}
-                    </Badge>
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {formatDateTime(room.updatedAt)}
-                  </p>
-                </button>
-              ))}
+              <ul>
+                {pastRooms.map((room) => (
+                  <li key={room.id}>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedPastRoomId(room.id)}
+                      className="grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-3 border-b border-border px-4 py-3.5 text-left transition-colors hover:bg-muted/60"
+                    >
+                      <span className="min-w-0">
+                        <span className="block truncate text-sm font-medium">
+                          {t('chat.history.room')} <span className="figure">#{room.id}</span>
+                        </span>
+                        <span className="mt-0.5 block text-xs text-muted-foreground figure">
+                          {formatDateTime(room.updatedAt)}
+                        </span>
+                      </span>
+                      <Badge variant="secondary" className="px-1.5 py-0 text-[10px]">
+                        {t('chat.status.closed')}
+                      </Badge>
+                    </button>
+                  </li>
+                ))}
+              </ul>
             </div>
           ) : (
-            <div className="flex flex-col flex-1 min-h-0">
-              <div className="flex items-center justify-between gap-2 mb-2">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setSelectedPastRoomId(null)}
-                >
-                  <ChevronLeft className="w-4 h-4 mr-1" />
+            <>
+              <div className="flex items-center justify-between gap-3 border-b border-border px-2 py-2 md:px-3">
+                <Button variant="ghost" size="sm" onClick={() => setSelectedPastRoomId(null)}>
+                  <ArrowLeft className="size-4" strokeWidth={1.5} aria-hidden />
                   {t('chat.history.back')}
                 </Button>
-                <Badge variant="secondary" className="text-xs">
+                <Badge variant="secondary" className="mr-1 px-1.5 py-0 text-[10px]">
                   {t('chat.history.readonly')}
                 </Badge>
               </div>
-              <div ref={pastScrollRef} className="flex-1 min-h-0 overflow-y-auto border rounded-lg bg-muted/30">
-                <div className="p-3 sm:p-4">
-                  {pastMessages.length === 0 && (
-                    <p className="text-center text-muted-foreground text-sm py-8">
-                      {t('chat.history.noMessages')}
-                    </p>
-                  )}
-                  {pastMessages.map((msg) => (
+              <div ref={pastScrollRef} className="min-h-0 flex-1 space-y-3 overflow-y-auto p-4">
+                {pastMessages.length === 0 && (
+                  <p className="py-10 text-center text-sm text-muted-foreground">
+                    {t('chat.history.noMessages')}
+                  </p>
+                )}
+                {pastMessages.map((msg, i) => (
+                  <Fragment key={msg.id}>
+                    {startsNewDay(pastMessages[i - 1], msg) && (
+                      <ChatDaySeparator label={dayLabel(msg.createdAt)} />
+                    )}
                     <ChatMessageBubble
-                      key={msg.id}
                       msg={msg}
                       mineType="USER"
                       otherLabel={t('chat.admin')}
                       fileLabel={t('chat.fileUnavailable')}
                     />
-                  ))}
-                </div>
+                  </Fragment>
+                ))}
               </div>
-            </div>
+            </>
           )}
         </TabsContent>
       </Tabs>

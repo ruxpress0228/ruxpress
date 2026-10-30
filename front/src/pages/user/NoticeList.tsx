@@ -1,10 +1,9 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router";
-import { Eye, Pin } from "lucide-react";
+import { Megaphone } from "lucide-react";
 import { Badge } from "../../components/ui/badge";
-import { Button } from "../../components/ui/button";
-import { Card, CardContent } from "../../components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../components/ui/select";
+import { EmptyState, LoadingState, PageHeader, Pager } from "../../components/page";
 import { api } from "../../utils/api";
 import { unwrap } from "../../utils/exception";
 import { useTranslation } from "../../hooks/useTranslation";
@@ -49,6 +48,7 @@ export default function NoticeList() {
 
   const pinnedNotices = notices.filter((n) => n.isPinned);
   const regularNotices = notices.filter((n) => !n.isPinned);
+  const orderedNotices = [...pinnedNotices, ...regularNotices];
 
   const formatDate = (n: Notice) => {
     const raw = n.publishedAt ?? n.createdAt;
@@ -59,114 +59,71 @@ export default function NoticeList() {
     });
   };
 
-  if (loading) {
-    return (
-      <div className="py-12 text-center text-muted-foreground">{t("notice.loading")}</div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="py-12 text-center text-red-600">
-        {t("notice.list.loadError")}
-      </div>
-    );
-  }
-
   return (
     <div>
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold text-foreground">{t("notice.list.title")}</h1>
-        <p className="text-muted-foreground mt-1">{t("notice.list.subtitle")}</p>
-      </div>
+      <PageHeader title={t("notice.list.title")} description={t("notice.list.subtitle")} />
 
-      <div className="space-y-3">
-        {pinnedNotices.map((notice) => (
-          <Link key={notice.id} to={`/notice/${notice.id}`}>
-            <Card className="hover:shadow-lg transition-shadow cursor-pointer border-2 border-yellow-200 bg-yellow-50">
-              <CardContent className="p-5">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center space-x-2 mb-2">
-                      <Pin className="w-4 h-4 text-yellow-600" />
-                      <Badge variant="destructive">{t("notice.important")}</Badge>
-                    </div>
-                    <h3 className="text-lg font-semibold text-foreground mb-1">
-                      {notice.title}
-                    </h3>
-                    <div className="flex items-center space-x-4 text-sm text-muted-foreground">
-                      <span>{formatDate(notice)}</span>
-                      <div className="flex items-center">
-                        <Eye className="w-4 h-4 mr-1" />
-                        {notice.viewCount.toLocaleString()}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </Link>
-        ))}
+      {loading ? (
+        <LoadingState label={t("notice.loading")} />
+      ) : error ? (
+        <EmptyState title={t("notice.list.loadError")} className="text-destructive" />
+      ) : (
+        <>
+          {orderedNotices.length > 0 ? (
+            <ul className="border-t border-border">
+              {orderedNotices.map((notice) => (
+                <li key={notice.id}>
+                  <Link
+                    to={`/notice/${notice.id}`}
+                    className="flex flex-col gap-1 border-b border-border py-4 transition-colors hover:bg-muted/60 md:flex-row md:items-center md:justify-between md:gap-4"
+                  >
+                    <span className="flex min-w-0 items-center gap-2">
+                      {notice.isPinned ? (
+                        <Badge className="px-1.5 py-0 text-[10px] font-medium">{t("notice.important")}</Badge>
+                      ) : null}
+                      <span className="min-w-0 truncate text-sm font-medium">{notice.title}</span>
+                    </span>
+                    <span className="shrink-0 text-xs text-muted-foreground figure">
+                      <time dateTime={notice.publishedAt ?? notice.createdAt}>{formatDate(notice)}</time>
+                      {" · "}
+                      {t("notice.detail.viewCount", { n: notice.viewCount.toLocaleString() })}
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <EmptyState
+              icon={Megaphone}
+              title={t("notice.list.emptyTitle")}
+              description={t("notice.list.emptyDesc")}
+            />
+          )}
 
-        {regularNotices.map((notice) => (
-          <Link key={notice.id} to={`/notice/${notice.id}`}>
-            <Card className="hover:shadow-lg transition-shadow cursor-pointer">
-              <CardContent className="p-5">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <h3 className="text-lg font-semibold text-foreground mb-1">
-                      {notice.title}
-                    </h3>
-                    <div className="flex items-center space-x-4 text-sm text-muted-foreground">
-                      <span>{formatDate(notice)}</span>
-                      <div className="flex items-center">
-                        <Eye className="w-4 h-4 mr-1" />
-                        {notice.viewCount.toLocaleString()}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </Link>
-        ))}
-      </div>
-
-      {notices.length === 0 && (
-        <Card className="p-12">
-          <div className="text-center">
-            <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
-              <Eye className="w-8 h-8 text-muted-foreground/70" />
-            </div>
-            <h3 className="text-lg font-semibold text-foreground mb-2">
-              {t("notice.list.emptyTitle")}
-            </h3>
-            <p className="text-muted-foreground">
-              {t("notice.list.emptyDesc")}
-            </p>
-          </div>
-        </Card>
-      )}
-
-      {totalPages > 0 && (
-        <div className="flex items-center justify-between mt-4 flex-wrap gap-2">
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <span>{t("purchase.list.perPage")}</span>
-            <Select value={String(size)} onValueChange={(v) => handleSizeChange(Number(v))}>
-              <SelectTrigger className="w-[80px] h-8 text-xs"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                {PAGE_SIZE_OPTIONS.map((s) => (
-                  <SelectItem key={s} value={String(s)}>{t("purchase.list.perPageOption", { n: s })}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" disabled={page <= 0} onClick={() => setPage((p) => p - 1)}>{t("purchase.list.prev")}</Button>
-            <span className="text-sm text-muted-foreground">{page + 1} / {Math.max(1, totalPages)}</span>
-            <Button variant="outline" size="sm" disabled={page >= totalPages - 1} onClick={() => setPage((p) => p + 1)}>{t("purchase.list.next")}</Button>
-          </div>
-        </div>
+          {totalPages > 0 && (
+            <Pager
+              page={page}
+              totalPages={totalPages}
+              onPrev={() => setPage((p) => p - 1)}
+              onNext={() => setPage((p) => p + 1)}
+              prevLabel={t("purchase.list.prev")}
+              nextLabel={t("purchase.list.next")}
+              leading={
+                <>
+                  <span>{t("purchase.list.perPage")}</span>
+                  <Select value={String(size)} onValueChange={(v) => handleSizeChange(Number(v))}>
+                    <SelectTrigger size="sm" className="w-24 text-xs"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {PAGE_SIZE_OPTIONS.map((s) => (
+                        <SelectItem key={s} value={String(s)}>{t("purchase.list.perPageOption", { n: s })}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </>
+              }
+            />
+          )}
+        </>
       )}
     </div>
   );
