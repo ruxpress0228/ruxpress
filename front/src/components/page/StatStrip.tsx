@@ -14,7 +14,7 @@ export type StatItem = {
   to?: string;
   /** Acts as a toggle/filter when set. */
   onClick?: () => void;
-  /** Filled black when true (selected filter). */
+  /** Filled with the brand colour when true (selected filter). */
   active?: boolean;
   /** Small dot marker for the one item that deserves attention. */
   emphasis?: boolean;
@@ -46,15 +46,15 @@ const VALUE: Record<NonNullable<StatStripProps["size"]>, string> = {
 const PAD: Record<NonNullable<StatStripProps["size"]>, string> = {
   sm: "p-3 md:p-4",
   md: "p-4 md:p-5",
-  lg: "p-4 md:p-5",
+  lg: "p-5 md:p-6",
 };
 
-/** Numbers in a grid that shares one hairline between cells. */
+/** Numbers in a row of soft tiles. */
 export function StatStrip({ items, columns = 4, size = "md", className }: StatStripProps) {
   return (
     <div
       className={cn(
-        "grid border-l border-t border-border",
+        "grid gap-2 md:gap-3",
         // On the 2-column phone layout an odd last cell stretches across both columns.
         "max-sm:[&>*:nth-child(odd):last-child]:col-span-2",
         COLS[columns],
@@ -64,27 +64,28 @@ export function StatStrip({ items, columns = 4, size = "md", className }: StatSt
       {items.map(({ key, label, value, hint, icon: Icon, to, onClick, active, emphasis }) => {
         const interactive = Boolean(to || onClick);
         const cellClass = cn(
-          "block min-w-0 border-b border-r border-border text-left",
+          "block min-w-0 rounded-2xl text-left",
           PAD[size],
-          interactive && "transition-colors",
-          interactive && !active && "hover:bg-muted/60",
-          active && "bg-foreground text-background",
+          active ? "bg-brand text-brand-foreground" : "bg-muted",
+          interactive && "transition-[background-color,transform] duration-200",
+          interactive && !active && "hover:bg-muted/70",
+          interactive && "active:scale-[0.99]",
         );
         const body = (
           <>
             <div className="flex items-center gap-2 text-sm">
-              {Icon ? <Icon className="size-4 shrink-0" strokeWidth={1.5} aria-hidden /> : null}
+              {Icon ? <Icon className="size-4 shrink-0" strokeWidth={1.75} aria-hidden /> : null}
               <span className={cn("min-w-0 truncate font-medium", size === "sm" && "text-xs")}>{label}</span>
               {emphasis ? (
                 <span
-                  className={cn("ml-auto size-1.5 shrink-0 rounded-full", active ? "bg-background" : "bg-foreground")}
+                  className={cn("ml-auto size-2 shrink-0 rounded-full", active ? "bg-brand-foreground" : "bg-brand")}
                   aria-hidden
                 />
               ) : null}
             </div>
-            <p className={cn("font-light figure", VALUE[size])}>{value}</p>
+            <p className={cn("font-bold tracking-[-0.03em] figure", VALUE[size])}>{value}</p>
             {hint ? (
-              <p className={cn("mt-2 text-xs leading-snug", active ? "text-background/70" : "text-muted-foreground")}>
+              <p className={cn("mt-2 text-xs leading-snug", active ? "text-brand-foreground/75" : "text-muted-foreground")}>
                 {hint}
               </p>
             ) : null}

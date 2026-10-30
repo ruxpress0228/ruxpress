@@ -16,7 +16,7 @@ type SectionProps = {
   className?: string;
 };
 
-/** Content block with a letter-spaced heading on a black rule. */
+/** Content block with a bold heading, an optional one-line description and a hairline rule. */
 export function Section({
   title,
   description,
@@ -33,20 +33,20 @@ export function Section({
       <div
         className={cn(
           "flex items-end justify-between gap-4 border-b pb-3",
-          inverted ? "border-background/30" : "border-foreground",
+          inverted ? "border-background/30" : "border-border",
         )}
       >
         <div className="min-w-0">
-          <h2 id={id} className="text-sm font-medium uppercase tracking-[0.18em]">
+          <h2 id={id} className="text-xl font-bold tracking-[-0.02em] md:text-2xl">
             {title}
           </h2>
           {description ? (
-            <p className={cn("mt-1 text-xs", inverted ? "text-background/60" : "text-muted-foreground")}>
+            <p className={cn("mt-1 text-sm", inverted ? "text-background/60" : "text-muted-foreground")}>
               {description}
             </p>
           ) : null}
         </div>
-        {action ? <div className="shrink-0 text-xs">{action}</div> : null}
+        {action ? <div className="shrink-0 pb-1 text-sm">{action}</div> : null}
       </div>
       <div className={flush ? undefined : "pt-4"}>{children}</div>
     </section>
@@ -63,7 +63,7 @@ type SectionLinkProps = {
 /** Quiet text link for a Section's `action` slot ("View all", "Edit"). */
 export function SectionLink({ children, className, to, onClick }: SectionLinkProps) {
   const classes = cn(
-    "text-xs text-muted-foreground underline-offset-4 transition-colors hover:text-foreground hover:underline",
+    "text-sm font-medium text-muted-foreground underline-offset-4 transition-colors hover:text-foreground hover:underline",
     className,
   );
   if (to) {

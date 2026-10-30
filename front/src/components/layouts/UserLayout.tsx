@@ -97,7 +97,7 @@ function UserShell() {
 
   const navLinkClass = (active: boolean) =>
     cn(
-      "eyebrow whitespace-nowrap py-1 transition-colors",
+      "whitespace-nowrap py-1 text-sm font-medium transition-colors",
       active ? "text-foreground" : "text-muted-foreground hover:text-foreground",
     );
 
@@ -156,7 +156,7 @@ function UserShell() {
                 </Button>
                 {langOpen && (
                   <div
-                    className="absolute right-0 top-full z-[100] mt-2 min-w-[10rem] border border-border bg-popover py-1"
+                    className="absolute right-0 top-full z-[100] mt-2 min-w-[10rem] rounded-2xl border border-border bg-popover p-1.5 shadow-lg"
                     role="listbox"
                     aria-label={t("common.language")}
                   >
@@ -169,7 +169,7 @@ function UserShell() {
                           role="option"
                           aria-selected={selected}
                           className={cn(
-                            "flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-sm transition-colors hover:bg-muted",
+                            "flex w-full items-center justify-between gap-3 rounded-xl px-3 py-2 text-left text-sm transition-colors hover:bg-muted",
                             selected ? "text-foreground" : "text-muted-foreground",
                           )}
                           onClick={() => {
@@ -208,7 +208,7 @@ function UserShell() {
                   <Link to={loginPath(currentPath)} className={cn(navLinkClass(isActive("/login")), "px-2")}>
                     {t("nav.login")}
                   </Link>
-                  <Button size="sm" asChild className="hidden sm:inline-flex">
+                  <Button size="sm" asChild>
                     <Link to="/signup">{t("landing.cta.start")}</Link>
                   </Button>
                 </div>

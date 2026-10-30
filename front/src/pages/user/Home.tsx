@@ -1,12 +1,13 @@
 import { useState, useEffect, useMemo } from "react";
 import { Link } from "react-router";
-import { ShoppingCart, Package, Truck, CheckCircle2, Ban, type LucideIcon } from "lucide-react";
+import { ShoppingCart, Package, Truck, CheckCircle2, Ban } from "lucide-react";
 import { Button } from "../../components/ui/button";
 import { Badge } from "../../components/ui/badge";
 import { cn } from "../../components/ui/utils";
-import { Section, SectionLink } from "../../components/page";
+import { Section, SectionLink, StatStrip, type StatItem } from "../../components/page";
 import { ExchangePanel } from "../../components/exchange/ExchangePanel";
-import { ProductGrid } from "../../components/product/ProductCard";
+import { ProductRail } from "../../components/product/ProductCard";
+import { LinkStartBar } from "../../components/landing/LinkStartBar";
 import { getFeaturedProducts } from "../../api/product";
 import { buildRateMap } from "../../utils/exchange";
 import type { Product } from "../../types/product";
@@ -100,7 +101,7 @@ export default function Home() {
       .then((res) => setRecentNotices(unwrap(res).content))
       .catch(() => setRecentNotices([]));
 
-    getFeaturedProducts(4)
+    getFeaturedProducts(8)
       .then(setFeatured)
       .catch(() => setFeatured([]));
   }, [getCurrentExchangeRates, getRecentPurchaseRequests]);
@@ -134,71 +135,66 @@ export default function Home() {
 
   const dateLocale = useMemo(() => (locale === "ko" ? "ko-KR" : locale === "ru" ? "ru-RU" : "en-US"), [locale]);
 
-  const dashboardCards = useMemo(
-    () =>
-      [
-        {
-          key: "inProgress",
-          count: inProgressCount,
-          title: t("home.dashboard.inProgress"),
-          desc: t("home.dashboard.desc.inProgress"),
-          to: "/purchase?bucket=progress",
-          icon: Package,
-          highlight: false,
-        },
-        {
-          key: "shipping",
-          count: shippingCount,
-          title: t("home.dashboard.shipping"),
-          desc: t("home.dashboard.desc.shipping"),
-          to: "/purchase?status=SHIPPING",
-          icon: Truck,
-          highlight: true,
-        },
-        {
-          key: "completed",
-          count: completedCount,
-          title: t("home.dashboard.completed"),
-          desc: t("home.dashboard.desc.completed"),
-          to: "/purchase?status=COMPLETED",
-          icon: CheckCircle2,
-          highlight: false,
-        },
-        {
-          key: "cancelled",
-          count: cancelledCount,
-          title: t("home.dashboard.cancelled"),
-          desc: t("home.dashboard.desc.cancelled"),
-          to: "/purchase?status=CANCELLED",
-          icon: Ban,
-          highlight: false,
-        },
-      ] satisfies { key: string; count: number; title: string; desc: string; to: string; icon: LucideIcon; highlight: boolean }[],
+  const dashboardItems = useMemo<StatItem[]>(
+    () => [
+      {
+        key: "inProgress",
+        value: inProgressCount,
+        label: t("home.dashboard.inProgress"),
+        hint: t("home.dashboard.desc.inProgress"),
+        to: "/purchase?bucket=progress",
+        icon: Package,
+      },
+      {
+        key: "shipping",
+        value: shippingCount,
+        label: t("home.dashboard.shipping"),
+        hint: t("home.dashboard.desc.shipping"),
+        to: "/purchase?status=SHIPPING",
+        icon: Truck,
+        emphasis: shippingCount > 0,
+      },
+      {
+        key: "completed",
+        value: completedCount,
+        label: t("home.dashboard.completed"),
+        hint: t("home.dashboard.desc.completed"),
+        to: "/purchase?status=COMPLETED",
+        icon: CheckCircle2,
+      },
+      {
+        key: "cancelled",
+        value: cancelledCount,
+        label: t("home.dashboard.cancelled"),
+        hint: t("home.dashboard.desc.cancelled"),
+        to: "/purchase?status=CANCELLED",
+        icon: Ban,
+      },
+    ],
     [t, inProgressCount, shippingCount, completedCount, cancelledCount],
   );
 
   return (
     <div className="space-y-14 md:space-y-20">
-      {/* Greeting + wallet */}
-      <section className="grid gap-8 md:grid-cols-[minmax(0,1fr)_minmax(16rem,20rem)] md:items-end md:gap-12">
-        <div className="min-w-0">
-          <p className="text-sm text-muted-foreground">{t("home.hero.contextLabel")}</p>
-          <h1 className="mt-3 text-4xl leading-[1.08] md:text-5xl">
-            {fillTpl(t("home.hero.welcomeTitle"), { name: displayName })}
-          </h1>
-          <p className="mt-4 text-base text-muted-foreground figure">
+      {/* Greeting, the link bar, and the wallet */}
+      <section className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(17rem,21rem)] lg:items-stretch lg:gap-8">
+        <div className="min-w-0 rounded-3xl bg-muted p-6 md:p-8">
+          <h1 className="text-3xl md:text-4xl">{fillTpl(t("home.hero.welcomeTitle"), { name: displayName })}</h1>
+          <p className="mt-2 text-sm text-muted-foreground figure md:text-base">
             {fillTpl(t("home.hero.welcomeSubtitle"), {
               inProgress: inProgressCount,
               shipping: shippingCount,
               total: totalActiveHint ?? 0,
             })}
           </p>
-          <div className="mt-7 flex flex-wrap items-center gap-2">
-            <Button asChild>
-              <Link to="/purchase/new">{t("home.hero.cta")}</Link>
-            </Button>
-            <Button asChild variant="outline">
+          <p className="mt-7 text-sm font-semibold">{t("home.link.title")}</p>
+          <LinkStartBar tone="onLight" className="mt-2" />
+          <div className="flex flex-wrap items-center gap-2">
+            <Button asChild variant="outline" size="sm">
               <Link to="/purchase">{t("home.hero.ctaSecondary")}</Link>
+            </Button>
+            <Button asChild variant="ghost" size="sm">
+              <Link to="/products">{t("landing.cta.browse")}</Link>
             </Button>
           </div>
         </div>
@@ -206,51 +202,33 @@ export default function Home() {
         {isLoggedIn ? (
           <Link
             to="/wallet"
-            className="block border border-border p-5 transition-colors hover:bg-muted/60 md:p-6"
+            className="flex min-w-0 flex-col justify-between rounded-3xl bg-tint-butter p-6 transition-transform duration-200 hover:-translate-y-0.5 md:p-7"
           >
-            <p className="text-xs text-muted-foreground">{t("home.walletBalance.label")}</p>
-            <p className="mt-3 text-3xl font-medium figure md:text-4xl">
-              {balance == null
-                ? "—"
-                : `₩${formatNumber(balance, locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
-            </p>
-            <BalanceEquivalents
-              balance={balance}
-              hintKey="wallet.balanceEquivalentsHint"
-              className="mt-1 text-sm text-muted-foreground figure"
-            />
-            <p className="mt-5 text-xs underline underline-offset-4 decoration-foreground/30">
-              {t("home.walletBalance.link")}
-            </p>
+            <p className="text-sm font-medium">{t("home.walletBalance.label")}</p>
+            <div className="mt-6">
+              <p className="text-3xl font-extrabold tracking-[-0.03em] figure md:text-4xl">
+                {balance == null
+                  ? "—"
+                  : `₩${formatNumber(balance, locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+              </p>
+              <BalanceEquivalents
+                balance={balance}
+                hintKey="wallet.balanceEquivalentsHint"
+                className="mt-2 text-sm text-foreground/70 figure"
+              />
+            </div>
+            <p className="mt-6 text-sm font-semibold underline underline-offset-4">{t("home.walletBalance.link")}</p>
           </Link>
         ) : null}
       </section>
 
-      {/* Order status strip */}
+      {/* Order status tiles */}
       <section aria-labelledby="home-dashboard-heading">
         <div className="flex flex-col gap-1 md:flex-row md:items-baseline md:justify-between">
           <h2 id="home-dashboard-heading">{t("home.dashboard.title")}</h2>
           <p className="text-sm text-muted-foreground">{t("home.dashboard.subtitle")}</p>
         </div>
-        <div className="mt-5 grid grid-cols-2 border-l border-t border-border md:grid-cols-4">
-          {dashboardCards.map(({ key, count, title, desc, to, icon: Icon, highlight }) => (
-            <Link
-              key={key}
-              to={to}
-              className="group border-b border-r border-border p-4 transition-colors hover:bg-muted/60 md:p-5"
-            >
-              <div className="flex items-center gap-2 text-sm">
-                <Icon className="size-4 shrink-0" strokeWidth={1.5} aria-hidden />
-                <span className="font-medium">{title}</span>
-                {highlight ? (
-                  <span className="ml-auto size-1.5 rounded-full bg-foreground" aria-hidden />
-                ) : null}
-              </div>
-              <p className="mt-5 text-4xl font-light figure md:text-5xl">{count}</p>
-              <p className="mt-3 text-xs leading-snug text-muted-foreground">{desc}</p>
-            </Link>
-          ))}
-        </div>
+        <StatStrip items={dashboardItems} columns={4} size="lg" className="mt-5" />
       </section>
 
       {/* Featured products */}
@@ -261,7 +239,7 @@ export default function Home() {
           action={<SectionLink to="/products">{t("common.viewAll")}</SectionLink>}
           flush
         >
-          <ProductGrid products={featured} rateMap={rateMap} />
+          <ProductRail products={featured} rateMap={rateMap} className="mt-6" />
         </Section>
       ) : null}
 
@@ -280,7 +258,7 @@ export default function Home() {
                   <li key={request.id}>
                     <Link
                       to={`/purchase/${request.id}`}
-                      className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 border-b border-border py-3.5 transition-colors hover:bg-muted/60 md:grid-cols-[auto_minmax(0,1.2fr)_minmax(0,1fr)_auto]"
+                      className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 border-b border-border py-4 transition-colors hover:text-brand md:grid-cols-[auto_minmax(0,1.2fr)_minmax(0,1fr)_auto]"
                     >
                       <Badge
                         variant="outline"
@@ -292,7 +270,7 @@ export default function Home() {
                       <span className="hidden min-w-0 truncate text-xs text-muted-foreground md:inline">
                         {statusHint(request.status)}
                       </span>
-                      <span className="text-sm font-medium figure">
+                      <span className="text-sm font-semibold figure">
                         {formatKrwLine(request.totalAmountKrw, dateLocale)}
                       </span>
                     </Link>
@@ -300,7 +278,7 @@ export default function Home() {
                 ))}
               </ul>
             ) : (
-              <div className="flex flex-col items-start gap-3 border-b border-border py-8">
+              <div className="flex flex-col items-start gap-3 py-8">
                 <ShoppingCart className="size-6 text-muted-foreground" strokeWidth={1.25} aria-hidden />
                 <p className="text-sm text-muted-foreground">{t("home.recentRequests.empty")}</p>
                 <Button asChild size="sm" variant="outline">
@@ -322,13 +300,15 @@ export default function Home() {
                   <li key={notice.id}>
                     <Link
                       to={`/notice/${notice.id}`}
-                      className="flex items-center justify-between gap-4 border-b border-border py-3.5 transition-colors hover:bg-muted/60"
+                      className="flex items-center justify-between gap-4 border-b border-border py-4 transition-colors hover:text-brand"
                     >
                       <span className="flex min-w-0 items-center gap-2">
                         {notice.isPinned ? (
-                          <Badge className="px-1.5 py-0 text-[10px] font-medium">{t("home.notice.pinned")}</Badge>
+                          <Badge className="bg-brand px-2 py-0 text-[11px] text-brand-foreground">
+                            {t("home.notice.pinned")}
+                          </Badge>
                         ) : null}
-                        <span className="min-w-0 truncate text-sm">{notice.title}</span>
+                        <span className="min-w-0 truncate text-sm font-medium">{notice.title}</span>
                       </span>
                       <time
                         dateTime={notice.createdAt}
@@ -341,14 +321,11 @@ export default function Home() {
                 ))}
               </ul>
             ) : (
-              <p className="border-b border-border py-8 text-sm text-muted-foreground">
-                {t("home.recentNotices.empty")}
-              </p>
+              <p className="py-8 text-sm text-muted-foreground">{t("home.recentNotices.empty")}</p>
             )}
           </Section>
         </div>
 
-        {/* Exchange panel: the one dark block on the page */}
         <ExchangePanel ratesData={ratesData} />
       </div>
     </div>

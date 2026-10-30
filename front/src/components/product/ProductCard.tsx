@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { Link } from "react-router";
 import { Package } from "lucide-react";
 import { Badge } from "../ui/badge";
@@ -34,17 +35,30 @@ const PLACEHOLDER_ICON: Record<NonNullable<ProductImageProps["size"]>, string> =
   lg: "size-10",
 };
 
-/** 4:5 image box; a quiet typographic placeholder when there is no photo. */
+const RADIUS: Record<NonNullable<ProductImageProps["size"]>, string> = {
+  xs: "rounded-lg",
+  sm: "rounded-2xl",
+  lg: "rounded-3xl",
+};
+
+/**
+ * 4:5 image box; a quiet placeholder when there is no photo or the file fails to load.
+ * The photo zooms a little on hover inside a card.
+ */
 export function ProductImage({ product, className, size = "sm" }: ProductImageProps) {
   const { t } = useTranslation();
+  const [failed, setFailed] = useState(false);
+  useEffect(() => setFailed(false), [product.imageUrl]);
+  const showImage = Boolean(product.imageUrl) && !failed;
   return (
-    <div className={cn("relative aspect-[4/5] w-full overflow-hidden bg-muted", className)}>
-      {product.imageUrl ? (
+    <div className={cn("relative aspect-[4/5] w-full overflow-hidden bg-muted", RADIUS[size], className)}>
+      {showImage ? (
         <img
-          src={product.imageUrl}
+          src={product.imageUrl ?? undefined}
           alt={product.name}
           loading="lazy"
-          className="absolute inset-0 size-full object-cover"
+          onError={() => setFailed(true)}
+          className="absolute inset-0 size-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.04]"
         />
       ) : (
         <div
@@ -52,9 +66,7 @@ export function ProductImage({ product, className, size = "sm" }: ProductImagePr
           aria-label={size === "xs" ? t("products.noImage") : undefined}
         >
           <Package className={PLACEHOLDER_ICON[size]} strokeWidth={1} aria-hidden />
-          {size !== "xs" ? (
-            <span className="text-[11px] uppercase tracking-[0.14em]">{t("products.noImage")}</span>
-          ) : null}
+          {size !== "xs" ? <span className="text-xs">{t("products.noImage")}</span> : null}
         </div>
       )}
     </div>
@@ -67,27 +79,23 @@ type ProductCardProps = {
   className?: string;
 };
 
-/** Grid cell: image, shop, name, price. The whole cell links to the product page. */
+/** Grid cell: rounded photo, shop, name, price. The whole cell links to the product page. */
 export function ProductCard({ product, rateMap, className }: ProductCardProps) {
   const { t, locale } = useTranslation();
   const rub = formatRubEquivalent(product.priceKrw, rateMap, locale);
   return (
-    <Link
-      to={`/products/${product.id}`}
-      className={cn(
-        "group block min-w-0 border-b border-r border-border p-3 transition-colors hover:bg-muted/40 md:p-4",
-        className,
-      )}
-    >
+    <Link to={`/products/${product.id}`} className={cn("group block min-w-0", className)}>
       <div className="relative">
         <ProductImage product={product} />
         {product.isFeatured ? (
-          <Badge className="absolute left-2 top-2 px-1.5 py-0 text-[10px] font-medium">{t("products.featured")}</Badge>
+          <Badge className="absolute left-3 top-3 bg-brand px-2 py-0.5 text-[11px] text-brand-foreground">
+            {t("products.featured")}
+          </Badge>
         ) : null}
       </div>
       <p className="mt-3 truncate text-xs text-muted-foreground">{product.shopName}</p>
-      <h3 className="mt-1 line-clamp-2 text-sm font-medium leading-snug">{product.name}</h3>
-      <p className="mt-2 text-base figure">{formatKrw(product.priceKrw, locale)}</p>
+      <h3 className="mt-1 line-clamp-2 text-sm font-medium leading-snug tracking-normal">{product.name}</h3>
+      <p className="mt-2 text-base font-bold figure">{formatKrw(product.priceKrw, locale)}</p>
       {rub ? <p className="text-xs text-muted-foreground figure">{rub}</p> : null}
     </Link>
   );
@@ -101,18 +109,41 @@ type ProductGridProps = {
   className?: string;
 };
 
-/** Products in a grid that shares one hairline between cells. */
+/** Products in a responsive grid. */
 export function ProductGrid({ products, rateMap, columns = 4, className }: ProductGridProps) {
   return (
     <div
       className={cn(
-        "grid grid-cols-2 border-l border-t border-border",
+        "grid grid-cols-2 gap-x-4 gap-y-8 md:gap-x-6",
         columns === 4 ? "md:grid-cols-3 lg:grid-cols-4" : "md:grid-cols-3",
         className,
       )}
     >
       {products.map((p) => (
         <ProductCard key={p.id} product={p} rateMap={rateMap} />
+      ))}
+    </div>
+  );
+}
+
+type ProductRailProps = {
+  products: Product[];
+  rateMap?: Map<string, number>;
+  className?: string;
+};
+
+/** A swipeable row on phones that becomes a four-column grid on desktop. */
+export function ProductRail({ products, rateMap, className }: ProductRailProps) {
+  return (
+    <div
+      className={cn(
+        "-mx-5 flex snap-x snap-mandatory gap-4 overflow-x-auto px-5 pb-1 scrollbar-none",
+        "md:mx-0 md:grid md:grid-cols-4 md:gap-x-6 md:overflow-visible md:px-0",
+        className,
+      )}
+    >
+      {products.map((p) => (
+        <ProductCard key={p.id} product={p} rateMap={rateMap} className="w-[62%] shrink-0 snap-start sm:w-[40%] md:w-auto" />
       ))}
     </div>
   );

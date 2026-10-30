@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router";
 import { Search, Package } from "lucide-react";
 import { Input } from "../../components/ui/input";
 import { cn } from "../../components/ui/utils";
@@ -13,13 +14,14 @@ import type { CurrentExchangeRates } from "../../utils/exchange";
 
 const PAGE_SIZE = 12;
 
-/** Public catalogue: category chips, search, hairline grid, pager. */
+/** Public catalogue: category chips, search, product grid, pager. */
 export default function Products() {
   const { t } = useTranslation();
   const { getCurrentExchangeRates } = useExchangeRate();
   const [products, setProducts] = useState<Product[]>([]);
+  const [searchParams, setSearchParams] = useSearchParams();
   const [categories, setCategories] = useState<string[]>([]);
-  const [category, setCategory] = useState<string | null>(null);
+  const [category, setCategoryState] = useState<string | null>(() => searchParams.get("category") || null);
   const [keyword, setKeyword] = useState("");
   const [debouncedKeyword, setDebouncedKeyword] = useState("");
   const [page, setPage] = useState(0);
@@ -43,6 +45,13 @@ export default function Products() {
     return () => window.clearTimeout(handle);
   }, [keyword]);
 
+  /** Category lives in the URL so a tile on the landing page can link straight to it. */
+  const setCategory = (next: string | null) => {
+    setCategoryState(next);
+    setPage(0);
+    setSearchParams(next ? { category: next } : {}, { replace: true });
+  };
+
   const load = useCallback(() => {
     setLoading(true);
     getProducts({ page, size: PAGE_SIZE, category, keyword: debouncedKeyword })
@@ -63,23 +72,20 @@ export default function Products() {
 
   const chipClass = (active: boolean) =>
     cn(
-      "border px-3 py-1.5 text-xs transition-colors",
-      active ? "border-foreground bg-foreground text-background" : "border-border text-muted-foreground hover:border-foreground hover:text-foreground",
+      "rounded-full px-3.5 py-1.5 text-sm font-medium transition-colors",
+      active ? "bg-foreground text-background" : "bg-muted text-muted-foreground hover:text-foreground",
     );
 
   return (
     <div className="space-y-8 md:space-y-10">
       <PageHeader title={t("products.title")} description={t("products.subtitle")} />
 
-      <div className="flex flex-col gap-4 border-b border-border pb-4 md:flex-row md:items-center md:justify-between">
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div className="flex flex-wrap gap-1.5" role="group" aria-label={t("products.category")}>
           <button
             type="button"
             aria-pressed={category === null}
-            onClick={() => {
-              setCategory(null);
-              setPage(0);
-            }}
+            onClick={() => setCategory(null)}
             className={chipClass(category === null)}
           >
             {t("products.all")}
@@ -89,10 +95,7 @@ export default function Products() {
               key={c}
               type="button"
               aria-pressed={category === c}
-              onClick={() => {
-                setCategory(c);
-                setPage(0);
-              }}
+              onClick={() => setCategory(c)}
               className={chipClass(category === c)}
             >
               {c}
@@ -106,7 +109,7 @@ export default function Products() {
             aria-hidden
           />
           <Input
-            className="pl-9"
+            className="rounded-full bg-muted pl-9"
             placeholder={t("products.search")}
             value={keyword}
             onChange={(e) => {

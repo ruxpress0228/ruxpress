@@ -1,18 +1,19 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router";
-import { ArrowUpRight, FileText, MessageSquare, ShoppingCart, type LucideIcon } from "lucide-react";
+import { ArrowRight, Bell, Coins, MessageCircle, Wallet, type LucideIcon } from "lucide-react";
 import { Button } from "../../components/ui/button";
 import { Badge } from "../../components/ui/badge";
 import { Section, SectionLink } from "../../components/page";
 import { ExchangePanel } from "../../components/exchange/ExchangePanel";
-import { ProductGrid } from "../../components/product/ProductCard";
-import { useAuthGate } from "../../components/auth/AuthGate";
+import { ProductRail } from "../../components/product/ProductCard";
+import { CategoryTiles } from "../../components/product/CategoryTiles";
+import { LinkStartBar } from "../../components/landing/LinkStartBar";
 import { api } from "../../utils/api";
 import { unwrap } from "../../utils/exception";
-import { getFeaturedProducts } from "../../api/product";
+import { getFeaturedProducts, getProductCategories } from "../../api/product";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useExchangeRate } from "../../hooks/exchange/useExchangeRate";
-import { buildRateMap } from "../../utils/exchange";
+import { buildRateMap, formatCrossRateLine } from "../../utils/exchange";
 import type { Notice, PageResponse } from "../../types";
 import type { Product } from "../../types/product";
 import type { CurrentExchangeRates } from "../../utils/exchange";
@@ -25,26 +26,32 @@ function formatNoticeDate(iso: string): string {
   return `${y}.${m}.${day}`;
 }
 
-type ServiceRow = {
-  key: string;
-  icon: LucideIcon;
-  title: string;
-  description: string;
-  action: string;
-  /** Public pages link directly; account features go through the login gate. */
-  to: string;
-  gated: boolean;
-};
+const BENEFITS: { key: string; icon: LucideIcon; tint: string }[] = [
+  { key: "rate", icon: Coins, tint: "bg-tint-butter" },
+  { key: "escrow", icon: Wallet, tint: "bg-tint-mint" },
+  { key: "chat", icon: MessageCircle, tint: "bg-tint-sky" },
+  { key: "track", icon: Bell, tint: "bg-tint-lilac" },
+];
 
-/** Guest home: what the service does, today's rate, how it works, and the latest notices. */
+/**
+ * Guest home. The hero is the service itself: paste a shop link, start a request.
+ * Everything below shows what is on offer (categories, products), how it works, and why to trust it.
+ */
 export default function Landing() {
-  const { t } = useTranslation();
-  const { requireLogin } = useAuthGate();
+  const { t, locale } = useTranslation();
   const { getCurrentExchangeRates } = useExchangeRate();
   const [rates, setRates] = useState<CurrentExchangeRates | null>(null);
   const [notices, setNotices] = useState<Notice[]>([]);
   const [featured, setFeatured] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<string[]>([]);
   const rateMap = useMemo(() => buildRateMap(rates?.quotes), [rates]);
+  /** "1 RUB = 17.52 KRW" → label "1 RUB", value "17.52 KRW" for the hero card. */
+  const headlineRate = useMemo(() => {
+    const line = rates && rates.quotes.length > 0 ? formatCrossRateLine("RUB", "KRW", rateMap, locale, 1) : null;
+    if (!line) return null;
+    const idx = line.indexOf(" = ");
+    return idx < 0 ? { base: null, value: line } : { base: line.slice(0, idx), value: line.slice(idx + 3) };
+  }, [rates, rateMap, locale]);
 
   useEffect(() => {
     getCurrentExchangeRates()
@@ -54,9 +61,12 @@ export default function Landing() {
       .get<PageResponse<Notice>>("/v1/notices?page=0&size=3")
       .then((res) => setNotices(unwrap(res).content))
       .catch(() => setNotices([]));
-    getFeaturedProducts(4)
+    getFeaturedProducts(8)
       .then(setFeatured)
       .catch(() => setFeatured([]));
+    getProductCategories()
+      .then(setCategories)
+      .catch(() => setCategories([]));
   }, [getCurrentExchangeRates]);
 
   const steps = [1, 2, 3].map((n) => ({
@@ -65,160 +75,152 @@ export default function Landing() {
     description: t(`landing.how.${n}.desc`),
   }));
 
-  const services: ServiceRow[] = [
-    {
-      key: "purchase",
-      icon: ShoppingCart,
-      title: t("home.quick.purchase.title"),
-      description: t("home.quick.purchase.desc"),
-      action: t("home.hero.cta"),
-      to: "/purchase/new",
-      gated: true,
-    },
-    {
-      key: "inquiry",
-      icon: MessageSquare,
-      title: t("home.quick.inquiry.title"),
-      description: t("home.quick.inquiry.desc"),
-      action: t("landing.services.inquiry.action"),
-      to: "/inquiry/new",
-      gated: true,
-    },
-    {
-      key: "notice",
-      icon: FileText,
-      title: t("home.quick.notice.title"),
-      description: t("home.quick.notice.desc"),
-      action: t("landing.services.notice.action"),
-      to: "/notice",
-      gated: false,
-    },
-  ];
-
-  const rowClass =
-    "group grid w-full grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-4 border-b border-border py-5 text-left transition-colors hover:bg-muted/60 md:gap-6";
-
   return (
-    <div className="space-y-20 md:space-y-28">
-      {/* Hero: the promise, and the number that matters today */}
-      <section className="grid gap-10 md:grid-cols-[minmax(0,1fr)_minmax(20rem,24rem)] md:items-center md:gap-16">
-        <div className="min-w-0">
-          <p className="text-sm text-muted-foreground">{t("footer.tagline")}</p>
-          <h1 className="mt-4 text-4xl leading-[1.05] md:text-6xl">{t("home.hero.title")}</h1>
-          <p className="mt-6 max-w-md text-base leading-relaxed text-muted-foreground md:text-lg">
-            {t("home.hero.subtitle")}
-          </p>
-          <div className="mt-8 flex flex-wrap items-center gap-2">
-            <Button size="lg" asChild>
-              <Link to="/signup">{t("landing.cta.start")}</Link>
-            </Button>
-            <Button size="lg" variant="outline" asChild>
-              <Link to="/login">{t("nav.login")}</Link>
-            </Button>
+    <div className="space-y-16 md:space-y-24">
+      {/* Hero: the promise, and the control that starts the job */}
+      <section className="rounded-3xl bg-brand px-6 py-10 text-brand-foreground md:rounded-[2.5rem] md:px-12 md:py-16 lg:px-16 lg:py-20">
+        <div className="grid gap-10 lg:grid-cols-[minmax(0,7fr)_minmax(0,4fr)] lg:items-center lg:gap-16">
+          <div className="min-w-0">
+            <h1 className="text-4xl font-extrabold leading-[1.05] tracking-[-0.035em] text-brand-foreground md:text-6xl">
+              {t("landing.hero.title")}
+            </h1>
+            <p className="mt-5 max-w-lg text-base leading-relaxed text-brand-foreground/85 md:text-lg">
+              {t("landing.hero.subtitle")}
+            </p>
+            <LinkStartBar className="mt-8 max-w-2xl" />
+            <p className="max-w-lg text-sm text-brand-foreground/75">{t("landing.hero.note")}</p>
           </div>
-          <p className="mt-6 max-w-md text-xs leading-relaxed text-muted-foreground">{t("landing.hero.note")}</p>
+
+          {headlineRate ? (
+            <a
+              href="#exchange"
+              className="group block rounded-3xl bg-background p-6 text-foreground transition-transform duration-200 hover:-translate-y-0.5 md:p-7"
+            >
+              <p className="text-sm text-muted-foreground">
+                {t("landing.rate.today")}
+                {headlineRate.base ? <span className="figure"> · {headlineRate.base}</span> : null}
+              </p>
+              <p className="mt-3 text-3xl font-extrabold leading-none tracking-[-0.03em] figure md:text-4xl">
+                {headlineRate.value}
+              </p>
+              <p className="mt-5 inline-flex items-center gap-1 text-sm font-semibold">
+                {t("landing.rate.cta")}
+                <ArrowRight
+                  className="size-4 transition-transform duration-200 group-hover:translate-x-0.5"
+                  strokeWidth={2}
+                  aria-hidden
+                />
+              </p>
+            </a>
+          ) : null}
         </div>
-        <ExchangePanel ratesData={rates} />
       </section>
 
-      {/* Featured products: what people actually order through the service */}
+      {/* Categories: what is on offer, one tile each */}
+      {categories.length > 0 ? (
+        <Section title={t("landing.categories.title")} flush>
+          <CategoryTiles categories={categories} className="mt-6" />
+        </Section>
+      ) : null}
+
+      {/* Featured products */}
       {featured.length > 0 ? (
         <Section
           title={t("landing.products.title")}
           action={<SectionLink to="/products">{t("common.viewAll")}</SectionLink>}
           flush
         >
-          <ProductGrid products={featured} rateMap={rateMap} />
+          <ProductRail products={featured} rateMap={rateMap} className="mt-6" />
         </Section>
       ) : null}
 
       {/* How it works: a real sequence, so the steps are numbered */}
-      <Section title={t("landing.how.title")} flush>
-        <ol className="grid border-l border-border md:grid-cols-3">
+      <section aria-labelledby="landing-how" className="rounded-3xl bg-muted p-6 md:rounded-[2.5rem] md:p-12">
+        <h2 id="landing-how" className="text-2xl font-bold tracking-[-0.02em] md:text-3xl">
+          {t("landing.how.title")}
+        </h2>
+        <ol className="mt-8 grid gap-8 md:grid-cols-3 md:gap-10">
           {steps.map((step) => (
-            <li key={step.n} className="border-b border-r border-border p-6 md:p-8">
-              <span className="text-xs text-muted-foreground figure">0{step.n}</span>
-              <h3 className="mt-8 text-lg leading-snug">{step.title}</h3>
-              <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{step.description}</p>
+            <li key={step.n} className="flex gap-4 md:block">
+              <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-foreground text-sm font-bold text-background figure">
+                {step.n}
+              </span>
+              <div className="md:mt-5">
+                <h3 className="text-lg font-semibold leading-snug">{step.title}</h3>
+                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{step.description}</p>
+              </div>
             </li>
           ))}
         </ol>
-      </Section>
+      </section>
 
-      {/* Services: each row leads to the feature; account features open the login sheet */}
-      <Section title={t("landing.services.title")} flush>
-        <ul>
-          {services.map(({ key, icon: Icon, title, description, action, to, gated }) => {
-            const inner = (
-              <>
-                <Icon className="size-5 text-muted-foreground" strokeWidth={1.5} aria-hidden />
-                <span className="min-w-0">
-                  <span className="block text-base font-medium">{title}</span>
-                  <span className="mt-1 block text-sm text-muted-foreground">{description}</span>
-                </span>
-                <span className="flex shrink-0 items-center gap-1 text-sm text-muted-foreground transition-colors group-hover:text-foreground">
-                  <span className="hidden sm:inline">{action}</span>
-                  <ArrowUpRight className="size-4" strokeWidth={1.5} aria-hidden />
-                </span>
-              </>
-            );
-            return (
-              <li key={key}>
-                {gated ? (
-                  <button type="button" onClick={() => requireLogin(to)} className={rowClass}>
-                    {inner}
-                  </button>
-                ) : (
-                  <Link to={to} className={rowClass}>
-                    {inner}
-                  </Link>
-                )}
-              </li>
-            );
-          })}
+      {/* Why trust it: the features the service actually has */}
+      <section aria-labelledby="landing-why">
+        <h2 id="landing-why" className="text-2xl font-bold tracking-[-0.02em] md:text-3xl">
+          {t("landing.why.title")}
+        </h2>
+        <ul className="mt-8 grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
+          {BENEFITS.map(({ key, icon: Icon, tint }) => (
+            <li key={key}>
+              <span className={`flex size-12 items-center justify-center rounded-2xl ${tint}`}>
+                <Icon className="size-6" strokeWidth={1.75} aria-hidden />
+              </span>
+              <h3 className="mt-4 text-base font-semibold leading-snug">{t(`landing.why.${key}.title`)}</h3>
+              <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{t(`landing.why.${key}.desc`)}</p>
+            </li>
+          ))}
         </ul>
-      </Section>
+      </section>
 
-      {/* Latest notices: public, so guests can see the service is alive */}
-      {notices.length > 0 ? (
+      {/* Notices and the converter */}
+      <div className="grid gap-10 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] lg:gap-12">
         <Section
           title={t("home.recentNotices.title")}
           action={<SectionLink to="/notice">{t("home.recentNotices.viewAll")}</SectionLink>}
           flush
         >
-          <ul>
-            {notices.map((notice) => (
-              <li key={notice.id}>
-                <Link
-                  to={`/notice/${notice.id}`}
-                  className="flex items-center justify-between gap-4 border-b border-border py-3.5 transition-colors hover:bg-muted/60"
-                >
-                  <span className="flex min-w-0 items-center gap-2">
-                    {notice.isPinned ? (
-                      <Badge className="px-1.5 py-0 text-[10px] font-medium">{t("home.notice.pinned")}</Badge>
-                    ) : null}
-                    <span className="min-w-0 truncate text-sm">{notice.title}</span>
-                  </span>
-                  <time dateTime={notice.createdAt} className="shrink-0 text-xs text-muted-foreground figure">
-                    {formatNoticeDate(notice.createdAt)}
-                  </time>
-                </Link>
-              </li>
-            ))}
-          </ul>
+          {notices.length > 0 ? (
+            <ul>
+              {notices.map((notice) => (
+                <li key={notice.id}>
+                  <Link
+                    to={`/notice/${notice.id}`}
+                    className="flex items-center justify-between gap-4 border-b border-border py-4 transition-colors hover:text-brand"
+                  >
+                    <span className="flex min-w-0 items-center gap-2">
+                      {notice.isPinned ? (
+                        <Badge className="bg-brand px-2 py-0 text-[11px] text-brand-foreground">
+                          {t("home.notice.pinned")}
+                        </Badge>
+                      ) : null}
+                      <span className="min-w-0 truncate text-sm font-medium">{notice.title}</span>
+                    </span>
+                    <time dateTime={notice.createdAt} className="shrink-0 text-xs text-muted-foreground figure">
+                      {formatNoticeDate(notice.createdAt)}
+                    </time>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="py-8 text-sm text-muted-foreground">{t("home.recentNotices.empty")}</p>
+          )}
         </Section>
-      ) : null}
+        <ExchangePanel id="exchange" ratesData={rates} />
+      </div>
 
       {/* Closing invitation */}
-      <section className="border-y border-foreground py-14 md:py-20">
-        <h2 className="max-w-2xl text-3xl font-light leading-tight md:text-5xl">{t("landing.final.title")}</h2>
-        <p className="mt-4 max-w-md text-base leading-relaxed text-muted-foreground">{t("landing.final.desc")}</p>
+      <section className="rounded-3xl bg-foreground px-6 py-12 text-background md:rounded-[2.5rem] md:px-12 md:py-16">
+        <h2 className="max-w-2xl text-3xl font-extrabold leading-tight tracking-[-0.03em] md:text-5xl">
+          {t("landing.final.title")}
+        </h2>
+        <p className="mt-4 max-w-md text-base leading-relaxed text-background/70">{t("landing.final.desc")}</p>
         <div className="mt-8 flex flex-wrap items-center gap-2">
-          <Button size="lg" asChild>
+          <Button size="lg" variant="secondary" asChild className="bg-background text-foreground hover:bg-background/90">
             <Link to="/signup">{t("landing.cta.start")}</Link>
           </Button>
-          <Button size="lg" variant="ghost" asChild>
-            <Link to="/login">{t("nav.login")}</Link>
+          <Button size="lg" variant="ghost" asChild className="text-background hover:bg-background/10 hover:text-background">
+            <Link to="/products">{t("landing.cta.browse")}</Link>
           </Button>
         </div>
       </section>
