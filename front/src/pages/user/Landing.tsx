@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router";
-import { ArrowRight, Bell, Coins, MessageCircle, Wallet, type LucideIcon } from "lucide-react";
 import { Button } from "../../components/ui/button";
 import { Badge } from "../../components/ui/badge";
+import { cn } from "../../components/ui/utils";
 import { Section, SectionLink } from "../../components/page";
 import { ExchangePanel } from "../../components/exchange/ExchangePanel";
 import { ProductRail } from "../../components/product/ProductCard";
@@ -10,13 +10,16 @@ import { CategoryTiles } from "../../components/product/CategoryTiles";
 import { LinkStartBar } from "../../components/landing/LinkStartBar";
 import { api } from "../../utils/api";
 import { unwrap } from "../../utils/exception";
-import { getFeaturedProducts, getProductCategories } from "../../api/product";
+import { getFeaturedProducts, getProductCategories, getProducts } from "../../api/product";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useExchangeRate } from "../../hooks/exchange/useExchangeRate";
 import { buildRateMap, formatCrossRateLine } from "../../utils/exchange";
 import type { Notice, PageResponse } from "../../types";
 import type { Product } from "../../types/product";
 import type { CurrentExchangeRates } from "../../utils/exchange";
+
+const SLIDE_INTERVAL_MS = 6000;
+const MAX_SLIDES = 5;
 
 function formatNoticeDate(iso: string): string {
   const d = new Date(iso);
@@ -26,32 +29,42 @@ function formatNoticeDate(iso: string): string {
   return `${y}.${m}.${day}`;
 }
 
-const BENEFITS: { key: string; icon: LucideIcon; tint: string }[] = [
-  { key: "rate", icon: Coins, tint: "bg-tint-butter" },
-  { key: "escrow", icon: Wallet, tint: "bg-tint-mint" },
-  { key: "chat", icon: MessageCircle, tint: "bg-tint-sky" },
-  { key: "track", icon: Bell, tint: "bg-tint-lilac" },
-];
+function usePrefersReducedMotion(): boolean {
+  const [reduced, setReduced] = useState(
+    () => typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches,
+  );
+  useEffect(() => {
+    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const onChange = () => setReduced(mq.matches);
+    mq.addEventListener("change", onChange);
+    return () => mq.removeEventListener("change", onChange);
+  }, []);
+  return reduced;
+}
 
 /**
- * Guest home. The hero is the service itself: paste a shop link, start a request.
- * Everything below shows what is on offer (categories, products), how it works, and why to trust it.
+ * Guest home. A full-width showcase of the shop's own product photos carries the
+ * promise and the one control that starts the job; below it the catalogue,
+ * how it works, the rate, and the latest notices.
  */
 export default function Landing() {
   const { t, locale } = useTranslation();
   const { getCurrentExchangeRates } = useExchangeRate();
+  const reducedMotion = usePrefersReducedMotion();
   const [rates, setRates] = useState<CurrentExchangeRates | null>(null);
   const [notices, setNotices] = useState<Notice[]>([]);
   const [featured, setFeatured] = useState<Product[]>([]);
+  const [catalogue, setCatalogue] = useState<Product[]>([]);
   const [categories, setCategories] = useState<string[]>([]);
+  const [slide, setSlide] = useState(0);
+  const [paused, setPaused] = useState(false);
+
   const rateMap = useMemo(() => buildRateMap(rates?.quotes), [rates]);
-  /** "1 RUB = 17.52 KRW" → label "1 RUB", value "17.52 KRW" for the hero card. */
-  const headlineRate = useMemo(() => {
-    const line = rates && rates.quotes.length > 0 ? formatCrossRateLine("RUB", "KRW", rateMap, locale, 1) : null;
-    if (!line) return null;
-    const idx = line.indexOf(" = ");
-    return idx < 0 ? { base: null, value: line } : { base: line.slice(0, idx), value: line.slice(idx + 3) };
-  }, [rates, rateMap, locale]);
+  const headlineRate = useMemo(
+    () => (rates && rates.quotes.length > 0 ? formatCrossRateLine("RUB", "KRW", rateMap, locale, 1) : null),
+    [rates, rateMap, locale],
+  );
+  const slides = useMemo(() => featured.filter((p) => p.imageUrl).slice(0, MAX_SLIDES), [featured]);
 
   useEffect(() => {
     getCurrentExchangeRates()
@@ -67,113 +80,169 @@ export default function Landing() {
     getProductCategories()
       .then(setCategories)
       .catch(() => setCategories([]));
+    getProducts({ page: 0, size: 48 })
+      .then((page) => setCatalogue(page.content))
+      .catch(() => setCatalogue([]));
   }, [getCurrentExchangeRates]);
 
+  // The showcase advances on its own unless the visitor is looking closely or prefers no motion.
+  useEffect(() => {
+    if (slides.length < 2 || paused || reducedMotion) return;
+    const handle = window.setInterval(() => setSlide((i) => (i + 1) % slides.length), SLIDE_INTERVAL_MS);
+    return () => window.clearInterval(handle);
+  }, [slides.length, paused, reducedMotion]);
+
+  useEffect(() => {
+    if (slide >= slides.length) setSlide(0);
+  }, [slide, slides.length]);
+
+  const current = slides[slide];
   const steps = [1, 2, 3].map((n) => ({
     n,
     title: t(`landing.how.${n}.title`),
     description: t(`landing.how.${n}.desc`),
   }));
+  const facts = ["rate", "escrow", "chat", "track"] as const;
 
   return (
-    <div className="space-y-16 md:space-y-24">
-      {/* Hero: the promise, and the control that starts the job */}
-      <section className="rounded-3xl bg-brand px-6 py-10 text-brand-foreground md:rounded-[2.5rem] md:px-12 md:py-16 lg:px-16 lg:py-20">
-        <div className="grid gap-10 lg:grid-cols-[minmax(0,7fr)_minmax(0,4fr)] lg:items-center lg:gap-16">
-          <div className="min-w-0">
-            <h1 className="text-4xl font-extrabold leading-[1.05] tracking-[-0.035em] text-brand-foreground md:text-6xl">
-              {t("landing.hero.title")}
-            </h1>
-            <p className="mt-5 max-w-lg text-base leading-relaxed text-brand-foreground/85 md:text-lg">
-              {t("landing.hero.subtitle")}
-            </p>
-            <LinkStartBar className="mt-8 max-w-2xl" />
-            <p className="max-w-lg text-sm text-brand-foreground/75">{t("landing.hero.note")}</p>
-          </div>
+    <div className="space-y-20 md:space-y-28">
+      {/* Showcase: the shop's own photos, edge to edge, with the promise over them */}
+      <section
+        aria-label={t("landing.hero.eyebrow")}
+        className="full-bleed -mt-24 flex min-h-[80vh] flex-col justify-end bg-foreground text-background md:-mt-26 md:min-h-[92vh]"
+        onMouseEnter={() => setPaused(true)}
+        onMouseLeave={() => setPaused(false)}
+        onFocusCapture={() => setPaused(true)}
+        onBlurCapture={() => setPaused(false)}
+      >
+        {slides.map((p, i) => (
+          <img
+            key={p.id}
+            src={p.imageUrl ?? undefined}
+            alt=""
+            aria-hidden={i !== slide}
+            className={cn(
+              "absolute inset-0 size-full object-cover transition-opacity duration-1000 ease-out",
+              i === slide ? "opacity-100" : "opacity-0",
+            )}
+          />
+        ))}
+        {slides.length > 0 ? (
+          <>
+            {/* Scrims keep the header and the text legible whatever the photo */}
+            <span className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/35 to-black/10" aria-hidden />
+            <span className="absolute inset-x-0 top-0 h-40 bg-gradient-to-b from-black/55 to-transparent" aria-hidden />
+          </>
+        ) : null}
 
-          {headlineRate ? (
-            <a
-              href="#exchange"
-              className="group block rounded-3xl bg-background p-6 text-foreground transition-transform duration-200 hover:-translate-y-0.5 md:p-7"
-            >
-              <p className="text-sm text-muted-foreground">
-                {t("landing.rate.today")}
-                {headlineRate.base ? <span className="figure"> · {headlineRate.base}</span> : null}
+        <div className="relative mx-auto w-full max-w-6xl px-5 pb-10 pt-32 md:px-6 md:pb-16">
+          <div className="grid gap-8 md:grid-cols-[minmax(0,1fr)_auto] md:items-end">
+            <div className="min-w-0 max-w-2xl">
+              <p className="text-[11px] uppercase tracking-[0.22em] text-background/80">{t("landing.hero.eyebrow")}</p>
+              <h1 className="mt-4 text-4xl font-light leading-[1.05] tracking-[-0.02em] text-background md:text-6xl">
+                {t("landing.hero.title")}
+              </h1>
+              <p className="mt-5 max-w-md text-sm leading-relaxed text-background/80 md:text-base">
+                {t("landing.hero.subtitle")}
               </p>
-              <p className="mt-3 text-3xl font-extrabold leading-none tracking-[-0.03em] figure md:text-4xl">
-                {headlineRate.value}
-              </p>
-              <p className="mt-5 inline-flex items-center gap-1 text-sm font-semibold">
-                {t("landing.rate.cta")}
-                <ArrowRight
-                  className="size-4 transition-transform duration-200 group-hover:translate-x-0.5"
-                  strokeWidth={2}
-                  aria-hidden
-                />
-              </p>
-            </a>
-          ) : null}
+              <LinkStartBar tone="onDark" className="mt-8 max-w-xl" />
+            </div>
+
+            {current ? (
+              <div className="flex items-end justify-between gap-6 md:flex-col md:items-end md:text-right">
+                <Link to={`/products/${current.id}`} className="min-w-0 transition-opacity hover:opacity-80">
+                  <span className="block text-[10px] uppercase tracking-[0.2em] text-background/70">
+                    {t("products.featured")}
+                  </span>
+                  <span className="mt-1 block truncate text-sm">{current.name}</span>
+                </Link>
+                {slides.length > 1 ? (
+                  <div className="flex shrink-0 items-center gap-3">
+                    <span className="text-[11px] text-background/70 figure">
+                      {String(slide + 1).padStart(2, "0")} / {String(slides.length).padStart(2, "0")}
+                    </span>
+                    <div className="flex items-center gap-1.5" role="tablist" aria-label={t("products.featured")}>
+                      {slides.map((p, i) => (
+                        <button
+                          key={p.id}
+                          type="button"
+                          role="tab"
+                          aria-selected={i === slide}
+                          aria-label={p.name}
+                          onClick={() => setSlide(i)}
+                          className={cn(
+                            "size-1.5 rounded-full transition-colors",
+                            i === slide ? "bg-background" : "bg-background/40 hover:bg-background/70",
+                          )}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
+          </div>
         </div>
       </section>
 
-      {/* Categories: what is on offer, one tile each */}
+      {/* Today's rate, one quiet line */}
+      {headlineRate ? (
+        <div className="-mt-12 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 border-b border-border pb-4 text-[11px] uppercase tracking-[0.16em] md:-mt-20">
+          <span className="text-muted-foreground">{t("landing.rate.today")}</span>
+          <span className="figure">{headlineRate}</span>
+          <a href="#exchange" className="text-muted-foreground underline underline-offset-4 transition-colors hover:text-foreground">
+            {t("landing.rate.cta")}
+          </a>
+        </div>
+      ) : null}
+
+      {/* Categories: dark panels in the shop's own photos */}
       {categories.length > 0 ? (
-        <Section title={t("landing.categories.title")} flush>
-          <CategoryTiles categories={categories} className="mt-6" />
+        <Section
+          title={t("landing.categories.title")}
+          action={<SectionLink to="/products">{t("common.viewAll")}</SectionLink>}
+        >
+          <CategoryTiles categories={categories} products={catalogue} className="mt-2" />
         </Section>
       ) : null}
 
       {/* Featured products */}
       {featured.length > 0 ? (
-        <Section
-          title={t("landing.products.title")}
-          action={<SectionLink to="/products">{t("common.viewAll")}</SectionLink>}
-          flush
-        >
-          <ProductRail products={featured} rateMap={rateMap} className="mt-6" />
+        <Section title={t("landing.products.title")} action={<SectionLink to="/products">{t("common.viewAll")}</SectionLink>}>
+          <ProductRail products={featured} rateMap={rateMap} className="mt-2" />
         </Section>
       ) : null}
 
-      {/* How it works: a real sequence, so the steps are numbered */}
-      <section aria-labelledby="landing-how" className="rounded-3xl bg-muted p-6 md:rounded-[2.5rem] md:p-12">
-        <h2 id="landing-how" className="text-2xl font-bold tracking-[-0.02em] md:text-3xl">
-          {t("landing.how.title")}
-        </h2>
-        <ol className="mt-8 grid gap-8 md:grid-cols-3 md:gap-10">
-          {steps.map((step) => (
-            <li key={step.n} className="flex gap-4 md:block">
-              <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-foreground text-sm font-bold text-background figure">
-                {step.n}
-              </span>
-              <div className="md:mt-5">
-                <h3 className="text-lg font-semibold leading-snug">{step.title}</h3>
-                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{step.description}</p>
-              </div>
-            </li>
-          ))}
-        </ol>
-      </section>
-
-      {/* Why trust it: the features the service actually has */}
-      <section aria-labelledby="landing-why">
-        <h2 id="landing-why" className="text-2xl font-bold tracking-[-0.02em] md:text-3xl">
-          {t("landing.why.title")}
-        </h2>
-        <ul className="mt-8 grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
-          {BENEFITS.map(({ key, icon: Icon, tint }) => (
-            <li key={key}>
-              <span className={`flex size-12 items-center justify-center rounded-2xl ${tint}`}>
-                <Icon className="size-6" strokeWidth={1.75} aria-hidden />
-              </span>
-              <h3 className="mt-4 text-base font-semibold leading-snug">{t(`landing.why.${key}.title`)}</h3>
-              <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{t(`landing.why.${key}.desc`)}</p>
+      {/* The statement, then the facts behind it */}
+      <section className="border-t border-foreground pt-10 md:pt-14">
+        <p className="mx-auto max-w-3xl text-center text-2xl font-light leading-snug tracking-[-0.01em] md:text-4xl">
+          {t("landing.statement")}
+        </p>
+        <ul className="mt-12 grid gap-8 sm:grid-cols-2 md:mt-16 md:grid-cols-4 md:gap-6">
+          {facts.map((key) => (
+            <li key={key} className="border-t border-border pt-4">
+              <h3 className="text-sm font-medium">{t(`landing.why.${key}.title`)}</h3>
+              <p className="mt-2 text-xs leading-relaxed text-muted-foreground">{t(`landing.why.${key}.desc`)}</p>
             </li>
           ))}
         </ul>
       </section>
 
-      {/* Notices and the converter */}
-      <div className="grid gap-10 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] lg:gap-12">
+      {/* How it works: a real sequence, so the steps are numbered */}
+      <Section title={t("landing.how.title")}>
+        <ol className="grid gap-8 md:grid-cols-3 md:gap-6">
+          {steps.map((step) => (
+            <li key={step.n} className="border-t border-border pt-4">
+              <span className="text-[11px] tracking-[0.16em] text-muted-foreground figure">0{step.n}</span>
+              <h3 className="mt-6 text-lg font-light leading-snug md:text-xl">{step.title}</h3>
+              <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{step.description}</p>
+            </li>
+          ))}
+        </ol>
+      </Section>
+
+      {/* Notices and the rate */}
+      <div className="grid gap-14 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] lg:gap-12">
         <Section
           title={t("home.recentNotices.title")}
           action={<SectionLink to="/notice">{t("home.recentNotices.viewAll")}</SectionLink>}
@@ -185,15 +254,13 @@ export default function Landing() {
                 <li key={notice.id}>
                   <Link
                     to={`/notice/${notice.id}`}
-                    className="flex items-center justify-between gap-4 border-b border-border py-4 transition-colors hover:text-brand"
+                    className="flex items-center justify-between gap-4 border-b border-border py-3.5 transition-colors hover:bg-muted/60"
                   >
                     <span className="flex min-w-0 items-center gap-2">
                       {notice.isPinned ? (
-                        <Badge className="bg-brand px-2 py-0 text-[11px] text-brand-foreground">
-                          {t("home.notice.pinned")}
-                        </Badge>
+                        <Badge className="px-1.5 py-0 text-[10px] font-medium">{t("home.notice.pinned")}</Badge>
                       ) : null}
-                      <span className="min-w-0 truncate text-sm font-medium">{notice.title}</span>
+                      <span className="min-w-0 truncate text-sm">{notice.title}</span>
                     </span>
                     <time dateTime={notice.createdAt} className="shrink-0 text-xs text-muted-foreground figure">
                       {formatNoticeDate(notice.createdAt)}
@@ -203,23 +270,24 @@ export default function Landing() {
               ))}
             </ul>
           ) : (
-            <p className="py-8 text-sm text-muted-foreground">{t("home.recentNotices.empty")}</p>
+            <p className="border-b border-border py-8 text-sm text-muted-foreground">{t("home.recentNotices.empty")}</p>
           )}
         </Section>
-        <ExchangePanel id="exchange" ratesData={rates} />
+        <ExchangePanel ratesData={rates} className="scroll-mt-24" id="exchange" />
       </div>
 
       {/* Closing invitation */}
-      <section className="rounded-3xl bg-foreground px-6 py-12 text-background md:rounded-[2.5rem] md:px-12 md:py-16">
-        <h2 className="max-w-2xl text-3xl font-extrabold leading-tight tracking-[-0.03em] md:text-5xl">
-          {t("landing.final.title")}
-        </h2>
-        <p className="mt-4 max-w-md text-base leading-relaxed text-background/70">{t("landing.final.desc")}</p>
-        <div className="mt-8 flex flex-wrap items-center gap-2">
-          <Button size="lg" variant="secondary" asChild className="bg-background text-foreground hover:bg-background/90">
+      <section className="border-t border-foreground py-14 text-center md:py-20">
+        <p className="text-[11px] uppercase tracking-[0.22em] text-muted-foreground">{t("landing.hero.eyebrow")}</p>
+        <h2 className="mx-auto mt-4 max-w-2xl text-3xl font-light leading-tight md:text-5xl">{t("landing.final.title")}</h2>
+        <p className="mx-auto mt-4 max-w-md text-sm leading-relaxed text-muted-foreground md:text-base">
+          {t("landing.final.desc")}
+        </p>
+        <div className="mt-8 flex flex-wrap items-center justify-center gap-2">
+          <Button size="lg" asChild>
             <Link to="/signup">{t("landing.cta.start")}</Link>
           </Button>
-          <Button size="lg" variant="ghost" asChild className="text-background hover:bg-background/10 hover:text-background">
+          <Button size="lg" variant="outline" asChild>
             <Link to="/products">{t("landing.cta.browse")}</Link>
           </Button>
         </div>

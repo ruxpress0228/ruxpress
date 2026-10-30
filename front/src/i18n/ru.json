@@ -1157,14 +1157,14 @@
   "admin.products.col.price": "Цена",
   "admin.products.col.sort": "Порядок",
   "admin.products.searchPlaceholder": "Поиск по названию или магазину",
-  "landing.hero.title": "Корейские магазины — прямо к вам в Россию",
-  "landing.hero.subtitle": "Просто вставьте ссылку на товар. Мы купим, проверим и отправим.",
+  "landing.hero.title": "Всё из корейских магазинов — в Россию",
+  "landing.hero.subtitle": "Просто пришлите ссылку. Купим, проверим и доставим до двери.",
   "landing.link.label": "Ссылка на товар",
   "landing.link.placeholder": "Вставьте ссылку на товар",
   "landing.link.cta": "Начать",
   "landing.link.hint": "Ссылка должна начинаться с https://",
   "landing.rate.today": "Курс сегодня",
-  "landing.rate.cta": "Открыть калькулятор",
+  "landing.rate.cta": "Калькулятор курса",
   "landing.categories.title": "Категории",
   "landing.categories.all": "Все товары",
   "landing.cta.browse": "Смотреть товары",
@@ -1177,5 +1177,8 @@
   "landing.why.chat.desc": "Вопросы по заказу решаются в чате и через обращения.",
   "landing.why.track.title": "Уведомления на каждом этапе",
   "landing.why.track.desc": "Сообщаем о каждом изменении статуса — от приёма до доставки.",
-  "home.link.title": "Вставьте ссылку и оформите заявку"
+  "home.link.title": "Вставьте ссылку и оформите заявку",
+  "landing.hero.eyebrow": "Покупка товаров из Кореи",
+  "landing.statement": "Корейский шопинг начинается с одной ссылки. Покупка, проверка и доставка — в одном месте.",
+  "landing.categories.view": "Смотреть"
 }

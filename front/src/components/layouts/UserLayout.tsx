@@ -72,6 +72,18 @@ function UserShell() {
 
   const userNickname = readAuthValue(STORAGE_KEYS.USER_NICKNAME);
 
+  // On the guest landing page the header sits over the showcase until the visitor scrolls.
+  const isLanding = location.pathname === "/" && !isLoggedIn;
+  const [atTop, setAtTop] = useState(true);
+  useEffect(() => {
+    if (!isLanding) return;
+    const onScroll = () => setAtTop(window.scrollY < 24);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, [isLanding]);
+  const overlay = isLanding && atTop;
+
   useEffect(() => {
     if (!langOpen) return;
     const handleClickOutside = (e: MouseEvent) => {
@@ -97,8 +109,14 @@ function UserShell() {
 
   const navLinkClass = (active: boolean) =>
     cn(
-      "whitespace-nowrap py-1 text-sm font-medium transition-colors",
-      active ? "text-foreground" : "text-muted-foreground hover:text-foreground",
+      "eyebrow whitespace-nowrap py-1 transition-colors",
+      overlay
+        ? active
+          ? "text-background"
+          : "text-background/70 hover:text-background"
+        : active
+          ? "text-foreground"
+          : "text-muted-foreground hover:text-foreground",
     );
 
   /**
@@ -126,12 +144,17 @@ function UserShell() {
     textNavigation.map((item) => renderNavItem(item, navLinkClass(isActive(item.path)), t(item.nameKey)));
 
   return (
-    <div className="flex min-h-screen flex-col bg-background text-foreground">
-      <header className="sticky top-0 z-50 border-b border-border bg-background/85 backdrop-blur-md">
+    <div className="flex min-h-screen flex-col overflow-x-clip bg-background text-foreground">
+      <header
+        className={cn(
+          "sticky top-0 z-50 border-b transition-colors duration-300",
+          overlay ? "border-transparent bg-transparent text-background" : "border-border bg-background/85 backdrop-blur-md",
+        )}
+      >
         <div className="mx-auto max-w-6xl px-5 md:px-6">
           <div className="grid h-16 grid-cols-[1fr_auto] items-center gap-4 lg:grid-cols-[auto_1fr_auto] lg:gap-8">
             <Link to="/" className="justify-self-start" aria-label={t("nav.home")}>
-              <Wordmark />
+              <Wordmark className={overlay ? "text-background" : undefined} />
             </Link>
 
             <nav
@@ -147,6 +170,7 @@ function UserShell() {
                   type="button"
                   variant="ghost"
                   size="icon"
+                  className={overlay ? "text-background hover:bg-background/15 hover:text-background" : undefined}
                   title={t("common.language")}
                   onClick={() => setLangOpen((v) => !v)}
                   aria-expanded={langOpen}
@@ -156,7 +180,7 @@ function UserShell() {
                 </Button>
                 {langOpen && (
                   <div
-                    className="absolute right-0 top-full z-[100] mt-2 min-w-[10rem] rounded-2xl border border-border bg-popover p-1.5 shadow-lg"
+                    className="absolute right-0 top-full z-[100] mt-2 min-w-[10rem] border border-border bg-popover py-1"
                     role="listbox"
                     aria-label={t("common.language")}
                   >
@@ -169,7 +193,7 @@ function UserShell() {
                           role="option"
                           aria-selected={selected}
                           className={cn(
-                            "flex w-full items-center justify-between gap-3 rounded-xl px-3 py-2 text-left text-sm transition-colors hover:bg-muted",
+                            "flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-sm transition-colors hover:bg-muted",
                             selected ? "text-foreground" : "text-muted-foreground",
                           )}
                           onClick={() => {
@@ -208,7 +232,11 @@ function UserShell() {
                   <Link to={loginPath(currentPath)} className={cn(navLinkClass(isActive("/login")), "px-2")}>
                     {t("nav.login")}
                   </Link>
-                  <Button size="sm" asChild>
+                  <Button
+                    size="sm"
+                    asChild
+                    className={cn("hidden sm:inline-flex", overlay && "bg-background text-foreground hover:bg-background/90")}
+                  >
                     <Link to="/signup">{t("landing.cta.start")}</Link>
                   </Button>
                 </div>

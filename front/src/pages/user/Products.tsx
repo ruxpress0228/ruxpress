@@ -14,7 +14,7 @@ import type { CurrentExchangeRates } from "../../utils/exchange";
 
 const PAGE_SIZE = 12;
 
-/** Public catalogue: category chips, search, product grid, pager. */
+/** Public catalogue: category chips, search, hairline grid, pager. */
 export default function Products() {
   const { t } = useTranslation();
   const { getCurrentExchangeRates } = useExchangeRate();
@@ -72,15 +72,15 @@ export default function Products() {
 
   const chipClass = (active: boolean) =>
     cn(
-      "rounded-full px-3.5 py-1.5 text-sm font-medium transition-colors",
-      active ? "bg-foreground text-background" : "bg-muted text-muted-foreground hover:text-foreground",
+      "border px-3 py-1.5 text-xs transition-colors",
+      active ? "border-foreground bg-foreground text-background" : "border-border text-muted-foreground hover:border-foreground hover:text-foreground",
     );
 
   return (
     <div className="space-y-8 md:space-y-10">
       <PageHeader title={t("products.title")} description={t("products.subtitle")} />
 
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+      <div className="flex flex-col gap-4 border-b border-border pb-4 md:flex-row md:items-center md:justify-between">
         <div className="flex flex-wrap gap-1.5" role="group" aria-label={t("products.category")}>
           <button
             type="button"
@@ -109,7 +109,7 @@ export default function Products() {
             aria-hidden
           />
           <Input
-            className="rounded-full bg-muted pl-9"
+            className="pl-9"
             placeholder={t("products.search")}
             value={keyword}
             onChange={(e) => {

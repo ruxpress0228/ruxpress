@@ -22,7 +22,7 @@ export function Steps({ steps, current, className }: StepsProps) {
             >
               <span
                 className={cn(
-                  "flex size-5 shrink-0 items-center justify-center rounded-full border text-[10px] font-medium figure",
+                  "flex size-5 shrink-0 items-center justify-center border text-[10px] font-medium figure",
                   state === "done" && "border-foreground bg-foreground text-background",
                   state === "current" && "border-foreground",
                   state === "todo" && "border-border",

@@ -89,7 +89,7 @@ export default function ProductDetail() {
         meta={
           <>
             {product.isFeatured ? (
-              <Badge className="bg-brand px-2 py-0 text-[11px] text-brand-foreground">{t("products.featured")}</Badge>
+              <Badge className="px-1.5 py-0 text-[10px] font-medium">{t("products.featured")}</Badge>
             ) : null}
             <span>{product.shopName}</span>
             {product.category ? <span>{product.category}</span> : null}
@@ -99,11 +99,11 @@ export default function ProductDetail() {
       />
 
       <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:gap-14">
-        <ProductImage product={product} size="lg" />
+        <ProductImage product={product} size="lg" className="border border-border" />
 
         <div className="min-w-0 lg:pt-2">
           <p className="text-xs text-muted-foreground">{t("products.referencePrice")}</p>
-          <p className="mt-2 text-4xl font-extrabold tracking-[-0.03em] figure md:text-5xl">{formatKrw(product.priceKrw, locale)}</p>
+          <p className="mt-2 text-4xl font-light figure md:text-5xl">{formatKrw(product.priceKrw, locale)}</p>
           {rub ? <p className="mt-1 text-base text-muted-foreground figure">{rub}</p> : null}
           <p className="mt-3 max-w-md text-xs leading-relaxed text-muted-foreground">{t("products.priceNote")}</p>
 

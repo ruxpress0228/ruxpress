@@ -1,6 +1,7 @@
 import { useId, useMemo, useState } from "react";
 import { Label } from "../ui/label";
 import { cn } from "../ui/utils";
+import { Section } from "../page";
 import { useTranslation } from "../../hooks/useTranslation";
 import { formatDate } from "../../utils/format";
 import {
@@ -17,12 +18,13 @@ type ExchangePanelProps = {
   /** Current rates, or null while loading / unavailable. */
   ratesData: CurrentExchangeRates | null;
   className?: string;
+  /** DOM id for in-page links (the heading keeps its own generated id). */
   id?: string;
 };
 
 /**
- * Exchange-rate panel on a soft surface: today's RUB→KRW rate set large,
- * plus a converter across all quote currencies. Used on the dashboard and the landing page.
+ * The black exchange-rate panel: today's RUB→KRW rate set large, plus a
+ * converter across all quote currencies. Used on the dashboard and the landing page.
  */
 export function ExchangePanel({ ratesData, className, id }: ExchangePanelProps) {
   const { t, locale } = useTranslation();
@@ -49,31 +51,29 @@ export function ExchangePanel({ ratesData, className, id }: ExchangePanelProps) 
   }, [krwRubSummary]);
 
   return (
-    <section
-      id={id}
-      aria-labelledby={headingId}
-      className={cn("scroll-mt-24 rounded-3xl bg-muted p-6 md:p-8", className)}
-    >
-      <div className="flex items-start justify-between gap-4">
-        <h2 id={headingId} className="text-xl font-bold tracking-[-0.02em]">
-          {t("home.exchange.title")}
-        </h2>
-        {ratesData?.fetchedAt ? (
-          <span className="shrink-0 pt-1 text-xs text-muted-foreground figure">
+    <div id={id} className={cn("bg-foreground p-5 text-background md:p-7", className)}>
+    <Section
+      id={headingId}
+      title={t("home.exchange.title")}
+      tone="inverted"
+      flush
+      action={
+        ratesData?.fetchedAt ? (
+          <span className="text-background/60 figure">
             {formatDate(ratesData.fetchedAt, locale)} {t("home.exchange.asOf")}
           </span>
-        ) : null}
-      </div>
-
+        ) : null
+      }
+    >
       {hasRates ? (
         <>
-          <div className="mt-6">
-            {headlineBase ? <p className="text-sm text-muted-foreground figure">{headlineBase}</p> : null}
-            <p className="mt-1 text-4xl font-bold leading-none tracking-[-0.03em] figure md:text-5xl">{headlineValue}</p>
+          <div className="mt-7">
+            {headlineBase ? <p className="text-sm text-background/60 figure">{headlineBase}</p> : null}
+            <p className="mt-1 text-4xl font-light leading-none figure md:text-5xl">{headlineValue}</p>
           </div>
 
           <div className="mt-8">
-            <p className="text-xs text-muted-foreground">{t("home.exchange.baseCurrency")}</p>
+            <p className="text-xs text-background/60">{t("home.exchange.baseCurrency")}</p>
             <div className="mt-2 flex flex-wrap gap-1.5" role="group" aria-label={t("home.exchange.baseCurrency")}>
               {QUOTE_CURRENCIES.map((c) => {
                 const active = baseCurrency === c;
@@ -84,8 +84,10 @@ export function ExchangePanel({ ratesData, className, id }: ExchangePanelProps) 
                     aria-pressed={active}
                     onClick={() => setBaseCurrency(c)}
                     className={cn(
-                      "rounded-full px-3 py-1.5 text-xs font-semibold transition-colors",
-                      active ? "bg-foreground text-background" : "bg-background text-muted-foreground hover:text-foreground",
+                      "border px-2.5 py-1 text-xs tracking-[0.08em] transition-colors",
+                      active
+                        ? "border-background bg-background text-foreground"
+                        : "border-background/30 text-background/80 hover:border-background",
                     )}
                   >
                     {c}
@@ -95,7 +97,7 @@ export function ExchangePanel({ ratesData, className, id }: ExchangePanelProps) 
             </div>
 
             <div className="mt-5">
-              <Label htmlFor={`${headingId}-amount`} className="text-xs font-normal text-muted-foreground">
+              <Label htmlFor={`${headingId}-amount`} className="text-xs font-normal text-background/60">
                 {t("home.exchange.baseAmount")}
               </Label>
               <input
@@ -104,7 +106,7 @@ export function ExchangePanel({ ratesData, className, id }: ExchangePanelProps) 
                 inputMode="decimal"
                 min="0"
                 step="any"
-                className="mt-1 w-full border-b border-foreground/20 bg-transparent py-1 text-2xl font-semibold text-foreground outline-none figure transition-colors placeholder:text-muted-foreground focus:border-brand"
+                className="mt-1 w-full border-b border-background/40 bg-transparent py-1 text-2xl font-light text-background outline-none figure transition-colors placeholder:text-background/40 focus:border-background"
                 value={baseAmountInput}
                 onChange={(e) => setBaseAmountInput(e.target.value)}
                 onBlur={() => {
@@ -112,31 +114,32 @@ export function ExchangePanel({ ratesData, className, id }: ExchangePanelProps) 
                   setBaseAmountInput(String(normalized));
                 }}
               />
-              <p className="mt-2 text-[11px] text-muted-foreground">
+              <p className="mt-2 text-[11px] text-background/50">
                 {t("home.exchange.baseAmountHint").replace("{{currency}}", baseCurrency)}
               </p>
             </div>
 
-            <ul className="mt-5 border-t border-foreground/10">
+            <ul className="mt-5 border-t border-background/20">
               {otherCurrencies(baseCurrency).map((target) => {
                 const line = formatCrossRateLine(baseCurrency, target, rateMap, locale, baseAmount);
                 return (
                   <li
                     key={target}
-                    className="flex flex-wrap items-baseline justify-between gap-2 border-b border-foreground/10 py-2.5"
+                    className="flex flex-wrap items-baseline justify-between gap-2 border-b border-background/20 py-2.5"
                   >
-                    <span className="text-sm text-muted-foreground">{currencyLabel(target)}</span>
-                    <span className="text-base font-medium figure">{line ?? t("home.exchange.rateUnavailable")}</span>
+                    <span className="text-sm text-background/60">{currencyLabel(target)}</span>
+                    <span className="text-base figure">{line ?? t("home.exchange.rateUnavailable")}</span>
                   </li>
                 );
               })}
             </ul>
-            <p className="mt-3 text-[11px] text-muted-foreground">{t("home.exchange.autoUpdate")}</p>
+            <p className="mt-3 text-[11px] text-background/50">{t("home.exchange.autoUpdate")}</p>
           </div>
         </>
       ) : (
-        <p className="mt-6 text-sm text-muted-foreground">{t("home.exchange.loading")}</p>
+        <p className="mt-7 text-sm text-background/60">{t("home.exchange.loading")}</p>
       )}
-    </section>
+    </Section>
+    </div>
   );
 }
