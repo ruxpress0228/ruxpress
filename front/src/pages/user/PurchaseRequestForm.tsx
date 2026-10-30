@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Link, useNavigate } from "react-router";
+import { useSearchParams, Link, useNavigate } from "react-router";
 import { MapPin, Plus, X, Upload } from "lucide-react";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
@@ -86,6 +86,33 @@ export default function PurchaseRequestForm() {
   const [addresses, setAddresses] = useState<UserAddress[]>([]);
   const [addressesLoading, setAddressesLoading] = useState(false);
   const [selectedShippingId, setSelectedShippingId] = useState<number | null>(null);
+  const [searchParams] = useSearchParams();
+
+  // A product card can open this form with ?name=&url=&shop=&price= — fill the first line once.
+  useEffect(() => {
+    const url = searchParams.get("url")?.trim() ?? "";
+    const name = searchParams.get("name")?.trim() ?? "";
+    if (!url && !name) return;
+    const shop = searchParams.get("shop")?.trim() ?? "";
+    const price = Number(searchParams.get("price"));
+    setRequestName((prev) => prev || name);
+    setItems((prev) => {
+      const first = prev[0] ?? emptyLineItem();
+      const untouched = first.urls.every((u) => !u) && !first.shop && first.priceKrw === 0;
+      if (!untouched) return prev;
+      return [
+        {
+          ...first,
+          urls: [url || ""],
+          shop,
+          priceKrw: Number.isFinite(price) && price > 0 ? Math.round(price) : 0,
+        },
+        ...prev.slice(1),
+      ];
+    });
+    // Only on mount: the query string describes the entry point, not live state.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const rateMap = useMemo(
     () => (ratesData ? buildRateMap(ratesData.quotes) : new Map<string, number>()),

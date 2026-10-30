@@ -6,6 +6,10 @@ import { Badge } from "../../components/ui/badge";
 import { cn } from "../../components/ui/utils";
 import { Section, SectionLink } from "../../components/page";
 import { ExchangePanel } from "../../components/exchange/ExchangePanel";
+import { ProductGrid } from "../../components/product/ProductCard";
+import { getFeaturedProducts } from "../../api/product";
+import { buildRateMap } from "../../utils/exchange";
+import type { Product } from "../../types/product";
 import { purchaseStatusBadgeClass } from "../../utils/purchaseStatusStyle";
 import { api, readAuthValue } from "../../utils/api";
 import { unwrap } from "../../utils/exception";
@@ -64,8 +68,10 @@ export default function Home() {
     null,
   );
   const [nickname, setNickname] = useState<string>(() => readAuthValue(STORAGE_KEYS.USER_NICKNAME) ?? "");
+  const [featured, setFeatured] = useState<Product[]>([]);
   const isLoggedIn = Boolean(readAuthValue(STORAGE_KEYS.TOKEN));
   const { balance } = useBalance();
+  const rateMap = useMemo(() => buildRateMap(ratesData?.quotes), [ratesData]);
 
   const inProgressCount =
     (summaryCounts?.REQUESTED ?? 0) + (summaryCounts?.PURCHASING ?? 0);
@@ -93,6 +99,10 @@ export default function Home() {
       .get<PageResponse<Notice>>("/v1/notices?page=0&size=10")
       .then((res) => setRecentNotices(unwrap(res).content))
       .catch(() => setRecentNotices([]));
+
+    getFeaturedProducts(4)
+      .then(setFeatured)
+      .catch(() => setFeatured([]));
   }, [getCurrentExchangeRates, getRecentPurchaseRequests]);
 
   useEffect(() => {
@@ -242,6 +252,18 @@ export default function Home() {
           ))}
         </div>
       </section>
+
+      {/* Featured products */}
+      {featured.length > 0 ? (
+        <Section
+          id="home-products-heading"
+          title={t("landing.products.title")}
+          action={<SectionLink to="/products">{t("common.viewAll")}</SectionLink>}
+          flush
+        >
+          <ProductGrid products={featured} rateMap={rateMap} />
+        </Section>
+      ) : null}
 
       {/* Activity + exchange */}
       <div className="grid gap-14 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] lg:gap-12">

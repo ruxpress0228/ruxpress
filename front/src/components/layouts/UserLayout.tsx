@@ -11,6 +11,7 @@ import {
   Landmark,
   MessageCircle,
   Check,
+  Tag,
   type LucideIcon,
 } from "lucide-react";
 import { Button } from "../ui/button";
@@ -22,15 +23,24 @@ import { LOCALES, STORAGE_KEYS, USER_AUTH_CHANGE_EVENT } from "../../utils/const
 import { clearUserSession, readAuthValue } from "../../utils/api";
 import { loginPath } from "../../utils/auth";
 
-type NavItem = { nameKey: string; path: string; icon: LucideIcon; public?: boolean };
+type NavItem = {
+  nameKey: string;
+  path: string;
+  icon: LucideIcon;
+  /** Reachable without an account. */
+  public?: boolean;
+  /** Shown in the phone tab bar (six slots). */
+  tab?: boolean;
+};
 
 const NAVIGATION: NavItem[] = [
-  { nameKey: "nav.home", path: "/", icon: Home, public: true },
-  { nameKey: "nav.purchase", path: "/purchase", icon: ShoppingCart },
-  { nameKey: "nav.inquiry", path: "/inquiry", icon: MessageSquare },
+  { nameKey: "nav.home", path: "/", icon: Home, public: true, tab: true },
+  { nameKey: "nav.products", path: "/products", icon: Tag, public: true, tab: true },
+  { nameKey: "nav.purchase", path: "/purchase", icon: ShoppingCart, tab: true },
+  { nameKey: "nav.inquiry", path: "/inquiry", icon: MessageSquare, tab: true },
   { nameKey: "nav.notice", path: "/notice", icon: FileText, public: true },
-  { nameKey: "nav.bankTransfer", path: "/bank-transfer", icon: Landmark },
-  { nameKey: "nav.chat", path: "/chat", icon: MessageCircle },
+  { nameKey: "nav.bankTransfer", path: "/bank-transfer", icon: Landmark, tab: true },
+  { nameKey: "nav.chat", path: "/chat", icon: MessageCircle, tab: true },
 ];
 
 export default function UserLayout() {
@@ -73,7 +83,8 @@ function UserShell() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [langOpen]);
 
-  const isActive = (path: string) => location.pathname === path;
+  const isActive = (path: string) =>
+    path === "/" ? location.pathname === "/" : location.pathname === path || location.pathname.startsWith(`${path}/`);
   const currentPath = `${location.pathname}${location.search}`;
 
   /** The wordmark already links home, so the text navigation skips it. */
@@ -223,7 +234,7 @@ function UserShell() {
         className="fixed inset-x-0 bottom-0 z-50 border-t border-border bg-background/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-md md:hidden"
       >
         <ul className="grid grid-cols-6">
-          {NAVIGATION.map((item) => {
+          {NAVIGATION.filter((item) => item.tab).map((item) => {
             const Icon = item.icon;
             const active = isActive(item.path);
             return (

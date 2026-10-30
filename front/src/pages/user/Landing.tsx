@@ -1,16 +1,20 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router";
 import { ArrowUpRight, FileText, MessageSquare, ShoppingCart, type LucideIcon } from "lucide-react";
 import { Button } from "../../components/ui/button";
 import { Badge } from "../../components/ui/badge";
 import { Section, SectionLink } from "../../components/page";
 import { ExchangePanel } from "../../components/exchange/ExchangePanel";
+import { ProductGrid } from "../../components/product/ProductCard";
 import { useAuthGate } from "../../components/auth/AuthGate";
 import { api } from "../../utils/api";
 import { unwrap } from "../../utils/exception";
+import { getFeaturedProducts } from "../../api/product";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useExchangeRate } from "../../hooks/exchange/useExchangeRate";
+import { buildRateMap } from "../../utils/exchange";
 import type { Notice, PageResponse } from "../../types";
+import type { Product } from "../../types/product";
 import type { CurrentExchangeRates } from "../../utils/exchange";
 
 function formatNoticeDate(iso: string): string {
@@ -39,6 +43,8 @@ export default function Landing() {
   const { getCurrentExchangeRates } = useExchangeRate();
   const [rates, setRates] = useState<CurrentExchangeRates | null>(null);
   const [notices, setNotices] = useState<Notice[]>([]);
+  const [featured, setFeatured] = useState<Product[]>([]);
+  const rateMap = useMemo(() => buildRateMap(rates?.quotes), [rates]);
 
   useEffect(() => {
     getCurrentExchangeRates()
@@ -48,6 +54,9 @@ export default function Landing() {
       .get<PageResponse<Notice>>("/v1/notices?page=0&size=3")
       .then((res) => setNotices(unwrap(res).content))
       .catch(() => setNotices([]));
+    getFeaturedProducts(4)
+      .then(setFeatured)
+      .catch(() => setFeatured([]));
   }, [getCurrentExchangeRates]);
 
   const steps = [1, 2, 3].map((n) => ({
@@ -111,6 +120,17 @@ export default function Landing() {
         </div>
         <ExchangePanel ratesData={rates} />
       </section>
+
+      {/* Featured products: what people actually order through the service */}
+      {featured.length > 0 ? (
+        <Section
+          title={t("landing.products.title")}
+          action={<SectionLink to="/products">{t("common.viewAll")}</SectionLink>}
+          flush
+        >
+          <ProductGrid products={featured} rateMap={rateMap} />
+        </Section>
+      ) : null}
 
       {/* How it works: a real sequence, so the steps are numbered */}
       <Section title={t("landing.how.title")} flush>

@@ -15,6 +15,8 @@ import InquiryForm from "./pages/user/InquiryForm";
 import InquiryDetail from "./pages/user/InquiryDetail";
 import NoticeList from "./pages/user/NoticeList";
 import NoticeDetail from "./pages/user/NoticeDetail";
+import Products from "./pages/user/Products";
+import ProductDetail from "./pages/user/ProductDetail";
 import MyPage from "./pages/user/MyPage";
 import BankTransfer from "./pages/user/BankTransfer";
 import WalletLedger from "./pages/user/WalletLedger";
@@ -28,6 +30,7 @@ import AdminPurchaseRequests from "./pages/admin/AdminPurchaseRequests";
 import AdminPurchaseRequestDetail from "./pages/admin/AdminPurchaseRequestDetail";
 import AdminInquiries from "./pages/admin/AdminInquiries";
 import AdminNotices from "./pages/admin/AdminNotices";
+import AdminProducts from "./pages/admin/AdminProducts";
 import AdminExchangeRate from "./pages/admin/AdminExchangeRate";
 import AdminUsers from "./pages/admin/AdminUsers";
 import AdminUserWallets from "./pages/admin/AdminUserWallets";
@@ -122,9 +125,11 @@ export const router = createBrowserRouter([
           { path: "signup", Component: Signup, loader: redirectIfAuthenticated },
           { path: "forgot-password", Component: ForgotPassword, loader: redirectIfAuthenticated },
           { path: "reset-password", Component: ResetPassword, loader: redirectIfAuthenticated },
-          // Public: notices are readable without an account.
+          // Public: notices and the product catalogue are readable without an account.
           { path: "notice", Component: NoticeList },
           { path: "notice/:id", Component: NoticeDetail },
+          { path: "products", Component: Products },
+          { path: "products/:id", Component: ProductDetail },
           // Member-only.
           { path: "purchase/new", Component: PurchaseRequestForm, loader: requireUserAuth },
           { path: "purchase", Component: PurchaseRequestList, loader: requireUserAuth },
@@ -150,6 +155,7 @@ export const router = createBrowserRouter([
           { path: "purchase-requests/:id", Component: AdminPurchaseRequestDetail, loader: requireAdminAuth },
           { path: "inquiries", Component: AdminInquiries, loader: requireAdminAuth },
           { path: "notices", Component: AdminNotices, loader: requireAdminAuth },
+          { path: "products", Component: AdminProducts, loader: requireAdminAuth },
           { path: "exchange-rate", Component: AdminExchangeRate, loader: requireAdminAuth },
           { path: "users", Component: AdminUsers, loader: requireAdminAuth },
           { path: "user-wallets", Component: AdminUserWallets, loader: requireAdminAuth },
