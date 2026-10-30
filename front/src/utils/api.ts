@@ -90,7 +90,9 @@ function handleUnauthorizedIfNeeded(path: string, payload: ApiResponse<unknown>)
   const isAdminPath = window.location.pathname.startsWith('/admin');
   const target = isAdminPath ? '/admin/login' : '/login';
   if (window.location.pathname !== target) {
-    window.location.href = target;
+    // Members come back to the page they were on after signing in again.
+    const next = `${window.location.pathname}${window.location.search}`;
+    window.location.href = isAdminPath ? target : `${target}?next=${encodeURIComponent(next)}`;
   }
 }
 

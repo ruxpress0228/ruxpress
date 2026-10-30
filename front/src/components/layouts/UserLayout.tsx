@@ -1,5 +1,5 @@
 import { Outlet, Link, useLocation, useNavigate } from "react-router";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, type ReactNode } from "react";
 import {
   User,
   ShoppingCart,
@@ -11,18 +11,41 @@ import {
   Landmark,
   MessageCircle,
   Check,
+  type LucideIcon,
 } from "lucide-react";
 import { Button } from "../ui/button";
 import { cn } from "../ui/utils";
 import { Wordmark } from "../brand/BrandMark";
+import { AuthGateProvider, useAuthGate } from "../auth/AuthGate";
 import { useTranslation } from "../../hooks/useTranslation";
 import { LOCALES, STORAGE_KEYS, USER_AUTH_CHANGE_EVENT } from "../../utils/constants";
 import { clearUserSession, readAuthValue } from "../../utils/api";
+import { loginPath } from "../../utils/auth";
+
+type NavItem = { nameKey: string; path: string; icon: LucideIcon; public?: boolean };
+
+const NAVIGATION: NavItem[] = [
+  { nameKey: "nav.home", path: "/", icon: Home, public: true },
+  { nameKey: "nav.purchase", path: "/purchase", icon: ShoppingCart },
+  { nameKey: "nav.inquiry", path: "/inquiry", icon: MessageSquare },
+  { nameKey: "nav.notice", path: "/notice", icon: FileText, public: true },
+  { nameKey: "nav.bankTransfer", path: "/bank-transfer", icon: Landmark },
+  { nameKey: "nav.chat", path: "/chat", icon: MessageCircle },
+];
 
 export default function UserLayout() {
+  return (
+    <AuthGateProvider>
+      <UserShell />
+    </AuthGateProvider>
+  );
+}
+
+function UserShell() {
   const location = useLocation();
   const navigate = useNavigate();
   const { t, locale, setLocale } = useTranslation();
+  const { isLoggedIn, requireLogin } = useAuthGate();
   const [langOpen, setLangOpen] = useState(false);
   const langRef = useRef<HTMLDivElement>(null);
   const [, setAuthRevision] = useState(0);
@@ -37,7 +60,6 @@ export default function UserLayout() {
     setAuthRevision((n) => n + 1);
   }, [location.pathname]);
 
-  const userToken = readAuthValue(STORAGE_KEYS.TOKEN);
   const userNickname = readAuthValue(STORAGE_KEYS.USER_NICKNAME);
 
   useEffect(() => {
@@ -52,22 +74,14 @@ export default function UserLayout() {
   }, [langOpen]);
 
   const isActive = (path: string) => location.pathname === path;
-
-  const navigation = [
-    { nameKey: "nav.home", path: "/", icon: Home },
-    { nameKey: "nav.purchase", path: "/purchase", icon: ShoppingCart },
-    { nameKey: "nav.inquiry", path: "/inquiry", icon: MessageSquare },
-    { nameKey: "nav.notice", path: "/notice", icon: FileText },
-    { nameKey: "nav.bankTransfer", path: "/bank-transfer", icon: Landmark },
-    { nameKey: "nav.chat", path: "/chat", icon: MessageCircle },
-  ];
+  const currentPath = `${location.pathname}${location.search}`;
 
   /** The wordmark already links home, so the text navigation skips it. */
-  const textNavigation = navigation.filter((item) => item.path !== "/");
+  const textNavigation = NAVIGATION.filter((item) => item.path !== "/");
 
   const handleLogout = () => {
     clearUserSession();
-    navigate("/login");
+    navigate("/");
   };
 
   const navLinkClass = (active: boolean) =>
@@ -76,20 +90,29 @@ export default function UserLayout() {
       active ? "text-foreground" : "text-muted-foreground hover:text-foreground",
     );
 
-  const renderTextNav = () =>
-    textNavigation.map((item) => {
-      const active = isActive(item.path);
+  /**
+   * Guests reach public pages directly; member features open the login sheet
+   * and continue to the feature after signing in.
+   */
+  const renderNavItem = (item: NavItem, className: string, children: ReactNode) => {
+    const active = isActive(item.path);
+    const gated = !isLoggedIn && !item.public;
+    if (gated) {
       return (
-        <Link
-          key={item.path}
-          to={item.path}
-          aria-current={active ? "page" : undefined}
-          className={navLinkClass(active)}
-        >
-          {t(item.nameKey)}
-        </Link>
+        <button key={item.path} type="button" onClick={() => requireLogin(item.path)} className={className}>
+          {children}
+        </button>
       );
-    });
+    }
+    return (
+      <Link key={item.path} to={item.path} aria-current={active ? "page" : undefined} className={className}>
+        {children}
+      </Link>
+    );
+  };
+
+  const renderTextNav = () =>
+    textNavigation.map((item) => renderNavItem(item, navLinkClass(isActive(item.path)), t(item.nameKey)));
 
   return (
     <div className="flex min-h-screen flex-col bg-background text-foreground">
@@ -152,7 +175,7 @@ export default function UserLayout() {
                 )}
               </div>
 
-              {userToken ? (
+              {isLoggedIn ? (
                 <div className="flex items-center gap-0.5">
                   <span
                     className="hidden max-w-[9rem] truncate px-2 text-sm text-muted-foreground sm:inline"
@@ -170,9 +193,14 @@ export default function UserLayout() {
                   </Button>
                 </div>
               ) : (
-                <Link to="/login" className={cn(navLinkClass(isActive("/login")), "px-2")}>
-                  {t("nav.login")}
-                </Link>
+                <div className="flex items-center gap-2">
+                  <Link to={loginPath(currentPath)} className={cn(navLinkClass(isActive("/login")), "px-2")}>
+                    {t("nav.login")}
+                  </Link>
+                  <Button size="sm" asChild className="hidden sm:inline-flex">
+                    <Link to="/signup">{t("landing.cta.start")}</Link>
+                  </Button>
+                </div>
               )}
             </div>
           </div>
@@ -195,22 +223,22 @@ export default function UserLayout() {
         className="fixed inset-x-0 bottom-0 z-50 border-t border-border bg-background/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-md md:hidden"
       >
         <ul className="grid grid-cols-6">
-          {navigation.map((item) => {
+          {NAVIGATION.map((item) => {
             const Icon = item.icon;
             const active = isActive(item.path);
             return (
               <li key={item.path}>
-                <Link
-                  to={item.path}
-                  aria-current={active ? "page" : undefined}
-                  className={cn(
-                    "flex flex-col items-center justify-center gap-1 py-2.5 text-[10px] leading-none transition-colors",
+                {renderNavItem(
+                  item,
+                  cn(
+                    "flex w-full flex-col items-center justify-center gap-1 py-2.5 text-[10px] leading-none transition-colors",
                     active ? "text-foreground" : "text-muted-foreground",
-                  )}
-                >
-                  <Icon className="size-5" strokeWidth={active ? 2 : 1.5} />
-                  <span className="max-w-full truncate px-1">{t(item.nameKey)}</span>
-                </Link>
+                  ),
+                  <>
+                    <Icon className="size-5" strokeWidth={active ? 2 : 1.5} />
+                    <span className="max-w-full truncate px-1">{t(item.nameKey)}</span>
+                  </>,
+                )}
               </li>
             );
           })}
@@ -229,9 +257,19 @@ export default function UserLayout() {
             <p className="text-sm font-medium">{t("footer.support")}</p>
             <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
               <li>
-                <Link to="/inquiry" className="transition-colors hover:text-foreground">
-                  {t("nav.inquiry")}
-                </Link>
+                {isLoggedIn ? (
+                  <Link to="/inquiry" className="transition-colors hover:text-foreground">
+                    {t("nav.inquiry")}
+                  </Link>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => requireLogin("/inquiry")}
+                    className="transition-colors hover:text-foreground"
+                  >
+                    {t("nav.inquiry")}
+                  </button>
+                )}
               </li>
               <li>
                 <Link to="/notice" className="transition-colors hover:text-foreground">

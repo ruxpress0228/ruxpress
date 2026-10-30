@@ -1089,5 +1089,21 @@
   "bankTransfer.attachInvalid": "Можно прикрепить только изображения jpg/png/webp до 5 МБ, не более 10 шт.",
   "bankTransfer.guideImages": "Справочные изображения",
   "bankTransfer.proofPhotoOptional": "Подтверждающее фото (необязательно)",
-  "bankTransfer.proofPhotoHint": "Подтверждающие изображения, напр. переписка с продавцом (jpg/png/webp, 5 МБ, до 10 шт.)"
+  "bankTransfer.proofPhotoHint": "Подтверждающие изображения, напр. переписка с продавцом (jpg/png/webp, 5 МБ, до 10 шт.)",
+  "landing.cta.start": "Начать",
+  "landing.hero.note": "Регистрация бесплатна. Новости и курс валют доступны без входа.",
+  "landing.how.title": "Как это работает",
+  "landing.how.1.title": "Отправьте ссылку на товар",
+  "landing.how.1.desc": "Укажите ссылку на корейский магазин, количество и опции — стоимость рассчитается сразу.",
+  "landing.how.2.title": "Мы покупаем и проверяем товар в Корее",
+  "landing.how.2.desc": "Оплата с баланса кошелька, статус заявки виден в реальном времени.",
+  "landing.how.3.title": "Доставляем на ваш адрес в России",
+  "landing.how.3.desc": "Отслеживайте посылку по трек-номеру, а вопросы решайте в чате 1:1.",
+  "landing.services.title": "Чем мы помогаем",
+  "landing.services.inquiry.action": "Задать вопрос",
+  "landing.services.notice.action": "Смотреть новости",
+  "landing.final.title": "Начните прямо сейчас",
+  "landing.final.desc": "Регистрация занимает минуту — сразу после неё можно отправить первую заявку.",
+  "auth.gate.title": "Нужно войти",
+  "auth.gate.description": "Войдите или создайте аккаунт, чтобы продолжить."
 }

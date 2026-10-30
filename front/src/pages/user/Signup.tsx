@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router";
+import { Link, useLocation, useNavigate } from "react-router";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
@@ -9,6 +9,7 @@ import { Field, Steps } from "../../components/page";
 import { toast } from "sonner";
 import { api } from "../../utils/api";
 import { useTranslation } from "../../hooks/useTranslation";
+import { loginPath, readNextParam } from "../../utils/auth";
 import {
   LegalConsentSection,
   SIGNUP_LEGAL_AGREED_KEY,
@@ -28,6 +29,8 @@ function initialStep(): SignupStep {
 
 export default function Signup() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const next = readNextParam(location.search);
   const { t } = useTranslation();
 
   const [step, setStep] = useState<SignupStep>(initialStep);
@@ -179,7 +182,7 @@ export default function Signup() {
           /* ignore */
         }
         toast.success(res.message ?? t("signup.toast.success"));
-        navigate("/login");
+        navigate(loginPath(next));
       } else {
         toast.error(res.message ?? t("signup.toast.failed"));
       }
@@ -386,7 +389,7 @@ export default function Signup() {
         <p className="mt-8 text-sm text-muted-foreground">
           {t("signup.haveAccount")}{" "}
           <Link
-            to="/login"
+            to={loginPath(next)}
             className="font-medium text-foreground underline underline-offset-4 decoration-foreground/30 transition-colors hover:decoration-foreground"
           >
             {t("signup.loginLink")}

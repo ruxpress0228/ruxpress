@@ -150,6 +150,9 @@
   body {
     @apply bg-background text-foreground;
     font-feature-settings: "cv11", "ss01";
+    /* Korean wraps between words, never inside one; long tokens still break before overflowing. */
+    word-break: keep-all;
+    overflow-wrap: break-word;
   }
 
   h1 {

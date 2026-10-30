@@ -1089,5 +1089,21 @@
   "bankTransfer.attachInvalid": "Only jpg/png/webp images up to 5MB, max 10 files can be attached",
   "bankTransfer.guideImages": "Guide images",
   "bankTransfer.proofPhotoOptional": "Proof photo (optional)",
-  "bankTransfer.proofPhotoHint": "Proof images such as seller chat history (jpg/png/webp, 5MB, max 10)"
+  "bankTransfer.proofPhotoHint": "Proof images such as seller chat history (jpg/png/webp, 5MB, max 10)",
+  "landing.cta.start": "Get started",
+  "landing.hero.note": "Signing up is free. Notices and exchange rates are open to everyone.",
+  "landing.how.title": "How it works",
+  "landing.how.1.title": "Send us the product link",
+  "landing.how.1.desc": "Paste the Korean shop URL with quantity and options and get an instant estimate.",
+  "landing.how.2.title": "We buy and check the item in Korea",
+  "landing.how.2.desc": "Pay from your wallet balance and follow every step in real time.",
+  "landing.how.3.title": "We ship to your address in Russia",
+  "landing.how.3.desc": "Track the parcel with its tracking number and solve questions in 1:1 chat.",
+  "landing.services.title": "What you can do here",
+  "landing.services.inquiry.action": "Ask a question",
+  "landing.services.notice.action": "Read notices",
+  "landing.final.title": "Start today",
+  "landing.final.desc": "Signing up takes a minute, and you can send your first request right away.",
+  "auth.gate.title": "Sign in to continue",
+  "auth.gate.description": "Log in or create an account to continue."
 }

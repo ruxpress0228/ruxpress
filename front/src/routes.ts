@@ -1,8 +1,8 @@
-import { createBrowserRouter, redirect } from "react-router";
+import { createBrowserRouter, redirect, type LoaderFunctionArgs } from "react-router";
 import Root from "./components/Root";
 import UserLayout from "./components/layouts/UserLayout";
 import AdminLayout from "./components/layouts/AdminLayout";
-import Home from "./pages/user/Home";
+import HomeIndex from "./pages/user/HomeIndex";
 import Login from "./pages/user/Login";
 import Signup from "./pages/user/Signup";
 import ForgotPassword from "./pages/user/ForgotPassword";
@@ -40,38 +40,31 @@ import NotFound from "./pages/NotFound";
 import ExamplePage from "./pages/ExamplePage";
 import { STORAGE_KEYS } from "./utils/constants";
 import { readAuthValue } from "./utils/api";
-
-function getTokenRole(token: string): string | null {
-  try {
-    const payload = token.split(".")[1];
-    if (!payload) return null;
-    const normalized = payload.replace(/-/g, "+").replace(/_/g, "/");
-    const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, "=");
-    const decoded = atob(padded);
-    const json = JSON.parse(decoded) as { role?: string };
-    return json.role ?? null;
-  } catch {
-    return null;
-  }
-}
-
-function isAdminRole(role: string | null): boolean {
-  return role === "SUPER_ADMIN" || role === "COUNSELOR";
-}
+import { decodeTokenRole, isAdminRole, loginPath, safeNextPath } from "./utils/auth";
 
 /** localStorage(영속) 와 sessionStorage(세션) 어느 쪽에 있든 토큰을 찾아낸다. REQ2-01. */
 function readToken(): string | null {
   return readAuthValue(STORAGE_KEYS.TOKEN);
 }
 
-function requireUserAuth() {
+/** Where the visitor was heading, so login can bring them back. */
+function requestedPath(request: Request): string {
+  const url = new URL(request.url);
+  return `${url.pathname}${url.search}`;
+}
+
+/**
+ * Member-only pages. Guests (and admin sessions) are sent to the login page
+ * with a `next` parameter that returns them here after signing in.
+ */
+function requireUserAuth({ request }: LoaderFunctionArgs) {
   const token = readToken();
+  const next = requestedPath(request);
   if (!token) {
-    throw redirect("/login");
+    throw redirect(loginPath(next));
   }
-  const role = getTokenRole(token);
-  if (isAdminRole(role)) {
-    throw redirect("/login");
+  if (isAdminRole(decodeTokenRole(token))) {
+    throw redirect(loginPath(next));
   }
   return null;
 }
@@ -81,29 +74,33 @@ function requireAdminAuth() {
   if (!token) {
     throw redirect("/admin/login");
   }
-  const role = getTokenRole(token);
+  const role = decodeTokenRole(token);
   if (!isAdminRole(role)) {
     throw redirect("/admin/login");
   }
   return null;
 }
 
-/** 이미 로그인된 사용자가 인증 페이지(/login 등)에 들어오면 역할에 맞는 메인으로 보낸다. REQ2-01. */
-function redirectIfAuthenticated() {
+/**
+ * 이미 로그인된 사용자가 인증 페이지(/login 등)에 들어오면 역할에 맞는 화면으로 보낸다.
+ * `next` 가 있으면 그곳으로, 없으면 홈으로. REQ2-01.
+ */
+function redirectIfAuthenticated({ request }: LoaderFunctionArgs) {
   const token = readToken();
   if (!token) return null;
-  const role = getTokenRole(token);
+  const role = decodeTokenRole(token);
   if (isAdminRole(role)) {
     throw redirect("/admin");
   }
-  throw redirect("/");
+  const next = safeNextPath(new URL(request.url).searchParams.get("next"));
+  throw redirect(next ?? "/");
 }
 
 /** /admin/login 가드: 이미 관리자 토큰을 가진 상태면 /admin 으로 보내되, 일반 회원 토큰이면 그대로 표시(역할 전환 허용). REQ2-01 Q1'''. */
 function redirectIfAdminAuthenticated() {
   const token = readToken();
   if (!token) return null;
-  const role = getTokenRole(token);
+  const role = decodeTokenRole(token);
   if (isAdminRole(role)) {
     throw redirect("/admin");
   }
@@ -119,20 +116,23 @@ export const router = createBrowserRouter([
         path: "/",
         Component: UserLayout,
         children: [
-          { index: true, Component: Home, loader: requireUserAuth},
+          // Public: the landing page for guests, the dashboard for members.
+          { index: true, Component: HomeIndex },
           { path: "login", Component: Login, loader: redirectIfAuthenticated },
           { path: "signup", Component: Signup, loader: redirectIfAuthenticated },
+          { path: "forgot-password", Component: ForgotPassword, loader: redirectIfAuthenticated },
+          { path: "reset-password", Component: ResetPassword, loader: redirectIfAuthenticated },
+          // Public: notices are readable without an account.
+          { path: "notice", Component: NoticeList },
+          { path: "notice/:id", Component: NoticeDetail },
+          // Member-only.
           { path: "purchase/new", Component: PurchaseRequestForm, loader: requireUserAuth },
           { path: "purchase", Component: PurchaseRequestList, loader: requireUserAuth },
           { path: "purchase/:id", Component: PurchaseRequestDetail, loader: requireUserAuth },
           { path: "inquiry", Component: InquiryList, loader: requireUserAuth },
           { path: "inquiry/new", Component: InquiryForm, loader: requireUserAuth },
           { path: "inquiry/:id", Component: InquiryDetail, loader: requireUserAuth },
-          { path: "notice", Component: NoticeList, loader: requireUserAuth },
-          { path: "notice/:id", Component: NoticeDetail, loader: requireUserAuth },
           { path: "mypage", Component: MyPage, loader: requireUserAuth },
-          { path: "forgot-password", Component: ForgotPassword, loader: redirectIfAuthenticated },
-          { path: "reset-password", Component: ResetPassword, loader: redirectIfAuthenticated },
           { path: "bank-transfer", Component: BankTransfer, loader: requireUserAuth },
           { path: "wallet", Component: WalletLedger, loader: requireUserAuth },
           { path: "bank-transfer/receipt/:id", Component: BankTransferReceipt, loader: requireUserAuth },
