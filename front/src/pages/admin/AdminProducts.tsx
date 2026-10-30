@@ -313,6 +313,7 @@ export default function AdminProducts() {
                 <TableHead>{t("admin.products.field.category")}</TableHead>
                 <TableHead className="text-right">{t("admin.products.col.price")}</TableHead>
                 <TableHead>{t("admin.common.col.status")}</TableHead>
+                <TableHead className="text-right">{t("admin.products.col.views")}</TableHead>
                 <TableHead className="text-right">{t("admin.products.col.sort")}</TableHead>
                 <TableHead className="text-right">{t("admin.common.actions")}</TableHead>
               </TableRow>
@@ -341,6 +342,7 @@ export default function AdminProducts() {
                       {t(statusKey(p.status))}
                     </Badge>
                   </TableCell>
+                  <TableCell className="text-right text-sm text-muted-foreground figure">{(p.viewCount ?? 0).toLocaleString()}</TableCell>
                   <TableCell className="text-right text-sm text-muted-foreground figure">{p.sortOrder}</TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-1" onClick={(e) => e.stopPropagation()}>

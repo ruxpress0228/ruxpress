@@ -6,7 +6,8 @@ import { Badge } from "../../components/ui/badge";
 import { cn } from "../../components/ui/utils";
 import { Section, SectionLink } from "../../components/page";
 import { ExchangePanel } from "../../components/exchange/ExchangePanel";
-import { ProductRail } from "../../components/product/ProductCard";
+import { ProductRail, RecentProductRail } from "../../components/product/ProductCard";
+import { readRecentProducts, type RecentProduct } from "../../utils/recentProducts";
 import { LinkStartBar } from "../../components/landing/LinkStartBar";
 import { getFeaturedProducts } from "../../api/product";
 import { buildRateMap } from "../../utils/exchange";
@@ -70,6 +71,7 @@ export default function Home() {
   );
   const [nickname, setNickname] = useState<string>(() => readAuthValue(STORAGE_KEYS.USER_NICKNAME) ?? "");
   const [featured, setFeatured] = useState<Product[]>([]);
+  const [recent] = useState<RecentProduct[]>(() => readRecentProducts().slice(0, 8));
   const isLoggedIn = Boolean(readAuthValue(STORAGE_KEYS.TOKEN));
   const { balance } = useBalance();
   const rateMap = useMemo(() => buildRateMap(ratesData?.quotes), [ratesData]);
@@ -265,6 +267,12 @@ export default function Home() {
           flush
         >
           <ProductRail products={featured} rateMap={rateMap} className="mt-6" />
+        </Section>
+      ) : null}
+
+      {recent.length > 0 ? (
+        <Section id="home-recent-products" title={t("products.recentlyViewed")} action={<SectionLink to="/products">{t("common.viewAll")}</SectionLink>}>
+          <RecentProductRail products={recent} className="mt-2" />
         </Section>
       ) : null}
 

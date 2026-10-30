@@ -52,6 +52,10 @@ public class Product extends BaseEntity {
     @Column(name = "sort_order", nullable = false)
     private int sortOrder = 0;
 
+    /** 공개 상세 조회 횟수. {@code ProductRepository.incrementViewCount} 의 벌크 UPDATE 로만 증가한다. */
+    @Column(name = "view_count", nullable = false)
+    private long viewCount = 0L;
+
     public static Product create(Long adminId, String name, String shopName, String productUrl, Long priceKrw,
                                  String category, String description, ProductStatus status,
                                  boolean isFeatured, int sortOrder) {

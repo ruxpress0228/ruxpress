@@ -55,6 +55,7 @@ export default function Landing() {
   const [rates, setRates] = useState<CurrentExchangeRates | null>(null);
   const [notices, setNotices] = useState<Notice[]>([]);
   const [featured, setFeatured] = useState<Product[]>([]);
+  const [popular, setPopular] = useState<Product[]>([]);
   const [catalogue, setCatalogue] = useState<Product[]>([]);
   const [categories, setCategories] = useState<string[]>([]);
   const [slide, setSlide] = useState(0);
@@ -84,6 +85,9 @@ export default function Landing() {
     getProducts({ page: 0, size: 48 })
       .then((page) => setCatalogue(page.content))
       .catch(() => setCatalogue([]));
+    getProducts({ page: 0, size: 4, sort: "popular" })
+      .then((page) => setPopular(page.content.filter((p) => p.viewCount > 0).slice(0, 4)))
+      .catch(() => setPopular([]));
   }, [getCurrentExchangeRates]);
 
   // The showcase advances on its own unless the visitor is looking closely or prefers no motion.
@@ -220,6 +224,16 @@ export default function Landing() {
               <Link to="/products">{t("common.viewAll")}</Link>
             </ViewAllButton>
           </div>
+        </section>
+      ) : null}
+
+      {/* Most viewed this season */}
+      {popular.length >= 2 ? (
+        <section aria-labelledby="landing-popular">
+          <h2 id="landing-popular" className="store-title">
+            {t("landing.popular.title")}
+          </h2>
+          <ProductRail products={popular} rateMap={rateMap} className="mt-8" />
         </section>
       ) : null}
 

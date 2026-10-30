@@ -17,6 +17,8 @@ import NoticeList from "./pages/user/NoticeList";
 import NoticeDetail from "./pages/user/NoticeDetail";
 import Products from "./pages/user/Products";
 import ProductDetail from "./pages/user/ProductDetail";
+import Wishlist from "./pages/user/Wishlist";
+import About from "./pages/user/About";
 import MyPage from "./pages/user/MyPage";
 import BankTransfer from "./pages/user/BankTransfer";
 import WalletLedger from "./pages/user/WalletLedger";
@@ -130,6 +132,7 @@ export const router = createBrowserRouter([
           { path: "notice/:id", Component: NoticeDetail },
           { path: "products", Component: Products },
           { path: "products/:id", Component: ProductDetail },
+          { path: "about", Component: About },
           // Member-only.
           { path: "purchase/new", Component: PurchaseRequestForm, loader: requireUserAuth },
           { path: "purchase", Component: PurchaseRequestList, loader: requireUserAuth },
@@ -138,6 +141,7 @@ export const router = createBrowserRouter([
           { path: "inquiry/new", Component: InquiryForm, loader: requireUserAuth },
           { path: "inquiry/:id", Component: InquiryDetail, loader: requireUserAuth },
           { path: "mypage", Component: MyPage, loader: requireUserAuth },
+          { path: "wishlist", Component: Wishlist, loader: requireUserAuth },
           { path: "bank-transfer", Component: BankTransfer, loader: requireUserAuth },
           { path: "wallet", Component: WalletLedger, loader: requireUserAuth },
           { path: "bank-transfer/receipt/:id", Component: BankTransferReceipt, loader: requireUserAuth },

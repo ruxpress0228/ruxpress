@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams, Link, useNavigate } from "react-router";
+import { STORAGE_KEYS } from "../../utils/constants";
 import { MapPin, Plus, X, Upload } from "lucide-react";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
@@ -87,6 +88,29 @@ export default function PurchaseRequestForm() {
   const [addressesLoading, setAddressesLoading] = useState(false);
   const [selectedShippingId, setSelectedShippingId] = useState<number | null>(null);
   const [searchParams] = useSearchParams();
+
+  // The wishlist hands over several products at once (sessionStorage, read once).
+  useEffect(() => {
+    if (searchParams.get("from") !== "wishlist") return;
+    try {
+      const raw = sessionStorage.getItem(STORAGE_KEYS.REQUEST_PREFILL);
+      sessionStorage.removeItem(STORAGE_KEYS.REQUEST_PREFILL);
+      const lines = raw ? (JSON.parse(raw) as { name: string; url: string; shop: string; priceKrw: number }[]) : [];
+      if (!Array.isArray(lines) || lines.length === 0) return;
+      setRequestName((prev) => prev || (lines.length === 1 ? lines[0].name : t("purchase.prefillTitle", { n: lines.length })));
+      setItems(
+        lines.map((line) => ({
+          ...emptyLineItem(),
+          urls: [line.url],
+          shop: line.shop,
+          priceKrw: Number.isFinite(line.priceKrw) && line.priceKrw > 0 ? Math.round(line.priceKrw) : 0,
+        })),
+      );
+    } catch {
+      // A malformed handover just leaves the form empty.
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // A product card can open this form with ?name=&url=&shop=&price= — fill the first line once.
   useEffect(() => {

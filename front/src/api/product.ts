@@ -1,6 +1,6 @@
 import { api } from "../utils/api";
 import type { PageResponse } from "../types";
-import type { Product, ProductRequest, ProductStatus } from "../types/product";
+import type { Product, ProductRequest, ProductSort, ProductStatus } from "../types/product";
 
 const PUBLIC_BASE = "/v1/products";
 const ADMIN_BASE = "/v1/admin/products";
@@ -22,6 +22,7 @@ export async function getProducts(params: {
   size?: number;
   category?: string | null;
   keyword?: string;
+  sort?: ProductSort;
 }): Promise<PageResponse<Product>> {
   const res = await api.get<PageResponse<Product>>(`${PUBLIC_BASE}${query(params)}`);
   if (res.code !== 200 || res.data == null) throw new Error(res.message || "Failed to load products");

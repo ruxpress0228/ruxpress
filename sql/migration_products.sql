@@ -16,6 +16,7 @@ CREATE TABLE IF NOT EXISTS `products` (
 	`status`	ENUM('ACTIVE', 'HIDDEN')	NOT NULL	DEFAULT 'ACTIVE'	COMMENT '노출 상태',
 	`is_featured`	TINYINT(1)	NOT NULL	DEFAULT 0	COMMENT '추천 상품',
 	`sort_order`	INT	NOT NULL	DEFAULT 0	COMMENT '정렬 순서',
+	`view_count`	BIGINT	NOT NULL	DEFAULT 0	COMMENT '조회수',
 	`created_at`	DATETIME	NOT NULL,
 	`updated_at`	DATETIME	NOT NULL	DEFAULT CURRENT_TIMESTAMP,
 	`deleted_at`	DATETIME	NULL	COMMENT '소프트 삭제',

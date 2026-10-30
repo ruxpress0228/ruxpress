@@ -2,16 +2,21 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router";
 import { Package, Search } from "lucide-react";
 import { cn } from "../../components/ui/utils";
-import { EmptyState, LoadingState, Pager } from "../../components/page";
-import { ProductGrid } from "../../components/product/ProductCard";
+import { EmptyState, Pager } from "../../components/page";
+import { ProductGrid, ProductGridSkeleton } from "../../components/product/ProductCard";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../components/ui/select";
 import { getProductCategories, getProducts } from "../../api/product";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useExchangeRate } from "../../hooks/exchange/useExchangeRate";
 import { buildRateMap } from "../../utils/exchange";
-import type { Product } from "../../types/product";
+import { PRODUCT_SORTS, type Product, type ProductSort } from "../../types/product";
 import type { CurrentExchangeRates } from "../../utils/exchange";
 
 const PAGE_SIZE = 12;
+
+function parseSort(raw: string | null | undefined): ProductSort {
+  return PRODUCT_SORTS.includes(raw as ProductSort) ? (raw as ProductSort) : "recommended";
+}
 
 /** Public catalogue: breadcrumb, centred title, a hairline toolbar, the grid. */
 export default function Products() {
@@ -21,8 +26,9 @@ export default function Products() {
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<string[]>([]);
   const [category, setCategoryState] = useState<string | null>(() => searchParams.get("category") || null);
-  const [keyword, setKeyword] = useState("");
-  const [debouncedKeyword, setDebouncedKeyword] = useState("");
+  const [keyword, setKeyword] = useState(() => searchParams.get("keyword") ?? "");
+  const [debouncedKeyword, setDebouncedKeyword] = useState(() => (searchParams.get("keyword") ?? "").trim());
+  const [sort, setSortState] = useState<ProductSort>(() => parseSort(searchParams.get("sort")));
   const [page, setPage] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
   const [total, setTotal] = useState<number | null>(null);
@@ -40,11 +46,27 @@ export default function Products() {
       .catch(() => setCategories([]));
   }, [getCurrentExchangeRates]);
 
-  // The URL is the source of truth for the category, so the browser's back button works.
+  // The URL is the source of truth (category, keyword, sort), so links and the back button work.
   useEffect(() => {
     const fromUrl = searchParams.get("category") || null;
     setCategoryState((prev) => (prev === fromUrl ? prev : fromUrl));
+    const kw = searchParams.get("keyword") ?? "";
+    setKeyword((prev) => (prev === kw ? prev : kw));
+    setDebouncedKeyword((prev) => (prev === kw.trim() ? prev : kw.trim()));
+    const st = parseSort(searchParams.get("sort"));
+    setSortState((prev) => (prev === st ? prev : st));
   }, [searchParams]);
+
+  const writeParams = (next: { category?: string | null; keyword?: string; sort?: ProductSort }) => {
+    const params: Record<string, string> = {};
+    const c = next.category === undefined ? category : next.category;
+    const k = next.keyword === undefined ? keyword : next.keyword;
+    const so = next.sort === undefined ? sort : next.sort;
+    if (c) params.category = c;
+    if (k.trim()) params.keyword = k.trim();
+    if (so !== "recommended") params.sort = so;
+    setSearchParams(params, { replace: true });
+  };
 
   useEffect(() => {
     const handle = window.setTimeout(() => setDebouncedKeyword(keyword.trim()), 300);
@@ -54,12 +76,18 @@ export default function Products() {
   const setCategory = (next: string | null) => {
     setCategoryState(next);
     setPage(0);
-    setSearchParams(next ? { category: next } : {}, { replace: true });
+    writeParams({ category: next });
+  };
+
+  const setSort = (next: ProductSort) => {
+    setSortState(next);
+    setPage(0);
+    writeParams({ sort: next });
   };
 
   const load = useCallback(() => {
     setLoading(true);
-    getProducts({ page, size: PAGE_SIZE, category, keyword: debouncedKeyword })
+    getProducts({ page, size: PAGE_SIZE, category, keyword: debouncedKeyword, sort })
       .then((data) => {
         setProducts(data.content);
         setTotalPages(data.totalPages);
@@ -71,7 +99,7 @@ export default function Products() {
         setTotal(null);
       })
       .finally(() => setLoading(false));
-  }, [page, category, debouncedKeyword]);
+  }, [page, category, debouncedKeyword, sort]);
 
   useEffect(() => {
     load();
@@ -103,7 +131,9 @@ export default function Products() {
           <span className="text-foreground">{t("nav.products")}</span>
         )}
       </nav>
-      <h1 className="page-title mt-5 text-center">{category ?? t("landing.categories.all")}</h1>
+      <h1 className="page-title mt-5 text-center">
+        {debouncedKeyword ? t("products.resultsFor", { q: debouncedKeyword }) : category ?? t("landing.categories.all")}
+      </h1>
       <p className="mx-auto mt-2 max-w-xl text-center text-sm text-muted-foreground">{t("products.subtitle")}</p>
 
       {/* Toolbar: categories, count, search, on one hairline row */}
@@ -121,25 +151,40 @@ export default function Products() {
         <p className="hidden text-[11px] tracking-[0.12em] text-muted-foreground figure md:block">
           {total != null ? t("products.count", { n: total }) : ""}
         </p>
-        <label className="flex items-center gap-2 md:justify-self-end">
-          <Search className="size-4 shrink-0 text-muted-foreground" strokeWidth={1.5} aria-hidden />
-          <input
-            type="search"
-            className="h-8 w-full min-w-0 bg-transparent text-sm outline-none placeholder:text-muted-foreground md:w-56"
-            placeholder={t("products.search")}
-            value={keyword}
-            onChange={(e) => {
-              setKeyword(e.target.value);
-              setPage(0);
-            }}
-            aria-label={t("products.search")}
-          />
-        </label>
+        <div className="flex items-center gap-4 md:justify-self-end">
+          <label className="flex min-w-0 flex-1 items-center gap-2">
+            <Search className="size-4 shrink-0 text-muted-foreground" strokeWidth={1.5} aria-hidden />
+            <input
+              type="search"
+              className="h-8 w-full min-w-0 bg-transparent text-sm outline-none placeholder:text-muted-foreground md:w-44 [&::-webkit-search-cancel-button]:hidden"
+              placeholder={t("products.search")}
+              value={keyword}
+              onChange={(e) => {
+                setKeyword(e.target.value);
+                setPage(0);
+              }}
+              onBlur={() => writeParams({ keyword })}
+              aria-label={t("products.search")}
+            />
+          </label>
+          <Select value={sort} onValueChange={(v) => setSort(parseSort(v))}>
+            <SelectTrigger size="sm" className="w-auto gap-1 border-0 bg-transparent px-0 text-[11px] uppercase tracking-[0.12em] shadow-none" aria-label={t("products.sort.label")}>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent align="end">
+              {PRODUCT_SORTS.map((s) => (
+                <SelectItem key={s} value={s}>
+                  {t(`products.sort.${s}`)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       <div className="mt-10 md:mt-12">
         {loading ? (
-          <LoadingState label={t("admin.common.loading")} />
+          <ProductGridSkeleton count={8} />
         ) : products.length === 0 ? (
           <EmptyState icon={Package} title={t("products.empty")} description={t("products.emptyDesc")} />
         ) : (

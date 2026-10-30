@@ -22,8 +22,9 @@ public class ProductController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "12") int size,
             @RequestParam(required = false) String category,
-            @RequestParam(required = false) String keyword) {
-        return ApiResponse.success(productService.getActiveProducts(category, keyword, PageRequest.of(page, size)));
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) String sort) {
+        return ApiResponse.success(productService.getActiveProducts(category, keyword, sort, PageRequest.of(page, size)));
     }
 
     @GetMapping("/featured")

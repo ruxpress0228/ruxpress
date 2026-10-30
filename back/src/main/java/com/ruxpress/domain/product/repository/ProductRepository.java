@@ -5,6 +5,7 @@ import com.ruxpress.domain.product.entity.ProductStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -35,7 +36,10 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
                                   @Param("status") ProductStatus status,
                                   Pageable pageable);
 
-    /** 공개 목록: ACTIVE·미삭제. category 는 정확 일치, keyword 는 상품명/쇼핑몰 포함 검색(둘 다 null 이면 필터 없음). */
+    /**
+     * 공개 목록: ACTIVE·미삭제. category 는 정확 일치, keyword 는 상품명/쇼핑몰 포함 검색(둘 다 null 이면 필터 없음).
+     * ORDER BY 를 두지 않는다 — 정렬은 Pageable 의 Sort({@link com.ruxpress.domain.product.entity.ProductSort})를 Spring Data 가 붙인다.
+     */
     @Query(value = """
             SELECT p FROM Product p
             WHERE p.deletedAt IS NULL
@@ -44,7 +48,6 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
               AND (:keyword IS NULL
                    OR LOWER(p.name) LIKE LOWER(CONCAT('%', :keyword, '%'))
                    OR LOWER(p.shopName) LIKE LOWER(CONCAT('%', :keyword, '%')))
-            ORDER BY p.isFeatured DESC, p.sortOrder ASC, p.createdAt DESC
             """,
             countQuery = """
             SELECT COUNT(p) FROM Product p
@@ -81,4 +84,12 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     Optional<Product> findByIdAndStatusAndDeletedAtIsNull(Long id, ProductStatus status);
 
     Optional<Product> findByIdAndDeletedAtIsNull(Long id);
+
+    /**
+     * 조회수 +1 (벌크 UPDATE, 갱신 행 수 반환). 영속성 컨텍스트에 이미 로드된 엔티티의 viewCount 는 바뀌지 않으므로
+     * 같은 트랜잭션에서 돌려주는 응답은 증가 전 값일 수 있다.
+     */
+    @Modifying
+    @Query("UPDATE Product p SET p.viewCount = p.viewCount + 1 WHERE p.id = :id")
+    int incrementViewCount(@Param("id") Long id);
 }

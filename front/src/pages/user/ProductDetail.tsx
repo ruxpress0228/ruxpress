@@ -1,12 +1,23 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
-import { ArrowUpRight } from "lucide-react";
+import { ArrowUpRight, Share2, ZoomIn } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "../../components/ui/button";
 import { Badge } from "../../components/ui/badge";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "../../components/ui/accordion";
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from "../../components/ui/dialog";
 import { EmptyState, LoadingState } from "../../components/page";
-import { ProductGrid, ProductImage, formatKrw, formatRubEquivalent } from "../../components/product/ProductCard";
+import {
+  ProductGrid,
+  ProductImage,
+  RecentProductRail,
+  formatKrw,
+  formatRubEquivalent,
+} from "../../components/product/ProductCard";
+import { WishButton } from "../../components/product/WishButton";
 import { useAuthGate } from "../../components/auth/AuthGate";
+import { formatDate } from "../../utils/format";
+import { readRecentProducts, rememberProduct, type RecentProduct } from "../../utils/recentProducts";
 import { getFeaturedProducts, getProduct, getProducts, purchaseRequestPathFor } from "../../api/product";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useExchangeRate } from "../../hooks/exchange/useExchangeRate";
@@ -31,6 +42,8 @@ export default function ProductDetail() {
   const { getCurrentExchangeRates } = useExchangeRate();
   const [product, setProduct] = useState<Product | null>(null);
   const [related, setRelated] = useState<Product[]>([]);
+  const [recent, setRecent] = useState<RecentProduct[]>([]);
+  const [zoomOpen, setZoomOpen] = useState(false);
   const [state, setState] = useState<"loading" | "ready" | "missing">("loading");
   const [rates, setRates] = useState<CurrentExchangeRates | null>(null);
 
@@ -54,7 +67,9 @@ export default function ProductDetail() {
       .then((p) => {
         setProduct(p);
         setState("ready");
-        window.scrollTo({ top: 0 });
+        // What the visitor opened before this one, then remember this one too.
+        setRecent(readRecentProducts().filter((r) => r.id !== numericId).slice(0, 8));
+        rememberProduct(p);
         return getProducts({ page: 0, size: 8, category: p.category ?? undefined });
       })
       .then(async (page) => {
@@ -94,6 +109,21 @@ export default function ProductDetail() {
     }
   };
 
+  /** Native share where the browser has it; otherwise the link goes to the clipboard. */
+  const handleShare = async () => {
+    const url = window.location.href;
+    try {
+      if (typeof navigator.share === "function") {
+        await navigator.share({ title: product.name, url });
+        return;
+      }
+      await navigator.clipboard.writeText(url);
+      toast(t("products.linkCopied"));
+    } catch {
+      // The visitor closed the share sheet; nothing to report.
+    }
+  };
+
   return (
     <div>
       {/* Breadcrumb */}
@@ -116,17 +146,46 @@ export default function ProductDetail() {
       </nav>
 
       <div className="mt-6 grid gap-10 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] lg:gap-16">
-        <ProductImage product={product} size="lg" />
+        <div className="group relative">
+          <ProductImage product={product} size="lg" />
+          {product.imageUrl ? (
+            <button
+              type="button"
+              onClick={() => setZoomOpen(true)}
+              aria-label={t("products.zoom")}
+              title={t("products.zoom")}
+              className="absolute bottom-3 right-3 flex size-10 items-center justify-center bg-background/85 text-foreground backdrop-blur-sm transition-colors hover:bg-background"
+            >
+              <ZoomIn className="size-[18px]" strokeWidth={1.5} aria-hidden />
+            </button>
+          ) : null}
+        </div>
 
         <div className="min-w-0 lg:sticky lg:top-28 lg:self-start">
-          <p className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">{product.shopName}</p>
-          <h1 className="mt-3 text-xl font-light leading-snug tracking-[0.06em] md:text-2xl">{product.name}</h1>
+          <div className="flex items-start justify-between gap-4">
+            <p className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">{product.shopName}</p>
+            <div className="-mt-2 flex items-center">
+              <button
+                type="button"
+                onClick={() => void handleShare()}
+                aria-label={t("products.share")}
+                title={t("products.share")}
+                className="flex size-9 items-center justify-center text-foreground transition-colors hover:text-muted-foreground"
+              >
+                <Share2 className="size-[18px]" strokeWidth={1.5} aria-hidden />
+              </button>
+              <WishButton productId={product.id} variant="inline" />
+            </div>
+          </div>
+          <h1 className="mt-2 text-xl font-light leading-snug tracking-[0.06em] md:text-2xl">{product.name}</h1>
           <div className="mt-4 flex flex-wrap items-baseline gap-x-3 gap-y-1">
             <p className="text-base figure">{formatKrw(product.priceKrw, locale)}</p>
             {rub ? <p className="text-sm text-muted-foreground figure">{rub}</p> : null}
             {product.isFeatured ? <Badge variant="outline">{t("products.featured")}</Badge> : null}
           </div>
-          <p className="mt-3 text-xs leading-relaxed text-muted-foreground">{t("products.priceNote")}</p>
+          <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
+            {t("products.priceNote")} {t("products.priceAsOf", { date: formatDate(product.updatedAt, locale) })}
+          </p>
 
           <div className="mt-8 space-y-2">
             <Button size="lg" className="w-full" onClick={handleRequest}>
@@ -188,6 +247,23 @@ export default function ProductDetail() {
           <ProductGrid products={related} rateMap={rateMap} className="mt-10" />
         </section>
       ) : null}
+
+      {recent.length > 0 ? (
+        <section className="mt-16 border-t border-border pt-8 md:mt-20 md:pt-10">
+          <h2 className="eyebrow text-muted-foreground">{t("products.recentlyViewed")}</h2>
+          <RecentProductRail products={recent} className="mt-5" />
+        </section>
+      ) : null}
+
+      <Dialog open={zoomOpen} onOpenChange={setZoomOpen}>
+        <DialogContent className="max-h-[92vh] overflow-hidden p-0 sm:max-w-3xl">
+          <DialogTitle className="sr-only">{product.name}</DialogTitle>
+          <DialogDescription className="sr-only">{t("products.zoom")}</DialogDescription>
+          {product.imageUrl ? (
+            <img src={product.imageUrl} alt={product.name} className="max-h-[92vh] w-full object-contain" />
+          ) : null}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

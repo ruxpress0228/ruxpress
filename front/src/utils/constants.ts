@@ -16,6 +16,12 @@ export const STORAGE_KEYS = {
   USER_EMAIL: 'ruxpress_user_email',
   USER_NICKNAME: 'ruxpress_user_nickname',
   REMEMBER_ME: 'ruxpress_remember_me',
+  /** 최근 본 상품 (이 브라우저에만 저장) */
+  RECENT_PRODUCTS: 'ruxpress_recent_products',
+  /** 최근 검색어 (이 브라우저에만 저장) */
+  RECENT_SEARCHES: 'ruxpress_recent_searches',
+  /** 찜 목록에서 넘어온 구매 요청 항목 (세션 저장소) */
+  REQUEST_PREFILL: 'ruxpress_request_prefill',
 } as const;
 
 /** UserLayout 등에서 로그인/로그아웃 후 헤더를 다시 그리기 위해 사용 */

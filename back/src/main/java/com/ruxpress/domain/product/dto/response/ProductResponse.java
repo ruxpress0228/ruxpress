@@ -25,6 +25,8 @@ public class ProductResponse {
     private final ProductStatus status;
     private final boolean isFeatured;
     private final int sortOrder;
+    /** 공개 상세 조회 횟수. 상세 응답은 이번 조회가 반영되기 전 값일 수 있다. */
+    private final long viewCount;
     private final LocalDateTime createdAt;
     private final LocalDateTime updatedAt;
 
@@ -48,6 +50,7 @@ public class ProductResponse {
                 p.getStatus(),
                 p.isFeatured(),
                 p.getSortOrder(),
+                p.getViewCount(),
                 p.getCreatedAt(),
                 p.getUpdatedAt());
     }

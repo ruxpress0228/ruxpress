@@ -370,9 +370,20 @@ CREATE TABLE `products` (
 	`status`	ENUM('ACTIVE', 'HIDDEN')	NOT NULL	DEFAULT 'ACTIVE'	COMMENT '노출 상태',
 	`is_featured`	TINYINT(1)	NOT NULL	DEFAULT 0	COMMENT '추천 상품',
 	`sort_order`	INT	NOT NULL	DEFAULT 0	COMMENT '정렬 순서',
+	`view_count`	BIGINT	NOT NULL	DEFAULT 0	COMMENT '조회수',
 	`created_at`	DATETIME	NOT NULL,
 	`updated_at`	DATETIME	NOT NULL	DEFAULT CURRENT_TIMESTAMP,
 	`deleted_at`	DATETIME	NULL	COMMENT '소프트 삭제',
 	PRIMARY KEY (`id`),
 	KEY `idx_products_status_sort` (`status`, `is_featured`, `sort_order`)
+);
+
+CREATE TABLE `product_wishlists` (
+	`id`	BIGINT	NOT NULL AUTO_INCREMENT,
+	`user_id`	BIGINT	NOT NULL	COMMENT '회원 ID',
+	`product_id`	BIGINT	NOT NULL	COMMENT '상품 ID',
+	`created_at`	DATETIME	NOT NULL,
+	PRIMARY KEY (`id`),
+	UNIQUE KEY `uk_product_wishlists_user_product` (`user_id`, `product_id`),
+	KEY `idx_product_wishlists_user` (`user_id`)
 );

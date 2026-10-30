@@ -8,17 +8,20 @@ import com.ruxpress.common.util.ModulePrefix;
 import com.ruxpress.domain.product.dto.request.ProductRequest;
 import com.ruxpress.domain.product.dto.response.ProductResponse;
 import com.ruxpress.domain.product.entity.Product;
+import com.ruxpress.domain.product.entity.ProductSort;
 import com.ruxpress.domain.product.entity.ProductStatus;
 import com.ruxpress.domain.product.repository.ProductRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
+import org.mockito.InOrder;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.util.ReflectionTestUtils;
 
@@ -30,7 +33,9 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
+import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -89,6 +94,7 @@ class ProductServiceTest {
         assertThat(response.getStatus()).isEqualTo(ProductStatus.ACTIVE);
         assertThat(response.isFeatured()).isFalse();
         assertThat(response.getSortOrder()).isZero();
+        assertThat(response.getViewCount()).isZero();
         assertThat(response.getImageUrl()).isNull();
         assertThat(response.getImageFilename()).isNull();
         verify(fileStoragePort, never()).getViewUrl(any());
@@ -183,6 +189,25 @@ class ProductServiceTest {
         assertThatThrownBy(() -> productService.getActiveProduct(5L))
                 .isInstanceOf(BusinessException.class)
                 .hasFieldOrPropertyWithValue("errorCode", ErrorCode.NOT_FOUND);
+
+        verify(productRepository, never()).incrementViewCount(any());
+    }
+
+    @Test
+    void getActiveProduct_incrementsViewCountAfterActiveCheck() {
+        Product product = product(5L);
+        when(productRepository.findByIdAndStatusAndDeletedAtIsNull(5L, ProductStatus.ACTIVE))
+                .thenReturn(Optional.of(product));
+
+        ProductResponse response = productService.getActiveProduct(5L);
+
+        InOrder inOrder = inOrder(productRepository);
+        inOrder.verify(productRepository).findByIdAndStatusAndDeletedAtIsNull(5L, ProductStatus.ACTIVE);
+        inOrder.verify(productRepository).incrementViewCount(5L);
+        verify(productRepository, times(1)).incrementViewCount(any());
+        // 증가는 벌크 UPDATE 로 수행되므로 응답은 증가 전 값(여기서는 0)이어도 된다.
+        assertThat(response.getId()).isEqualTo(5L);
+        assertThat(response.getViewCount()).isZero();
     }
 
     @Test
@@ -202,11 +227,11 @@ class ProductServiceTest {
 
     @Test
     void getActiveProducts_normalizesBlankFiltersToNull() {
-        Pageable pageable = PageRequest.of(0, 12);
-        when(productRepository.findActive(isNull(), isNull(), eq(pageable)))
-                .thenReturn(new PageImpl<>(List.of(product(1L)), pageable, 1));
+        Pageable sorted = PageRequest.of(0, 12, ProductSort.RECOMMENDED.toSort());
+        when(productRepository.findActive(isNull(), isNull(), eq(sorted)))
+                .thenReturn(new PageImpl<>(List.of(product(1L)), sorted, 1));
 
-        PageResponse<ProductResponse> result = productService.getActiveProducts("  ", "", pageable);
+        PageResponse<ProductResponse> result = productService.getActiveProducts("  ", "", null, PageRequest.of(0, 12));
 
         assertThat(result.getContent()).hasSize(1);
         assertThat(result.getTotalElements()).isEqualTo(1);
@@ -216,13 +241,74 @@ class ProductServiceTest {
 
     @Test
     void getActiveProducts_trimsFilters() {
-        Pageable pageable = PageRequest.of(0, 12);
-        when(productRepository.findActive(eq("Shoes"), eq("pegasus"), eq(pageable)))
-                .thenReturn(new PageImpl<>(List.of(), pageable, 0));
+        Pageable sorted = PageRequest.of(0, 12, ProductSort.LATEST.toSort());
+        when(productRepository.findActive(eq("Shoes"), eq("pegasus"), eq(sorted)))
+                .thenReturn(new PageImpl<>(List.of(), sorted, 0));
 
-        PageResponse<ProductResponse> result = productService.getActiveProducts(" Shoes ", " pegasus ", pageable);
+        PageResponse<ProductResponse> result =
+                productService.getActiveProducts(" Shoes ", " pegasus ", "latest", PageRequest.of(0, 12));
 
         assertThat(result.getContent()).isEmpty();
+    }
+
+    // ─── sort (catalogue v2) ──────────────────────────────
+
+    @Test
+    void getActiveProducts_mapsEachSortValueToRepositoryOrder() {
+        when(productRepository.findActive(isNull(), isNull(), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of()));
+
+        assertThat(appliedSort("recommended")).isEqualTo(
+                Sort.by(Sort.Order.desc("isFeatured"), Sort.Order.asc("sortOrder"), Sort.Order.desc("createdAt")));
+        assertThat(appliedSort("latest")).isEqualTo(
+                Sort.by(Sort.Order.desc("createdAt"), Sort.Order.desc("id")));
+        assertThat(appliedSort("popular")).isEqualTo(
+                Sort.by(Sort.Order.desc("viewCount"), Sort.Order.desc("createdAt")));
+        assertThat(appliedSort("priceAsc")).isEqualTo(
+                Sort.by(Sort.Order.asc("priceKrw"), Sort.Order.asc("id")));
+        assertThat(appliedSort("priceDesc")).isEqualTo(
+                Sort.by(Sort.Order.desc("priceKrw"), Sort.Order.desc("id")));
+    }
+
+    @Test
+    void getActiveProducts_sortIsCaseInsensitiveAndUnknownFallsBackToRecommended() {
+        when(productRepository.findActive(isNull(), isNull(), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of()));
+        Sort recommended = Sort.by(Sort.Order.desc("isFeatured"), Sort.Order.asc("sortOrder"), Sort.Order.desc("createdAt"));
+
+        assertThat(appliedSort("LATEST")).isEqualTo(ProductSort.LATEST.toSort());
+        assertThat(appliedSort("priceasc")).isEqualTo(ProductSort.PRICE_ASC.toSort());
+        assertThat(appliedSort("PRICE_DESC")).isEqualTo(ProductSort.PRICE_DESC.toSort());
+        assertThat(appliedSort(" popular ")).isEqualTo(ProductSort.POPULAR.toSort());
+        assertThat(appliedSort("unknown")).isEqualTo(recommended);
+        assertThat(appliedSort("   ")).isEqualTo(recommended);
+        assertThat(appliedSort(null)).isEqualTo(recommended);
+    }
+
+    @Test
+    void getActiveProducts_keepsPageNumberAndSizeWhenApplyingSort() {
+        Pageable expected = PageRequest.of(2, 24, ProductSort.PRICE_ASC.toSort());
+        when(productRepository.findActive(eq("Shoes"), isNull(), eq(expected)))
+                .thenReturn(new PageImpl<>(List.of(product(1L)), expected, 49));
+
+        PageResponse<ProductResponse> result =
+                productService.getActiveProducts("Shoes", null, "priceAsc", PageRequest.of(2, 24));
+
+        assertThat(result.getPage()).isEqualTo(2);
+        assertThat(result.getSize()).isEqualTo(24);
+        assertThat(result.getTotalElements()).isEqualTo(49);
+        assertThat(result.getTotalPages()).isEqualTo(3);
+    }
+
+    /** Calls the public list with the given sort and returns the Sort the repository actually received. */
+    private Sort appliedSort(String sort) {
+        productService.getActiveProducts(null, null, sort, PageRequest.of(0, 12));
+        ArgumentCaptor<Pageable> captor = ArgumentCaptor.forClass(Pageable.class);
+        verify(productRepository, atLeastOnce()).findActive(isNull(), isNull(), captor.capture());
+        Pageable applied = captor.getValue();
+        assertThat(applied.getPageNumber()).isZero();
+        assertThat(applied.getPageSize()).isEqualTo(12);
+        return applied.getSort();
     }
 
     @Test

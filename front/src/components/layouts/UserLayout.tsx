@@ -15,6 +15,8 @@ import {
   Menu,
   ChevronLeft,
   ChevronRight,
+  Search,
+  Heart,
   type LucideIcon,
 } from "lucide-react";
 import { Button } from "../ui/button";
@@ -22,6 +24,9 @@ import { Sheet, SheetContent, SheetDescription, SheetTitle } from "../ui/sheet";
 import { cn } from "../ui/utils";
 import { Wordmark } from "../brand/BrandMark";
 import { AuthGateProvider, useAuthGate } from "../auth/AuthGate";
+import { WishlistProvider, useWishlist } from "../product/WishlistProvider";
+import { SearchSheet } from "../search/SearchSheet";
+import { getProductCategories } from "../../api/product";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useExchangeRate } from "../../hooks/exchange/useExchangeRate";
 import { buildRateMap, formatCrossRateLine } from "../../utils/exchange";
@@ -57,7 +62,9 @@ const ANNOUNCEMENT_INTERVAL_MS = 7000;
 export default function UserLayout() {
   return (
     <AuthGateProvider>
-      <UserShell />
+      <WishlistProvider>
+        <UserShell />
+      </WishlistProvider>
     </AuthGateProvider>
   );
 }
@@ -67,9 +74,12 @@ function UserShell() {
   const navigate = useNavigate();
   const { t, locale, setLocale } = useTranslation();
   const { isLoggedIn, requireLogin } = useAuthGate();
+  const { count: wishCount } = useWishlist();
   const { getCurrentExchangeRates } = useExchangeRate();
   const [langOpen, setLangOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [categories, setCategories] = useState<string[]>([]);
   const langRef = useRef<HTMLDivElement>(null);
   const [, setAuthRevision] = useState(0);
   const [rates, setRates] = useState<CurrentExchangeRates | null>(null);
@@ -90,6 +100,9 @@ function UserShell() {
     getCurrentExchangeRates()
       .then(setRates)
       .catch(() => setRates(null));
+    getProductCategories()
+      .then(setCategories)
+      .catch(() => setCategories([]));
   }, [getCurrentExchangeRates]);
 
   const userNickname = readAuthValue(STORAGE_KEYS.USER_NICKNAME);
@@ -245,6 +258,39 @@ function UserShell() {
             </Link>
 
             <div className="flex items-center justify-end gap-0.5">
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                title={t("search.title")}
+                aria-label={t("search.title")}
+                onClick={() => setSearchOpen(true)}
+              >
+                <Search className="size-[18px]" strokeWidth={1.25} aria-hidden />
+              </Button>
+              {isLoggedIn ? (
+                <Button variant="ghost" size="icon" asChild className="relative">
+                  <Link to="/wishlist" title={t("wishlist.title")} aria-label={t("wishlist.title")}>
+                    <Heart className="size-[18px]" strokeWidth={1.25} aria-hidden />
+                    {wishCount > 0 ? (
+                      <span className="absolute right-0.5 top-0.5 flex h-4 min-w-4 items-center justify-center bg-foreground px-1 text-[9px] font-medium text-background figure">
+                        {wishCount > 99 ? "99+" : wishCount}
+                      </span>
+                    ) : null}
+                  </Link>
+                </Button>
+              ) : (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  title={t("wishlist.title")}
+                  aria-label={t("wishlist.title")}
+                  onClick={() => requireLogin("/wishlist")}
+                >
+                  <Heart className="size-[18px]" strokeWidth={1.25} aria-hidden />
+                </Button>
+              )}
               <div className="relative" ref={langRef}>
                 <Button
                   type="button"
@@ -330,8 +376,57 @@ function UserShell() {
                       ),
                       t(item.nameKey),
                     )}
+                    {item.path === "/products" && categories.length > 0 ? (
+                      <ul className="mb-3 mt-1 flex flex-wrap gap-x-4 gap-y-1.5 pl-0.5">
+                        {categories.map((c) => (
+                          <li key={c}>
+                            <Link
+                              to={`/products?category=${encodeURIComponent(c)}`}
+                              className="eyebrow text-muted-foreground transition-colors hover:text-foreground"
+                            >
+                              {c}
+                            </Link>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : null}
                   </li>
                 ))}
+                <li>
+                  {isLoggedIn ? (
+                    <Link
+                      to="/wishlist"
+                      className={cn(
+                        "block w-full py-2 text-left text-2xl font-light tracking-[0.02em] transition-colors md:text-3xl",
+                        isActive("/wishlist") ? "text-foreground" : "text-foreground/60 hover:text-foreground",
+                      )}
+                    >
+                      {t("wishlist.title")}
+                    </Link>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMenuOpen(false);
+                        requireLogin("/wishlist");
+                      }}
+                      className="block w-full py-2 text-left text-2xl font-light tracking-[0.02em] text-foreground/60 transition-colors hover:text-foreground md:text-3xl"
+                    >
+                      {t("wishlist.title")}
+                    </button>
+                  )}
+                </li>
+                <li>
+                  <Link
+                    to="/about"
+                    className={cn(
+                      "block w-full py-2 text-left text-2xl font-light tracking-[0.02em] transition-colors md:text-3xl",
+                      isActive("/about") ? "text-foreground" : "text-foreground/60 hover:text-foreground",
+                    )}
+                  >
+                    {t("about.title")}
+                  </Link>
+                </li>
               </ul>
             </nav>
 
@@ -372,6 +467,8 @@ function UserShell() {
           </div>
         </SheetContent>
       </Sheet>
+
+      <SearchSheet open={searchOpen} onOpenChange={setSearchOpen} />
 
       <main className={cn("mx-auto w-full max-w-6xl flex-1 px-5 pt-8 md:px-6 md:pb-16 md:pt-10", isLoggedIn ? "pb-24" : "pb-12")}>
         <Outlet />
@@ -419,6 +516,11 @@ function UserShell() {
             <p className="eyebrow text-muted-foreground">{t("footer.support")}</p>
             <ul className="mt-5 space-y-2.5 text-sm">
               <li>
+                <Link to="/about" className="transition-colors hover:text-muted-foreground">
+                  {t("about.title")}
+                </Link>
+              </li>
+              <li>
                 <Link to="/notice" className="transition-colors hover:text-muted-foreground">
                   {t("nav.notice")}
                 </Link>
@@ -458,6 +560,11 @@ function UserShell() {
               </li>
               {isLoggedIn ? (
                 <>
+                  <li>
+                    <Link to="/wishlist" className="transition-colors hover:text-muted-foreground">
+                      {t("wishlist.title")}
+                    </Link>
+                  </li>
                   <li>
                     <Link to="/purchase" className="transition-colors hover:text-muted-foreground">
                       {t("nav.purchase")}

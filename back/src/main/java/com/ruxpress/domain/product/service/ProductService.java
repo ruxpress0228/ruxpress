@@ -9,6 +9,7 @@ import com.ruxpress.common.util.ModulePrefix;
 import com.ruxpress.domain.product.dto.request.ProductRequest;
 import com.ruxpress.domain.product.dto.response.ProductResponse;
 import com.ruxpress.domain.product.entity.Product;
+import com.ruxpress.domain.product.entity.ProductSort;
 import com.ruxpress.domain.product.entity.ProductStatus;
 import com.ruxpress.domain.product.repository.ProductRepository;
 import lombok.RequiredArgsConstructor;
@@ -36,10 +37,15 @@ public class ProductService {
 
     // ─── User-facing ──────────────────────────────────────
 
+    /**
+     * 공개 목록. {@code sort} 는 {@link ProductSort#from(String)} 으로 해석해(없거나 모르는 값은 recommended)
+     * 페이지 번호·크기는 유지한 채 Pageable 의 정렬로 싣는다.
+     */
     @Transactional(readOnly = true)
-    public PageResponse<ProductResponse> getActiveProducts(String category, String keyword, Pageable pageable) {
+    public PageResponse<ProductResponse> getActiveProducts(String category, String keyword, String sort, Pageable pageable) {
+        Pageable sorted = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), ProductSort.from(sort).toSort());
         Page<Product> page = productRepository.findActive(
-                normalizeOptional(category), normalizeOptional(keyword), pageable);
+                normalizeOptional(category), normalizeOptional(keyword), sorted);
         return toPageResponse(page);
     }
 
@@ -57,10 +63,12 @@ public class ProductService {
         return productRepository.findActiveCategories();
     }
 
-    @Transactional(readOnly = true)
+    /** 공개 상세. ACTIVE·미삭제 확인 후 조회수를 1 증가시킨다(벌크 UPDATE 이므로 응답의 viewCount 는 증가 전 값일 수 있음). */
+    @Transactional
     public ProductResponse getActiveProduct(Long id) {
         Product product = productRepository.findByIdAndStatusAndDeletedAtIsNull(id, ProductStatus.ACTIVE)
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND, "상품을 찾을 수 없습니다."));
+        productRepository.incrementViewCount(product.getId());
         return toResponse(product);
     }
 
@@ -174,7 +182,8 @@ public class ProductService {
         return new PageResponse<>(content, page.getTotalElements(), page.getTotalPages(), page.getNumber(), page.getSize());
     }
 
-    private ProductResponse toResponse(Product p) {
+    /** 패키지 공개: WishlistService 가 찜 목록의 상품을 공개 목록과 같은 방식(이미지 view URL 포함)으로 매핑할 때 재사용한다. */
+    ProductResponse toResponse(Product p) {
         String imageUrl = p.hasImage() ? fileStoragePort.getViewUrl(p.getImageStoredUrl()) : null;
         return ProductResponse.from(p, imageUrl);
     }
