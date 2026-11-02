@@ -1292,5 +1292,12 @@
   "admin.dashboard.totals": "Итого",
   "admin.login.console": "Консоль администратора",
   "admin.login.tagline": "Вопросы, запросы на покупку и платежи — в одном месте.",
-  "admin.login.backToStore": "Вернуться в магазин"
+  "admin.login.backToStore": "Вернуться в магазин",
+  "admin.bank.status.PENDING": "Ожидает",
+  "admin.bank.status.CONFIRMED": "Подтверждён",
+  "admin.bank.status.CANCELLED": "Отменён",
+  "admin.bank.status.FAILED": "Ошибка",
+  "admin.bank.type.DEPOSIT": "Пополнение",
+  "admin.bank.type.SETTLEMENT": "Расчёт",
+  "admin.bank.type.REFUND": "Возврат"
 }

@@ -21,7 +21,7 @@ type PageHeaderProps = {
 /** Standard page opening: light large title, muted description, actions on the right. */
 export function PageHeader({ title, description, actions, back, meta, align = "start", className }: PageHeaderProps) {
   return (
-    <header className={cn("mb-8 md:mb-10", align === "center" && "text-center", className)}>
+    <header data-slot="page-header" className={cn("mb-8 md:mb-10", align === "center" && "text-center", className)}>
       {back ? (
         <Link
           to={back.to}
@@ -38,9 +38,12 @@ export function PageHeader({ title, description, actions, back, meta, align = "s
         )}
       >
         <div className="min-w-0">
-          <h1 className="page-title">{title}</h1>
+          <h1 data-slot="page-title" className="page-title">{title}</h1>
           {description ? (
-            <p className={cn("mt-2 max-w-2xl text-sm text-muted-foreground md:text-base", align === "center" && "mx-auto")}>
+            <p
+              data-slot="page-description"
+              className={cn("mt-2 max-w-2xl text-sm text-muted-foreground md:text-base", align === "center" && "mx-auto")}
+            >
               {description}
             </p>
           ) : null}

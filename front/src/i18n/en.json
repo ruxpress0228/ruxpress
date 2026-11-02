@@ -1292,5 +1292,12 @@
   "admin.dashboard.totals": "Totals",
   "admin.login.console": "Admin console",
   "admin.login.tagline": "Inquiries, purchase requests and deposits in one place.",
-  "admin.login.backToStore": "Back to the store"
+  "admin.login.backToStore": "Back to the store",
+  "admin.bank.status.PENDING": "Pending",
+  "admin.bank.status.CONFIRMED": "Confirmed",
+  "admin.bank.status.CANCELLED": "Cancelled",
+  "admin.bank.status.FAILED": "Failed",
+  "admin.bank.type.DEPOSIT": "Deposit",
+  "admin.bank.type.SETTLEMENT": "Settlement",
+  "admin.bank.type.REFUND": "Refund"
 }

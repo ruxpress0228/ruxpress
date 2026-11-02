@@ -1292,5 +1292,12 @@
   "admin.dashboard.totals": "전체 현황",
   "admin.login.console": "관리자 콘솔",
   "admin.login.tagline": "문의, 구매 요청, 입금을 한곳에서.",
-  "admin.login.backToStore": "스토어로 돌아가기"
+  "admin.login.backToStore": "스토어로 돌아가기",
+  "admin.bank.status.PENDING": "대기",
+  "admin.bank.status.CONFIRMED": "확정",
+  "admin.bank.status.CANCELLED": "취소",
+  "admin.bank.status.FAILED": "실패",
+  "admin.bank.type.DEPOSIT": "입금",
+  "admin.bank.type.SETTLEMENT": "정산",
+  "admin.bank.type.REFUND": "환불"
 }

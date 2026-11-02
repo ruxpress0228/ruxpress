@@ -77,26 +77,31 @@ function isFullyProcessedRoot(e: TransferLedgerEntry): boolean {
 }
 
 /** Pending is an outline, confirmed a black fill, cancelled/failed the destructive outline. */
-function LedgerStatusBadge({ status }: { status: TransferLedgerStatus }) {
-  if (status === "CONFIRMED") return <Badge>{status}</Badge>;
+function LedgerStatusBadge({ status, label }: { status: TransferLedgerStatus; label: string }) {
+  if (status === "CONFIRMED") return <Badge>{label}</Badge>;
   if (status === "CANCELLED" || status === "FAILED") {
     return (
       <Badge variant="outline" className={DESTRUCTIVE_OUTLINE}>
-        {status}
+        {label}
       </Badge>
     );
   }
-  return <Badge variant="outline">{status}</Badge>;
+  return <Badge variant="outline">{label}</Badge>;
 }
 
 export default function AdminBankTransfers() {
   const { t, locale } = useTranslation();
   const isSuper = getAdminRole() === "SUPER_ADMIN";
+  const statusLabel = (status: TransferLedgerStatus) => t(`admin.bank.status.${status}`);
+  const typeLabel = (type: string) => {
+    const label = t(`admin.bank.type.${type}`);
+    return label === `admin.bank.type.${type}` ? type : label;
+  };
   const filterChips: { value: StatusChipValue; label: string }[] = [
     { value: "all", label: t("admin.bank.filterAll") },
-    { value: "PENDING", label: "PENDING" },
-    { value: "CONFIRMED", label: "CONFIRMED" },
-    { value: "CANCELLED", label: "CANCELLED" },
+    { value: "PENDING", label: statusLabel("PENDING") },
+    { value: "CONFIRMED", label: statusLabel("CONFIRMED") },
+    { value: "CANCELLED", label: statusLabel("CANCELLED") },
   ];
   const [rows, setRows] = useState<TransferLedgerEntry[]>([]);
   const [loading, setLoading] = useState(true);
@@ -415,7 +420,7 @@ export default function AdminBankTransfers() {
                   <TableCell className="max-w-[220px] truncate" title={r.userEmail ?? ""}>
                     {r.userEmail ?? "—"}
                   </TableCell>
-                  <TableCell>{r.entryType}</TableCell>
+                  <TableCell>{typeLabel(r.entryType)}</TableCell>
                   <TableCell className="text-right figure">
                     <span className="font-medium">
                       {r.amount.toLocaleString(locale === "en" ? "en-US" : "ko-KR")} {r.currency}
@@ -431,7 +436,7 @@ export default function AdminBankTransfers() {
                   </TableCell>
                   <TableCell>
                     <div className="flex flex-wrap items-center gap-1">
-                      <LedgerStatusBadge status={r.status} />
+                      <LedgerStatusBadge status={r.status} label={statusLabel(r.status)} />
                       {isFullyProcessedRoot(r) ? (
                         <Badge variant="secondary">{t("admin.bank.ledger.processed")}</Badge>
                       ) : null}
@@ -538,7 +543,7 @@ export default function AdminBankTransfers() {
                   {
                     key: "type",
                     label: t("admin.bank.ledger.detail.type"),
-                    value: detail.entryType,
+                    value: typeLabel(detail.entryType),
                   },
                   {
                     key: "amount",
@@ -563,7 +568,7 @@ export default function AdminBankTransfers() {
                   {
                     key: "status",
                     label: t("admin.bank.ledger.detail.status"),
-                    value: <LedgerStatusBadge status={detail.status} />,
+                    value: <LedgerStatusBadge status={detail.status} label={statusLabel(detail.status)} />,
                   },
                   {
                     key: "settlementAccount",

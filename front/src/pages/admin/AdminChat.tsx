@@ -236,7 +236,7 @@ export default function AdminChat() {
                           {t('admin.chat.userLabel')} <span className="figure">#{room.userId}</span>
                         </span>
                         <span className="shrink-0 text-[11px] text-muted-foreground figure">
-                          {new Date(room.updatedAt).toLocaleString()}
+                          {formatDate(room.updatedAt, locale, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                         </span>
                       </span>
                       <span className="mt-1 flex items-center justify-between gap-3">
