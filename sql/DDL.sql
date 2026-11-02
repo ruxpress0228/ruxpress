@@ -1,12 +1,14 @@
--- #### mysqlsh -h aws주소 -P 3306 -u admin -p --ssl-mode=VERIFY_IDENTITY --ssl-ca=./global-bundle.pem
--- #### 초기 구축 시 실행 명령어 
-CREATE DATABASE DB명
-    CHARACTER SET utf8mb4 
-    COLLATE utf8mb4_unicode_ci;
-
-CREATE USER 'DB유저명'@'%' IDENTIFIED BY 'DB비밀번호';
-GRANT ALL PRIVILEGES ON DB명.* TO 'ruxpDB유저명'@'%';
-FLUSH PRIVILEGES;
+-- Main Proxy 전체 스키마 (MariaDB / MySQL 8 호환). 이 파일 하나로 신규 DB를 구축한다.
+--   docker compose 환경:  ./script/init-db.sh
+--   외부 DB(RDS 등):       mysql -h <host> -u <user> -p <db> < sql/DDL.sql
+-- 기존 DB에 기능을 추가할 때는 sql/migration_*.sql 을 순서대로 적용한다.
+--
+-- 초기 구축 시 DB·계정 생성 예시 (값을 바꿔 직접 실행):
+--   CREATE DATABASE ruxpress CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+--   CREATE USER 'ruxpress'@'%' IDENTIFIED BY '비밀번호';
+--   GRANT ALL PRIVILEGES ON ruxpress.* TO 'ruxpress'@'%';
+--   FLUSH PRIVILEGES;
+-- RDS 접속 예시: mysqlsh -h <endpoint> -P 3306 -u admin -p --ssl-mode=VERIFY_IDENTITY --ssl-ca=./global-bundle.pem
 
 -- #### 테이블 생성 명령어 
 CREATE TABLE `inquiry_replies` (

@@ -18,7 +18,7 @@ import java.util.Objects;
 
 @Slf4j
 @Component
-@Profile({"local", "docker"})
+@Profile({"local", "docker", "h2"})
 @RequiredArgsConstructor
 public class DataInitializer implements CommandLineRunner {
 

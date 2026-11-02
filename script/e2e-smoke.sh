@@ -14,19 +14,14 @@ if [ -z "$JAR" ]; then
   JAR=$(ls "$ROOT"/back/target/ruxpress-back-*.jar | head -1)
 fi
 
-java -jar "$JAR" \
-  --spring.profiles.active=local \
-  "--spring.datasource.url=jdbc:h2:mem:e2e;MODE=MariaDB;DB_CLOSE_DELAY=-1" \
-  --spring.datasource.driver-class-name=org.h2.Driver --spring.datasource.username=sa --spring.datasource.password= \
-  --spring.jpa.hibernate.ddl-auto=create-drop --spring.jpa.database-platform=org.hibernate.dialect.H2Dialect \
-  --storage.type=local "--storage.local.upload-dir=$WORK/uploads" "--logging.file.name=$WORK/backend.log" \
-  "--app.cors.allowed-origins=http://127.0.0.1:$PORT_FRONT,http://localhost:$PORT_FRONT" \
-  --ruxpress.kafka.publish-events=false --ruxpress.kafka.consume-results=false \
-  > "$WORK/backend.out" 2>&1 &
+UPLOAD_DIR="$WORK/uploads" LOG_FILE="$WORK/backend.log" CORS_ALLOWED_ORIGINS="http://127.0.0.1:$PORT_FRONT,http://localhost:$PORT_FRONT" \
+  java -jar "$JAR" --spring.profiles.active=h2 > "$WORK/backend.out" 2>&1 &
 BACK_PID=$!
-(cd "$ROOT/front" && npx vite --port "$PORT_FRONT" --host 127.0.0.1 --strictPort > "$WORK/front.out" 2>&1) &
+(cd "$ROOT/front" && exec npx vite --port "$PORT_FRONT" --host 127.0.0.1 --strictPort > "$WORK/front.out" 2>&1) &
 FRONT_PID=$!
-trap 'kill $BACK_PID $FRONT_PID 2>/dev/null || true' EXIT
+# Vite runs as a grandchild of npx, so stop the whole process tree of both servers on exit.
+stop_tree() { local pid=$1; for child in $(pgrep -P "$pid" 2>/dev/null); do stop_tree "$child"; done; kill "$pid" 2>/dev/null || true; }
+trap 'stop_tree $BACK_PID; stop_tree $FRONT_PID' EXIT
 
 for _ in $(seq 1 90); do
   curl -s -o /dev/null -w '%{http_code}' "http://127.0.0.1:$PORT_FRONT/api/v1/notices?page=0&size=1" 2>/dev/null | grep -q 200 && break

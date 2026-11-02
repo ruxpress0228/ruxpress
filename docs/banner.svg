@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="400" viewBox="0 0 1600 400" role="img" aria-label="Main Proxy">
+  <rect width="1600" height="400" fill="#000"/>
+  <g font-family="Helvetica Neue, Helvetica, Arial, 'Noto Sans KR', sans-serif" fill="#fff">
+    <text x="80" y="160" font-size="22" letter-spacing="9" fill="#9a9a9a">KOREA  →  RUSSIA</text>
+    <text x="80" y="238" font-size="64" font-weight="300" letter-spacing="18">MAIN PROXY</text>
+    <text x="80" y="292" font-size="20" fill="#bdbdbd">링크 하나로 시작하는 구매대행 커머스 플랫폼  ·  Spring Boot · React · Kafka · Docker</text>
+  </g>
+  <line x1="80" y1="330" x2="1520" y2="330" stroke="#fff" stroke-opacity="0.18"/>
+  <g fill="none" stroke="#fff" stroke-width="1.2">
+    <path d="M1130 250 C 1230 120, 1380 120, 1480 250" stroke-dasharray="4 6" stroke-opacity="0.6"/>
+    <circle cx="1130" cy="250" r="6" fill="#fff"/>
+    <circle cx="1480" cy="250" r="6" fill="#fff"/>
+    <rect x="1292" y="88" width="30" height="30" fill="#000" stroke="#fff"/>
+  </g>
+  <g font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="13" letter-spacing="4" fill="#9a9a9a">
+    <text x="1112" y="286">KR</text>
+    <text x="1464" y="286">RU</text>
+  </g>
+</svg>
