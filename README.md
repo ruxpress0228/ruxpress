@@ -20,6 +20,7 @@
   <img alt="Docker Compose" src="https://img.shields.io/badge/Docker-Compose-000000?logo=docker&logoColor=white">
   <img alt="i18n ko ru en" src="https://img.shields.io/badge/i18n-ko%20%C2%B7%20ru%20%C2%B7%20en-000000">
   <img alt="E2E 34 checks" src="https://img.shields.io/badge/E2E-34%20checks-000000?logo=playwright&logoColor=white">
+  <a href="LICENSE"><img alt="License MIT" src="https://img.shields.io/badge/License-MIT-000000"></a>
 </p>
 
 <p align="center">
@@ -294,6 +295,7 @@ ruxpress/
 ├── sql/             DDL.sql(전체 스키마) · migration_*.sql
 ├── script/          init-db · e2e-smoke · rebuild · manage · init · aws/
 ├── docs/            ENGINEERING.md · screenshots/ · banner.svg
+├── LICENSE          MIT
 └── docker-compose.yml
 ```
 
@@ -303,6 +305,6 @@ ruxpress/
 
 이슈와 PR을 환영합니다. 변경 전 `npm run build`, `npm test`, `mvn test`를 돌리고, 화면을 바꿨다면 `./script/e2e-smoke.sh`로 확인해 주세요.
 
-저장소에는 아직 `LICENSE` 파일이 없어 현재는 **All rights reserved**입니다. 공개 라이선스를 적용하려면 MIT 또는 Apache-2.0 중 하나를 골라 `LICENSE` 파일을 추가하세요. 도입·협업 문의는 GitHub Issues로 남겨 주세요.
+[MIT 라이선스](LICENSE)로 공개합니다. 사내 도입, 수정, 재배포, 상업적 이용 모두 가능하며 저작권 고지만 유지하면 됩니다. 디자인 시스템·일러스트·문구도 저장소 안의 자체 제작물이라 같은 조건으로 쓸 수 있습니다. 도입·협업 문의는 GitHub Issues로 남겨 주세요.
 
-<p align="center"><sub>© 2026 Main Proxy · <a href="docs/ENGINEERING.md">Engineering notes</a> · <a href="https://main-proxy.com">main-proxy.com</a></sub></p>
+<p align="center"><sub>© 2026 Main Proxy · MIT License · <a href="docs/ENGINEERING.md">Engineering notes</a> · <a href="https://main-proxy.com">main-proxy.com</a></sub></p>
