@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
-import { useNavigate } from "react-router";
-import { Users, MessageSquare, FileText, TrendingUp, Trash2, Pin } from "lucide-react";
+import { Link, useNavigate } from "react-router";
+import { ChevronRight, ExternalLink, Trash2, Pin } from "lucide-react";
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
 import {
@@ -12,12 +12,17 @@ import {
   DialogTitle,
 } from "../../components/ui/dialog";
 import { Textarea } from "../../components/ui/textarea";
-import { PageHeader, Section, StatStrip, LoadingState, Field, type StatItem } from "../../components/page";
+import { cn } from "../../components/ui/utils";
+import { Section, SectionLink, StatStrip, LoadingState, Field } from "../../components/page";
 import { toast } from "sonner";
 import { api } from "../../utils/api";
 import { unwrap } from "../../utils/exception";
+import { purchaseStatusBadgeClass } from "../../utils/purchaseStatusStyle";
+import { formatRateToKrwForInput, type CurrentExchangeRates } from "../../utils/exchange";
+import { useExchangeRate } from "../../hooks/exchange/useExchangeRate";
+import { canAccess, readAdmin } from "../../components/layouts/adminNav";
 import type {
-  AdminInquiryListItem, Inquiry, User, Notice, PageResponse,
+  AdminInquiryListItem, Inquiry, User, Notice, PageResponse, PurchaseRequest,
   UserStatus, InquiryStatus, InquiryCategory, NoticeStatus,
 } from "../../types";
 import { useTranslation } from "../../hooks/useTranslation";
@@ -66,12 +71,44 @@ function noticeStatusKey(status: NoticeStatus) {
 
 type PopupKind = "users" | "inquiries" | "notices" | null;
 
+type QueueItem = {
+  key: string;
+  label: string;
+  value: number | null;
+  /** Where the number leads (the page name). */
+  hint: string;
+  to?: string;
+  onClick?: () => void;
+};
+
+const QUEUE_COLS: Record<number, string> = { 1: "md:grid-cols-1", 2: "md:grid-cols-2", 3: "md:grid-cols-3", 4: "md:grid-cols-4" };
+
+/** Fetches a page but never throws: the dashboard still opens when one counter is unavailable (e.g. for a counselor). */
+async function quietPage<T>(path: string): Promise<PageResponse<T> | null> {
+  try {
+    return unwrap(await api.get<PageResponse<T>>(path));
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * The operator's desk. Opens with one sentence about today's work, then the queue
+ * (what needs a hand), the latest inquiries and requests, today's rates and shortcuts.
+ */
 export default function AdminDashboard() {
   const { t, locale } = useTranslation();
   const dateLocale = locale === "ko" ? "ko-KR" : locale === "ru" ? "ru-RU" : "en-US";
   const navigate = useNavigate();
+  const { getCurrentExchangeRates } = useExchangeRate();
+  const role = readAdmin()?.role ?? "COUNSELOR";
+
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [recentInquiries, setRecentInquiries] = useState<AdminInquiryListItem[]>([]);
+  const [recentRequests, setRecentRequests] = useState<PurchaseRequest[]>([]);
+  const [newRequests, setNewRequests] = useState<number | null>(null);
+  const [pendingDeposits, setPendingDeposits] = useState<number | null>(null);
+  const [rates, setRates] = useState<CurrentExchangeRates | null>(null);
   const [loading, setLoading] = useState(true);
 
   const [popup, setPopup] = useState<PopupKind>(null);
@@ -89,6 +126,9 @@ export default function AdminDashboard() {
   const [notices, setNotices] = useState<Notice[]>([]);
   const [noticesLoading, setNoticesLoading] = useState(false);
 
+  const canSeeRequests = canAccess(role, "/admin/purchase-requests");
+  const canSeeUsers = canAccess(role, "/admin/users");
+
   const load = useCallback(async () => {
     setLoading(true);
     try {
@@ -100,7 +140,18 @@ export default function AdminDashboard() {
       setRecentInquiries(unwrap(inqRes).content);
     } catch { /* silent */ }
     finally { setLoading(false); }
-  }, []);
+
+    // Secondary counters load on their own so one missing permission does not blank the desk.
+    const [requests, requested, deposits] = await Promise.all([
+      canSeeRequests ? quietPage<PurchaseRequest>("/v1/admin/purchases?page=0&size=5") : Promise.resolve(null),
+      canSeeRequests ? quietPage<PurchaseRequest>("/v1/admin/purchases?page=0&size=1&status=REQUESTED") : Promise.resolve(null),
+      quietPage<unknown>("/v1/admin/bank-transfers?page=0&size=1&status=PENDING"),
+    ]);
+    setRecentRequests(requests?.content ?? []);
+    setNewRequests(requested ? requested.totalElements : null);
+    setPendingDeposits(deposits ? deposits.totalElements : null);
+    getCurrentExchangeRates().then(setRates).catch(() => setRates(null));
+  }, [canSeeRequests, getCurrentExchangeRates]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -197,95 +248,229 @@ export default function AdminDashboard() {
   ] : [];
 
   if (loading || !stats) {
-    return (
-      <div>
-        <PageHeader title={t("admin.dashboard.title")} description={t("admin.dashboard.subtitle")} />
-        <LoadingState label={t("admin.common.loading")} />
-      </div>
-    );
+    return <LoadingState label={t("admin.common.loading")} />;
   }
 
-  const statItems: StatItem[] = [
-    {
-      key: "users",
-      label: t("admin.dashboard.totalUsers"),
-      value: t("admin.common.countUnit", { n: stats.totalUsers }),
-      hint: t("admin.common.todayPlus", { n: stats.newUsersToday }),
-      icon: Users,
-      onClick: openUsers,
-    },
-    {
-      key: "inquiries",
-      label: t("admin.dashboard.inquiries"),
-      value: t("admin.common.countCase", { n: stats.totalInquiries }),
-      hint: t("admin.common.pendingCount", { n: stats.pendingInquiries }),
-      icon: MessageSquare,
-      onClick: openInquiries,
-      emphasis: stats.pendingInquiries > 0,
-    },
-    {
-      key: "notices",
-      label: t("admin.dashboard.notices"),
-      value: t("admin.common.countCase", { n: stats.totalNotices }),
-      icon: FileText,
-      onClick: openNotices,
-    },
-    {
-      key: "exchange",
-      label: t("admin.dashboard.exchangeRate"),
-      value: "—",
-      hint: t("admin.dashboard.exchangeHint"),
-      icon: TrendingUp,
-      to: "/admin/exchange-rate",
-    },
+  const today = new Date().toLocaleDateString(dateLocale, { weekday: "long", month: "long", day: "numeric" });
+  const todo = stats.pendingInquiries + (newRequests ?? 0) + (pendingDeposits ?? 0);
+  const fmt = (n: number) => n.toLocaleString(dateLocale);
+  const fmtDate = (iso: string) => new Date(iso).toLocaleDateString(dateLocale, { month: "short", day: "numeric" });
+
+  const queue: QueueItem[] = [
+    { key: "inquiries", label: t("admin.dashboard.queue.inquiries"), value: stats.pendingInquiries, hint: t("nav.admin.inquiries"), onClick: openInquiries },
+    ...(canSeeRequests
+      ? [{ key: "requests", label: t("admin.dashboard.queue.requests"), value: newRequests, hint: t("nav.admin.purchaseRequests"), to: "/admin/purchase-requests?status=REQUESTED" }]
+      : []),
+    { key: "deposits", label: t("admin.dashboard.queue.deposits"), value: pendingDeposits, hint: t("nav.admin.bankTransfers"), to: "/admin/bank-transfers" },
+    ...(canSeeUsers
+      ? [{ key: "signups", label: t("admin.dashboard.queue.signups"), value: stats.newUsersToday, hint: t("nav.admin.users"), onClick: openUsers }]
+      : []),
   ];
 
+  const shortcuts = [
+    { key: "product", label: t("admin.dashboard.shortcut.newProduct"), to: "/admin/products" },
+    { key: "notice", label: t("admin.dashboard.shortcut.newNotice"), to: "/admin/notices" },
+    { key: "rates", label: t("nav.admin.exchangeRate"), to: "/admin/exchange-rate" },
+    { key: "site", label: t("nav.admin.site"), to: "/admin/site" },
+    { key: "admins", label: t("nav.admin.admins"), to: "/admin/admins" },
+  ].filter((s) => canAccess(role, s.to));
+
+  const totals = [
+    { key: "users", label: t("admin.dashboard.totalUsers"), value: fmt(stats.totalUsers), onClick: canSeeUsers ? openUsers : undefined },
+    { key: "inquiries", label: t("admin.dashboard.inquiries"), value: fmt(stats.totalInquiries), onClick: openInquiries },
+    { key: "notices", label: t("admin.dashboard.notices"), value: fmt(stats.totalNotices), onClick: canAccess(role, "/admin/notices") ? openNotices : undefined },
+  ];
+
+  const queueCell = (item: QueueItem) => {
+    const empty = item.value === 0 || item.value === null;
+    const body = (
+      <>
+        <span className="block text-[13px] text-muted-foreground">{item.label}</span>
+        <span className={cn("mt-3 block text-4xl font-light leading-none figure md:text-5xl", empty && "text-muted-foreground/40")}>
+          {item.value === null ? "—" : fmt(item.value)}
+        </span>
+        <span className="mt-4 inline-flex items-center gap-1 text-xs text-muted-foreground">
+          {item.hint}
+          <ChevronRight className="size-3" strokeWidth={1.5} aria-hidden />
+        </span>
+      </>
+    );
+    const cls = "block h-full w-full p-4 text-left transition-colors hover:bg-muted/60 md:p-5";
+    return item.to ? (
+      <Link to={item.to} className={cls}>{body}</Link>
+    ) : (
+      <button type="button" onClick={item.onClick} className={cls}>{body}</button>
+    );
+  };
+
   return (
-    <div>
-      <PageHeader title={t("admin.dashboard.title")} description={t("admin.dashboard.subtitle")} />
+    <div className="space-y-12 md:space-y-14">
+      {/* The desk opens with a sentence, not a title */}
+      <header>
+        <p className="text-[13px] text-muted-foreground figure">{today}</p>
+        <h1 className="mt-2 max-w-3xl text-3xl font-light leading-tight tracking-[-0.01em] md:text-4xl">
+          {todo > 0 ? t("admin.dashboard.queueSentence", { n: todo }) : t("admin.dashboard.queueEmpty")}
+        </h1>
+        <ul className={cn("mt-8 grid grid-cols-2 border-l border-t border-border", QUEUE_COLS[queue.length] ?? "md:grid-cols-4")}>
+          {queue.map((item) => (
+            <li key={item.key} className="border-b border-r border-border">
+              {queueCell(item)}
+            </li>
+          ))}
+        </ul>
+      </header>
 
-      <div className="space-y-10 md:space-y-12">
-        <StatStrip size="md" columns={4} items={statItems} />
+      <div className="grid gap-12 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] lg:gap-14">
+        <div className="min-w-0 space-y-12">
+          <Section
+            title={t("admin.dashboard.recentInquiries")}
+            action={<SectionLink to="/admin/inquiries">{t("admin.common.viewAll")}</SectionLink>}
+            flush
+          >
+            {recentInquiries.length === 0 ? (
+              <p className="border-b border-border py-8 text-sm text-muted-foreground">
+                {t("admin.dashboard.noRecentInquiries")}
+              </p>
+            ) : (
+              <ul>
+                {recentInquiries.map((inquiry) => (
+                  <li key={inquiry.id}>
+                    <button
+                      type="button"
+                      onClick={() => { openInquiries().then(() => openInqDetail(inquiry.id)); }}
+                      className="grid w-full grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 border-b border-border py-3.5 text-left transition-colors hover:bg-muted/60 md:gap-5"
+                    >
+                      <Badge variant={inqStatusVariant[inquiry.status]}>{t(inquiryStatusKey(inquiry.status))}</Badge>
+                      <span className="min-w-0">
+                        <span className="block truncate text-sm font-medium">{inquiry.title}</span>
+                        <span className="mt-0.5 block truncate text-xs text-muted-foreground">
+                          {t(inquiryCategoryKey(inquiry.category))}
+                        </span>
+                      </span>
+                      <span className="text-xs text-muted-foreground figure">{fmtDate(inquiry.createdAt)}</span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Section>
 
-        <Section
-          title={t("admin.dashboard.recentInquiries")}
-          description={t("admin.dashboard.recentInquiriesDesc")}
-          action={
-            stats.pendingInquiries > 0 ? (
-              <Badge variant="outline">{t("admin.common.pendingBadge", { n: stats.pendingInquiries })}</Badge>
-            ) : undefined
-          }
-          flush
-        >
-          {recentInquiries.length === 0 ? (
-            <p className="border-b border-border py-8 text-sm text-muted-foreground">
-              {t("admin.dashboard.noRecentInquiries")}
-            </p>
-          ) : (
+          {canSeeRequests ? (
+            <Section
+              title={t("admin.dashboard.recentRequests")}
+              action={<SectionLink to="/admin/purchase-requests">{t("admin.common.viewAll")}</SectionLink>}
+              flush
+            >
+              {recentRequests.length === 0 ? (
+                <p className="border-b border-border py-8 text-sm text-muted-foreground">
+                  {t("admin.dashboard.noRecentRequests")}
+                </p>
+              ) : (
+                <ul>
+                  {recentRequests.map((r) => (
+                    <li key={r.id}>
+                      <Link
+                        to={`/admin/purchase-requests/${r.id}`}
+                        className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 border-b border-border py-3.5 transition-colors hover:bg-muted/60 md:gap-5"
+                      >
+                        <Badge className={cn("px-2 py-0.5 text-[10px] font-medium", purchaseStatusBadgeClass(r.status))}>
+                          {t(`purchase.status.${r.status}`)}
+                        </Badge>
+                        <span className="min-w-0">
+                          <span className="block truncate text-sm font-medium">{r.requestName}</span>
+                          <span className="mt-0.5 block truncate text-xs text-muted-foreground figure">
+                            {r.requestNumber} · {fmtDate(r.createdAt)}
+                          </span>
+                        </span>
+                        <span className="text-sm figure">
+                          {r.totalAmountKrw != null ? `₩${fmt(r.totalAmountKrw)}` : "—"}
+                        </span>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </Section>
+          ) : null}
+        </div>
+
+        <div className="min-w-0 space-y-12">
+          <Section
+            title={t("admin.dashboard.rates")}
+            action={canAccess(role, "/admin/exchange-rate") ? <SectionLink to="/admin/exchange-rate">{t("nav.admin.exchangeRate")}</SectionLink> : undefined}
+            flush
+          >
+            {rates && rates.quotes.length > 0 ? (
+              <>
+                <ul>
+                  {rates.quotes.map((q) => (
+                    <li key={q.currency} className="flex items-baseline justify-between gap-4 border-b border-border py-3">
+                      <span className="text-sm">1 {q.currency}</span>
+                      <span className="text-right">
+                        <span className="text-xl font-light figure">{formatRateToKrwForInput(q.rateToKrw)}</span>
+                        <span className="ml-1.5 text-xs text-muted-foreground">KRW</span>
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+                {rates.fetchedAt ? (
+                  <p className="mt-3 text-xs text-muted-foreground figure">
+                    {t("admin.dashboard.ratesUpdated", {
+                      time: new Date(rates.fetchedAt).toLocaleString(dateLocale, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }),
+                    })}
+                  </p>
+                ) : null}
+              </>
+            ) : (
+              <p className="border-b border-border py-6 text-sm text-muted-foreground">{t("admin.dashboard.ratesEmpty")}</p>
+            )}
+          </Section>
+
+          <Section title={t("admin.dashboard.shortcuts")} flush>
             <ul>
-              {recentInquiries.map((inquiry) => (
-                <li key={inquiry.id}>
+              {shortcuts.map((s) => (
+                <li key={s.key}>
+                  <Link
+                    to={s.to}
+                    className="flex items-center justify-between gap-3 border-b border-border py-3 text-sm transition-colors hover:bg-muted/60"
+                  >
+                    {s.label}
+                    <ChevronRight className="size-3.5 text-muted-foreground" strokeWidth={1.5} aria-hidden />
+                  </Link>
+                </li>
+              ))}
+              <li>
+                <a
+                  href="/"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex items-center justify-between gap-3 border-b border-border py-3 text-sm transition-colors hover:bg-muted/60"
+                >
+                  {t("nav.admin.storefront")}
+                  <ExternalLink className="size-3.5 text-muted-foreground" strokeWidth={1.5} aria-hidden />
+                </a>
+              </li>
+            </ul>
+          </Section>
+
+          <Section title={t("admin.dashboard.totals")} flush>
+            <ul>
+              {totals.map((row) => (
+                <li key={row.key}>
                   <button
                     type="button"
-                    onClick={() => { openInquiries().then(() => openInqDetail(inquiry.id)); }}
-                    className="grid w-full grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 border-b border-border py-4 text-left transition-colors hover:bg-muted/60 md:gap-5"
+                    onClick={row.onClick}
+                    disabled={!row.onClick}
+                    className="flex w-full items-baseline justify-between gap-3 border-b border-border py-3 text-left text-sm transition-colors enabled:hover:bg-muted/60 disabled:cursor-default"
                   >
-                    <Badge variant={inqStatusVariant[inquiry.status]}>{t(inquiryStatusKey(inquiry.status))}</Badge>
-                    <span className="min-w-0">
-                      <span className="block truncate text-sm font-medium">{inquiry.title}</span>
-                      <span className="mt-0.5 block truncate text-xs text-muted-foreground">
-                        {t(inquiryCategoryKey(inquiry.category))}
-                      </span>
-                    </span>
-                    <span className="text-xs text-muted-foreground figure">
-                      {new Date(inquiry.createdAt).toLocaleDateString(dateLocale)}
-                    </span>
+                    <span className="text-muted-foreground">{row.label}</span>
+                    <span className="figure">{row.value}</span>
                   </button>
                 </li>
               ))}
             </ul>
-          )}
-        </Section>
+          </Section>
+        </div>
       </div>
 
       <Dialog open={popup === "users"} onOpenChange={(o) => { if (!o) closePopup(); }}>

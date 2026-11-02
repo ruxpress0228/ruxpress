@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Search, MapPin, ExternalLink, MoreHorizontal, Package, RefreshCw, ClipboardCopy, Pencil } from "lucide-react";
-import { Link, useNavigate } from "react-router";
+import { Link, useNavigate, useSearchParams } from "react-router";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import { Badge } from "../../components/ui/badge";
@@ -219,7 +219,12 @@ export default function AdminPurchaseRequests() {
   const isSuper = getAdminRole() === "SUPER_ADMIN";
   const [rows, setRows] = useState<PurchaseRequestDetail[]>([]);
   const [loading, setLoading] = useState(true);
-  const [statusFilter, setStatusFilter] = useState<"all" | PurchaseRequestStatus>("all");
+  const [searchParams] = useSearchParams();
+  // The dashboard queue links here with ?status=REQUESTED; anything else opens the full list.
+  const [statusFilter, setStatusFilter] = useState<"all" | PurchaseRequestStatus>(() => {
+    const s = searchParams.get("status");
+    return s && ["REQUESTED", "PURCHASING", "SHIPPING", "COMPLETED", "CANCELLED"].includes(s) ? (s as PurchaseRequestStatus) : "all";
+  });
   const [page, setPage] = useState(0);
   const [size, setSize] = useState(DEFAULT_PAGE_SIZE);
   const [totalPages, setTotalPages] = useState(0);

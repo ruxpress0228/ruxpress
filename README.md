@@ -129,7 +129,9 @@ cd front && npm install && npm run dev                           # :3000, /api·
 
 **🛠️ 관리자 콘솔**
 
-- 상품 등록·수정·숨김, 이미지 업로드, 추천·정렬, 조회수
+- 운영 데스크 대시보드: 오늘 처리할 일(답변 대기 · 신규 요청 · 입금 확인)을 한 문장과 큐로, 최근 문의·요청, 오늘의 환율
+- 잉크 레일 내비게이션(운영 · 상거래 · 고객 · 콘텐츠), 접히는 아이콘 레일, ⌘K 이동 팔레트
+- 상품 등록·수정·숨김, 이미지 업로드, 추천·정렬, 조회수, 메인 히어로 이미지
 - 환율: 러시아 중앙은행 자동 수집 또는 수동 설정, 다중 통화
 - 입금 확인 · 정산 계좌 · 지갑 수동 조정(원장 기록)
 - 구매 요청 상태 전이(접수 → 구매 → 배송 → 완료)
@@ -155,9 +157,13 @@ cd front && npm install && npm run dev                           # :3000, /api·
 |:--:|:--:|
 | ![상품 상세](docs/screenshots/product.png) | ![찜 목록](docs/screenshots/wishlist.png) |
 
-| 회원 홈 | 관리자 상품 관리 |
+| 회원 홈 | 관리자 대시보드 |
 |:--:|:--:|
-| ![회원 홈](docs/screenshots/home.png) | ![관리자 상품 관리](docs/screenshots/admin-products.png) |
+| ![회원 홈](docs/screenshots/home.png) | ![관리자 대시보드](docs/screenshots/admin-dashboard.png) |
+
+| 관리자 상품 관리 | 관리자 로그인 |
+|:--:|:--:|
+| ![관리자 상품 관리](docs/screenshots/admin-products.png) | ![관리자 로그인](docs/screenshots/admin-login.png) |
 
 <p align="center">
   <img src="docs/screenshots/landing-mobile.png" width="30%" alt="모바일 랜딩">

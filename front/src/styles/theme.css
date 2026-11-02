@@ -64,13 +64,14 @@
   --chart-4: #c4c4c4;
   --chart-5: #e3e3e3;
   --radius: 0rem;
-  --sidebar: #ffffff;
-  --sidebar-foreground: #000000;
-  --sidebar-primary: #000000;
-  --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #f4f4f4;
-  --sidebar-accent-foreground: #000000;
-  --sidebar-border: rgba(0, 0, 0, 0.12);
+  /* The admin console's rail is ink: white type on black, the active page stamped in white. */
+  --sidebar: #000000;
+  --sidebar-foreground: #ffffff;
+  --sidebar-primary: #ffffff;
+  --sidebar-primary-foreground: #000000;
+  --sidebar-accent: #1c1c1c;
+  --sidebar-accent-foreground: #ffffff;
+  --sidebar-border: rgba(255, 255, 255, 0.14);
   --sidebar-ring: #8a8a8a;
 }
 

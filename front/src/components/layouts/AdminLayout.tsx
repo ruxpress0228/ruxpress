@@ -1,60 +1,47 @@
 import { Outlet, Link, useLocation, Navigate, useNavigate } from "react-router";
 import { useState, useRef, useEffect } from "react";
-import {
-  LayoutDashboard,
-  ShoppingCart,
-  MessageSquare,
-  FileText,
-  TrendingUp,
-  Users,
-  LogOut,
-  Shield,
-  Landmark,
-  Wallet,
-  Coins,
-  Bell,
-  Globe,
-  Check,
-  Tag,
-  Image as ImageIcon,
-} from "lucide-react";
+import { LogOut, Globe, Check, Search, ExternalLink, ChevronRight } from "lucide-react";
 import { Button } from "../ui/button";
 import { cn } from "../ui/utils";
 import {
   Sidebar,
   SidebarContent,
   SidebarFooter,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarProvider,
+  SidebarRail,
   SidebarTrigger,
 } from "../ui/sidebar";
 import { useTranslation } from "../../hooks/useTranslation";
 import { LOCALES, STORAGE_KEYS } from "../../utils/constants";
 import { notifyUserAuthChange, readAuthValue } from "../../utils/api";
 import AdminNotificationBell from "./AdminNotificationBell";
+import { AdminCommandPalette } from "./AdminCommandPalette";
+import { ADMIN_STORAGE_KEY, initialsOf, matchNav, navGroupsFor, readAdmin } from "./adminNav";
 import { Mark, Wordmark } from "../brand/BrandMark";
 
-const ADMIN_STORAGE_KEY = "ruxpress_admin";
+const RAIL_ITEM =
+  "h-8 px-2 text-[13px] text-sidebar-foreground/75 hover:bg-sidebar-accent hover:text-sidebar-foreground " +
+  "data-[active=true]:bg-sidebar-primary data-[active=true]:font-medium data-[active=true]:text-sidebar-primary-foreground " +
+  "group-data-[collapsible=icon]:justify-center";
 
-function getAdmin(): { id: number; email: string; name: string; role: string } | null {
-  try {
-    const raw = readAuthValue(ADMIN_STORAGE_KEY);
-    return raw ? JSON.parse(raw) : null;
-  } catch {
-    return null;
-  }
-}
-
+/**
+ * The console shell: an ink rail on the left with the pages grouped by what operators do,
+ * a slim bar with the breadcrumb and the ⌘K palette, and the page on paper.
+ */
 export default function AdminLayout() {
   const location = useLocation();
   const navigate = useNavigate();
   const { t, locale, setLocale } = useTranslation();
   const [langOpen, setLangOpen] = useState(false);
+  const [paletteOpen, setPaletteOpen] = useState(false);
   const langRef = useRef<HTMLDivElement>(null);
-  const isActive = (path: string) => location.pathname === path;
 
   useEffect(() => {
     if (!langOpen) return;
@@ -67,12 +54,24 @@ export default function AdminLayout() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [langOpen]);
 
+  // ⌘K / Ctrl+K opens the palette from anywhere in the console.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        setPaletteOpen((o) => !o);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
   if (location.pathname === "/admin/login") {
     return <Outlet />;
   }
 
   const token = readAuthValue(STORAGE_KEYS.TOKEN);
-  const admin = getAdmin();
+  const admin = readAdmin();
 
   if (!token || !admin) {
     return <Navigate to="/admin/login" replace />;
@@ -89,83 +88,106 @@ export default function AdminLayout() {
 
   const isSuperAdmin = admin.role === "SUPER_ADMIN";
   const roleLabel = isSuperAdmin ? t("nav.admin.roleSuper") : t("nav.admin.roleCounselor");
-
-  const navigation = [
-    { nameKey: "nav.admin.dashboard", path: "/admin", icon: LayoutDashboard, roles: ["SUPER_ADMIN", "COUNSELOR"] },
-    { nameKey: "nav.admin.purchaseRequests", path: "/admin/purchase-requests", icon: ShoppingCart, roles: ["SUPER_ADMIN"] },
-    { nameKey: "nav.admin.inquiries", path: "/admin/inquiries", icon: MessageSquare, roles: ["SUPER_ADMIN", "COUNSELOR"] },
-    { nameKey: "nav.admin.notices", path: "/admin/notices", icon: FileText, roles: ["SUPER_ADMIN"] },
-    { nameKey: "nav.admin.products", path: "/admin/products", icon: Tag, roles: ["SUPER_ADMIN"] },
-    { nameKey: "nav.admin.exchangeRate", path: "/admin/exchange-rate", icon: TrendingUp, roles: ["SUPER_ADMIN"] },
-    { nameKey: "nav.admin.site", path: "/admin/site", icon: ImageIcon, roles: ["SUPER_ADMIN"] },
-    { nameKey: "nav.admin.users", path: "/admin/users", icon: Users, roles: ["SUPER_ADMIN"] },
-    { nameKey: "nav.admin.userWallets", path: "/admin/user-wallets", icon: Coins, roles: ["SUPER_ADMIN"] },
-    { nameKey: "nav.admin.admins", path: "/admin/admins", icon: Shield, roles: ["SUPER_ADMIN"] },
-    { nameKey: "nav.admin.bankTransfers", path: "/admin/bank-transfers", icon: Landmark, roles: ["SUPER_ADMIN", "COUNSELOR"] },
-    { nameKey: "nav.admin.settlementAccounts", path: "/admin/settlement-accounts", icon: Wallet, roles: ["SUPER_ADMIN"] },
-    { nameKey: "nav.admin.chat", path: "/admin/chat", icon: MessageSquare, roles: ["SUPER_ADMIN", "COUNSELOR"] },
-    { nameKey: "nav.admin.notifications", path: "/admin/notifications", icon: Bell, roles: ["SUPER_ADMIN", "COUNSELOR"] },
-  ].filter((item) => item.roles.includes(admin.role));
+  const groups = navGroupsFor(admin.role);
+  const current = matchNav(location.pathname);
+  const isActive = (path: string) => current?.item.path === path;
 
   return (
-    <SidebarProvider>
-      <Sidebar>
-        <SidebarHeader className="h-16 justify-center border-b border-border px-4 py-0">
-          <div className="flex items-center gap-3">
-            <Mark size="sm" />
-            <div className="min-w-0">
-              <Wordmark size="sm" />
-              <p className="mt-0.5 text-xs text-muted-foreground">{t("nav.admin.label")}</p>
-            </div>
-          </div>
+    <SidebarProvider style={{ "--sidebar-width": "15rem" } as React.CSSProperties}>
+      <Sidebar collapsible="icon" className="border-r-0">
+        <SidebarHeader className="h-14 justify-center border-b border-sidebar-border px-3 py-0 group-data-[collapsible=icon]:px-0">
+          <Link
+            to="/admin"
+            className="flex items-center gap-3 outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring group-data-[collapsible=icon]:justify-center"
+          >
+            <Mark size="sm" className="bg-sidebar-primary text-sidebar-primary-foreground" />
+            <span className="min-w-0 group-data-[collapsible=icon]:hidden">
+              <Wordmark size="sm" className="text-sidebar-foreground" />
+              <span className="mt-1 block text-[11px] leading-none text-sidebar-foreground/55">{t("nav.admin.label")}</span>
+            </span>
+          </Link>
         </SidebarHeader>
 
-        <SidebarContent>
-          <SidebarMenu className="px-2 py-3">
-            {navigation.map((item) => {
-              const Icon = item.icon;
-              const active = isActive(item.path);
-              return (
-                <SidebarMenuItem key={item.path}>
-                  <SidebarMenuButton
-                    asChild
-                    isActive={active}
-                    className="h-9 px-3 text-[13px] hover:bg-muted/60 data-[active=true]:bg-muted data-[active=true]:font-medium"
-                  >
-                    <Link to={item.path} aria-current={active ? "page" : undefined}>
-                      <Icon className="size-4" strokeWidth={1.5} aria-hidden />
-                      <span>{t(item.nameKey)}</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              );
-            })}
-          </SidebarMenu>
+        <SidebarContent className="gap-0 py-2">
+          {groups.map((group) => (
+            <SidebarGroup key={group.key} className="px-2 py-1.5">
+              <SidebarGroupLabel className="h-7 px-2 text-[10px] font-medium uppercase tracking-[0.18em] text-sidebar-foreground/45">
+                {t(`nav.admin.group.${group.key}`)}
+              </SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu className="gap-px">
+                  {group.items.map((item) => {
+                    const Icon = item.icon;
+                    const active = isActive(item.path);
+                    return (
+                      <SidebarMenuItem key={item.path}>
+                        <SidebarMenuButton asChild isActive={active} tooltip={t(item.nameKey)} className={RAIL_ITEM}>
+                          <Link to={item.path} aria-current={active ? "page" : undefined}>
+                            <Icon className="size-4" strokeWidth={1.5} aria-hidden />
+                            <span>{t(item.nameKey)}</span>
+                          </Link>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    );
+                  })}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+          ))}
         </SidebarContent>
 
-        <SidebarFooter className="border-t border-border p-2">
-          <Button
-            type="button"
-            variant="ghost"
-            className="w-full justify-start text-muted-foreground hover:text-foreground"
-            onClick={handleLogout}
-          >
-            <LogOut className="size-4" strokeWidth={1.5} aria-hidden />
-            {t("nav.admin.logout")}
-          </Button>
+        <SidebarFooter className="border-t border-sidebar-border p-2">
+          <SidebarMenu className="gap-px">
+            <SidebarMenuItem>
+              <SidebarMenuButton asChild tooltip={t("nav.admin.storefront")} className={RAIL_ITEM}>
+                <a href="/" target="_blank" rel="noreferrer">
+                  <ExternalLink className="size-4" strokeWidth={1.5} aria-hidden />
+                  <span>{t("nav.admin.storefront")}</span>
+                </a>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              <SidebarMenuButton tooltip={t("nav.admin.logout")} onClick={handleLogout} className={RAIL_ITEM}>
+                <LogOut className="size-4" strokeWidth={1.5} aria-hidden />
+                <span>{t("nav.admin.logout")}</span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          </SidebarMenu>
         </SidebarFooter>
+        <SidebarRail />
       </Sidebar>
 
       <div className="flex min-h-svh min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-40 flex h-16 items-center gap-2 border-b border-border bg-background/85 px-4 backdrop-blur-md md:px-6">
-          <SidebarTrigger className="size-9" title={t("nav.menu")} aria-label={t("nav.menu")} />
+        <header className="sticky top-0 z-40 flex h-14 items-center gap-2 border-b border-border bg-background/90 px-3 backdrop-blur-md md:px-5">
+          <SidebarTrigger className="size-8 text-muted-foreground hover:text-foreground" title={t("nav.menu")} aria-label={t("nav.menu")} />
 
-          <div className="ml-auto flex min-w-0 items-center gap-0.5">
+          {current ? (
+            <nav aria-label="Breadcrumb" className="hidden min-w-0 items-center gap-1.5 text-[13px] sm:flex">
+              <span className="text-muted-foreground">{t(`nav.admin.group.${current.group.key}`)}</span>
+              <ChevronRight className="size-3 text-muted-foreground/60" strokeWidth={1.5} aria-hidden />
+              <span className="truncate font-medium">{t(current.item.nameKey)}</span>
+            </nav>
+          ) : null}
+
+          <button
+            type="button"
+            onClick={() => setPaletteOpen(true)}
+            className="ml-auto flex size-8 items-center justify-center text-muted-foreground transition-colors hover:text-foreground md:ml-6 md:h-8 md:w-64 md:justify-start md:gap-2 md:border md:border-border md:px-2.5 md:text-xs md:hover:border-foreground/40"
+            aria-label={t("nav.admin.search")}
+            aria-keyshortcuts="Meta+K Control+K"
+          >
+            <Search className="size-4" strokeWidth={1.5} aria-hidden />
+            <span className="hidden flex-1 text-left md:inline">{t("nav.admin.search")}</span>
+            <kbd className="hidden border border-border px-1 py-px font-sans text-[10px] text-muted-foreground figure md:inline">⌘K</kbd>
+          </button>
+
+          <div className="flex items-center gap-0.5 md:ml-1">
             <div className="relative" ref={langRef}>
               <Button
                 type="button"
                 variant="ghost"
                 size="icon"
+                className="size-8"
                 title={t("common.language")}
                 onClick={() => setLangOpen((v) => !v)}
                 aria-expanded={langOpen}
@@ -206,22 +228,30 @@ export default function AdminLayout() {
             </div>
 
             <AdminNotificationBell />
+          </div>
 
-            <div className="ml-2 min-w-0 text-right">
-              <p className="max-w-[10rem] truncate text-sm sm:max-w-[16rem]">{admin.name}</p>
-              <p className="max-w-[10rem] truncate text-xs text-muted-foreground sm:max-w-[16rem]">
-                {admin.email} ({roleLabel})
-              </p>
-            </div>
+          <div className="ml-1 flex items-center gap-2.5 border-l border-border pl-3" title={`${admin.name} · ${admin.email}`}>
+            <span
+              className="inline-flex size-7 shrink-0 select-none items-center justify-center bg-foreground text-[10px] font-medium tracking-[0.06em] text-background"
+              aria-hidden
+            >
+              {initialsOf(admin.name)}
+            </span>
+            <span className="hidden min-w-0 lg:block">
+              <span className="block max-w-[11rem] truncate text-[13px] leading-tight">{admin.name}</span>
+              <span className="block truncate text-[11px] leading-tight text-muted-foreground">{roleLabel}</span>
+            </span>
           </div>
         </header>
 
         <main className="flex-1 overflow-auto">
-          <div className="mx-auto w-full max-w-7xl p-5 md:p-8">
+          <div className="mx-auto w-full max-w-7xl px-4 py-6 md:px-8 md:py-8">
             <Outlet />
           </div>
         </main>
       </div>
+
+      <AdminCommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} groups={groups} onLogout={handleLogout} />
     </SidebarProvider>
   );
 }
