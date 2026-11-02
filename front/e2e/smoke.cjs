@@ -119,6 +119,24 @@ function png(width, height, rgb) {
     await check(`admin UI registers "${p.name}"`, async () => (await page.getByRole('cell', { name: new RegExp(p.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')) }).count()) > 0);
   }
   await shot('01-admin-products');
+
+  // ───────────────────────── admin sets the landing hero image through the UI ─────────────────────────
+  await go('/admin/site');
+  await check('site settings page shows the default artwork first', async () =>
+    (await page.locator('[data-testid=hero-preview] svg[data-hero-art]').count()) === 1 && (await page.getByText('기본 아트워크', { exact: true }).count()) > 0);
+  await page.setInputFiles('input[type=file]', { name: 'hero.png', mimeType: 'image/png', buffer: png(96, 54, [28, 28, 28]) });
+  await page.waitForTimeout(1500);
+  await check('admin UI uploads a hero image', async () =>
+    (await page.locator('[data-testid=hero-preview] img[src*="/files/"], [data-testid=hero-preview] img[src*="/api/"]').count()) === 1 && (await page.getByText('업로드한 이미지', { exact: true }).count()) > 0);
+  await shot('01b-admin-site');
+  await check('public hero setting returns the uploaded image and it is served', async () => {
+    const r = await api('GET', '/api/v1/settings/hero');
+    const url = r.json?.data?.imageUrl;
+    if (typeof url !== 'string' || !url) return false;
+    const img = await fetch(FRONT + url);
+    return img.status === 200 && (img.headers.get('content-type') || '').startsWith('image/');
+  });
+
   await check('uploaded image is served by the backend', async () => {
     const r = await api('GET', '/api/v1/products?size=10');
     const withImg = r.json.data.content.filter((x) => x.imageUrl);
@@ -133,8 +151,18 @@ function png(width, height, rgb) {
   await go('/');
   await check('landing shows the announcement rate and the categories', async () =>
     (await page.getByText('1 RUB = 17.52 KRW').count()) > 0 && (await page.getByRole('link', { name: /신발/ }).count()) > 0);
-  await check('landing showcase uses the uploaded product photo', async () => (await page.locator('section img[src*="/files/"], section img[src*="/api/"]').count()) > 0);
+  // The hero section is the one that carries the artwork; the category tiles below also show uploaded photos.
+  const heroImage = () => page.locator('section:has(> svg[data-hero-art]) img[src*="/files/"], section:has(> svg[data-hero-art]) img[src*="/api/"]');
+  await check('landing hero shows the uploaded brand image over the artwork', async () =>
+    (await heroImage().count()) === 1 && (await page.locator('section > svg[data-hero-art]').count()) === 1);
   await shot('02-landing-real');
+  await check('removing the hero image (admin API) brings the default artwork back', async () => {
+    const r = await api('DELETE', '/api/v1/admin/settings/hero-image', undefined, adminToken);
+    if (r.status !== 200 || r.json?.data?.imageUrl !== null) return false;
+    await go('/');
+    return (await heroImage().count()) === 0 && (await page.locator('section > svg[data-hero-art]').count()) === 1;
+  });
+  await shot('02b-landing-artwork');
   await go('/products');
   await check('catalogue lists the three products', async () => (await page.locator('a.group h3').count()) === 3);
   await page.getByRole('button', { name: '뷰티', exact: true }).click();

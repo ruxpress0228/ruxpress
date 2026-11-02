@@ -9,18 +9,18 @@ import { ExchangePanel } from "../../components/exchange/ExchangePanel";
 import { ProductRail } from "../../components/product/ProductCard";
 import { CategoryTiles } from "../../components/product/CategoryTiles";
 import { LinkStartBar } from "../../components/landing/LinkStartBar";
+import { HeroArtwork } from "../../components/landing/HeroArtwork";
 import { api } from "../../utils/api";
 import { unwrap } from "../../utils/exception";
 import { getFeaturedProducts, getProductCategories, getProducts } from "../../api/product";
+import { getHeroSettings } from "../../api/settings";
 import { useTranslation } from "../../hooks/useTranslation";
+import { useMediaQuery } from "../../hooks/useMediaQuery";
 import { useExchangeRate } from "../../hooks/exchange/useExchangeRate";
 import { buildRateMap, formatCrossRateLine } from "../../utils/exchange";
 import type { Notice, PageResponse } from "../../types";
 import type { Product } from "../../types/product";
 import type { CurrentExchangeRates } from "../../utils/exchange";
-
-const SLIDE_INTERVAL_MS = 6000;
-const MAX_SLIDES = 5;
 
 function formatNoticeDate(iso: string): string {
   const d = new Date(iso);
@@ -30,45 +30,35 @@ function formatNoticeDate(iso: string): string {
   return `${y}.${m}.${day}`;
 }
 
-function usePrefersReducedMotion(): boolean {
-  const [reduced, setReduced] = useState(
-    () => typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches,
-  );
-  useEffect(() => {
-    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
-    const onChange = () => setReduced(mq.matches);
-    mq.addEventListener("change", onChange);
-    return () => mq.removeEventListener("change", onChange);
-  }, []);
-  return reduced;
-}
-
 /**
- * Guest home. A full-width showcase of the shop's own product photos carries the
- * promise and the one control that starts the job; below it the catalogue,
+ * Guest home. A full-width hero introduces the service — the shop's own artwork
+ * (a parcel on its way from Seoul to Moscow) or a brand image the admin uploaded —
+ * and carries the one control that starts the job; below it the catalogue,
  * how it works, the rate, and the latest notices.
  */
 export default function Landing() {
   const { t, locale } = useTranslation();
   const { getCurrentExchangeRates } = useExchangeRate();
-  const reducedMotion = usePrefersReducedMotion();
+  const reducedMotion = useMediaQuery("(prefers-reduced-motion: reduce)");
   const [rates, setRates] = useState<CurrentExchangeRates | null>(null);
   const [notices, setNotices] = useState<Notice[]>([]);
   const [featured, setFeatured] = useState<Product[]>([]);
   const [popular, setPopular] = useState<Product[]>([]);
   const [catalogue, setCatalogue] = useState<Product[]>([]);
   const [categories, setCategories] = useState<string[]>([]);
-  const [slide, setSlide] = useState(0);
-  const [paused, setPaused] = useState(false);
+  const [heroImage, setHeroImage] = useState<string | null>(null);
+  const [heroImageReady, setHeroImageReady] = useState(false);
 
   const rateMap = useMemo(() => buildRateMap(rates?.quotes), [rates]);
   const headlineRate = useMemo(
     () => (rates && rates.quotes.length > 0 ? formatCrossRateLine("RUB", "KRW", rateMap, locale, 1) : null),
     [rates, rateMap, locale],
   );
-  const slides = useMemo(() => featured.filter((p) => p.imageUrl).slice(0, MAX_SLIDES), [featured]);
 
   useEffect(() => {
+    getHeroSettings()
+      .then((s) => setHeroImage(s.imageUrl))
+      .catch(() => setHeroImage(null));
     getCurrentExchangeRates()
       .then(setRates)
       .catch(() => setRates(null));
@@ -90,18 +80,6 @@ export default function Landing() {
       .catch(() => setPopular([]));
   }, [getCurrentExchangeRates]);
 
-  // The showcase advances on its own unless the visitor is looking closely or prefers no motion.
-  useEffect(() => {
-    if (slides.length < 2 || paused || reducedMotion) return;
-    const handle = window.setInterval(() => setSlide((i) => (i + 1) % slides.length), SLIDE_INTERVAL_MS);
-    return () => window.clearInterval(handle);
-  }, [slides.length, paused, reducedMotion]);
-
-  useEffect(() => {
-    if (slide >= slides.length) setSlide(0);
-  }, [slide, slides.length]);
-
-  const current = slides[slide];
   const steps = [1, 2, 3].map((n) => ({
     n,
     title: t(`landing.how.${n}.title`),
@@ -111,82 +89,48 @@ export default function Landing() {
 
   return (
     <div className="-mt-8 space-y-20 md:-mt-10 md:space-y-28">
-      {/* Showcase: the shop's own photos, edge to edge, with the promise over them */}
+      {/* Hero: the service's own artwork (or the admin's brand image), edge to edge, with the promise over it */}
       <section
         aria-label={t("landing.hero.eyebrow")}
-        className="full-bleed flex min-h-[72vh] flex-col justify-end bg-foreground text-background md:min-h-[82vh]"
-        onMouseEnter={() => setPaused(true)}
-        onMouseLeave={() => setPaused(false)}
-        onFocusCapture={() => setPaused(true)}
-        onBlurCapture={() => setPaused(false)}
+        className="full-bleed flex min-h-[72vh] flex-col justify-end overflow-hidden bg-[#0a0a0a] text-background md:min-h-[82vh]"
       >
-        {slides.map((p, i) => (
-          <img
-            key={p.id}
-            src={p.imageUrl ?? undefined}
-            alt=""
-            aria-hidden={i !== slide}
-            className={cn(
-              "absolute inset-0 size-full object-cover transition-opacity duration-1000 ease-out",
-              i === slide ? "opacity-100" : "opacity-0",
-            )}
-          />
-        ))}
-        {slides.length > 0 ? (
+        <HeroArtwork
+          from={t("landing.hero.art.from")}
+          to={t("landing.hero.art.to")}
+          reducedMotion={reducedMotion}
+          className="absolute inset-0 size-full"
+        />
+        {heroImage ? (
           <>
-            {/* Scrims keep the header and the text legible whatever the photo */}
+            {/* The uploaded image fades in over the artwork once it has loaded, so nothing flashes */}
+            <img
+              src={heroImage}
+              alt=""
+              onLoad={() => setHeroImageReady(true)}
+              onError={() => setHeroImage(null)}
+              className={cn(
+                "absolute inset-0 size-full object-cover transition-opacity duration-700 ease-out",
+                heroImageReady ? "opacity-100" : "opacity-0",
+              )}
+            />
+            {/* Scrims keep the text legible whatever the photo */}
             <span className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/35 to-black/10" aria-hidden />
             <span className="absolute inset-x-0 top-0 h-40 bg-gradient-to-b from-black/55 to-transparent" aria-hidden />
           </>
-        ) : null}
+        ) : (
+          <span className="absolute inset-x-0 bottom-0 h-3/5 bg-gradient-to-t from-black/85 via-black/40 to-transparent" aria-hidden />
+        )}
 
         <div className="relative mx-auto w-full max-w-6xl px-5 pb-10 pt-24 md:px-6 md:pb-14">
-          <div className="grid gap-8 md:grid-cols-[1fr_auto_1fr] md:items-end">
-            <div className="hidden md:block" aria-hidden />
-            <div className="mx-auto min-w-0 max-w-2xl text-center">
-              <p className="text-[11px] uppercase tracking-[0.24em] text-background/80">{t("landing.hero.eyebrow")}</p>
-              <h1 className="mt-4 text-4xl font-light leading-[1.1] tracking-[0.02em] text-background md:text-5xl lg:text-6xl">
-                {t("landing.hero.title")}
-              </h1>
-              <p className="mx-auto mt-5 max-w-md text-sm leading-relaxed text-background/80 md:text-base">
-                {t("landing.hero.subtitle")}
-              </p>
-              <LinkStartBar tone="onDark" className="mx-auto mt-8 max-w-xl text-left" />
-            </div>
-
-            {current ? (
-              <div className="flex items-end justify-between gap-6 md:flex-col md:items-end md:text-right">
-                <Link to={`/products/${current.id}`} className="min-w-0 transition-opacity hover:opacity-80">
-                  <span className="block text-[10px] uppercase tracking-[0.2em] text-background/70">
-                    {t("products.featured")}
-                  </span>
-                  <span className="mt-1 block truncate text-sm">{current.name}</span>
-                </Link>
-                {slides.length > 1 ? (
-                  <div className="flex shrink-0 items-center gap-3">
-                    <span className="text-[11px] text-background/70 figure">
-                      {String(slide + 1).padStart(2, "0")} / {String(slides.length).padStart(2, "0")}
-                    </span>
-                    <div className="flex items-center gap-1.5" role="tablist" aria-label={t("products.featured")}>
-                      {slides.map((p, i) => (
-                        <button
-                          key={p.id}
-                          type="button"
-                          role="tab"
-                          aria-selected={i === slide}
-                          aria-label={p.name}
-                          onClick={() => setSlide(i)}
-                          className={cn(
-                            "size-1.5 rounded-full transition-colors",
-                            i === slide ? "bg-background" : "bg-background/40 hover:bg-background/70",
-                          )}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                ) : null}
-              </div>
-            ) : null}
+          <div className="mx-auto min-w-0 max-w-2xl text-center">
+            <p className="text-[11px] uppercase tracking-[0.24em] text-background/80">{t("landing.hero.eyebrow")}</p>
+            <h1 className="mt-4 text-4xl font-light leading-[1.1] tracking-[0.02em] text-background md:text-5xl lg:text-6xl">
+              {t("landing.hero.title")}
+            </h1>
+            <p className="mx-auto mt-5 max-w-md text-sm leading-relaxed text-background/80 md:text-base">
+              {t("landing.hero.subtitle")}
+            </p>
+            <LinkStartBar tone="onDark" className="mx-auto mt-8 max-w-xl text-left" />
           </div>
         </div>
       </section>

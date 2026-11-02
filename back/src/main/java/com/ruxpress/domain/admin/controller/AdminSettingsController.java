@@ -2,13 +2,17 @@ package com.ruxpress.domain.admin.controller;
 
 import com.ruxpress.common.dto.ApiResponse;
 import com.ruxpress.domain.admin.dto.request.SettingUpdateRequest;
+import com.ruxpress.domain.admin.dto.response.HeroSettingsResponse;
 import com.ruxpress.domain.admin.dto.response.SettingResponse;
 import com.ruxpress.domain.admin.entity.SystemSetting;
 import com.ruxpress.domain.admin.repository.SystemSettingRepository;
+import com.ruxpress.domain.admin.service.HeroSettingsService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.MediaType;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -23,6 +27,7 @@ public class AdminSettingsController {
     private static final String DEFAULT_FEE_RATE = "12";
 
     private final SystemSettingRepository repository;
+    private final HeroSettingsService heroSettingsService;
 
     @GetMapping("/fee-rate")
     public ApiResponse<SettingResponse> getFeeRate() {
@@ -79,5 +84,21 @@ public class AdminSettingsController {
     public ApiResponse<Void> deleteTemplate(@PathVariable Long id) {
         repository.deleteById(id);
         return ApiResponse.success(null);
+    }
+
+    // ─── Landing hero image ───────────────────────────────
+
+    @PostMapping(value = "/hero-image", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ApiResponse<HeroSettingsResponse> uploadHeroImage(
+            Authentication auth,
+            @RequestPart("file") MultipartFile file) {
+        Long adminId = auth != null ? (Long) auth.getPrincipal() : 1L;
+        return ApiResponse.success(heroSettingsService.upload(adminId, file));
+    }
+
+    @DeleteMapping("/hero-image")
+    public ApiResponse<HeroSettingsResponse> deleteHeroImage(Authentication auth) {
+        Long adminId = auth != null ? (Long) auth.getPrincipal() : 1L;
+        return ApiResponse.success(heroSettingsService.remove(adminId));
     }
 }

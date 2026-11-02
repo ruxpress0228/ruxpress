@@ -1,8 +1,10 @@
 package com.ruxpress.domain.admin.controller;
 
 import com.ruxpress.common.dto.ApiResponse;
+import com.ruxpress.domain.admin.dto.response.HeroSettingsResponse;
 import com.ruxpress.domain.admin.entity.SystemSetting;
 import com.ruxpress.domain.admin.repository.SystemSettingRepository;
+import com.ruxpress.domain.admin.service.HeroSettingsService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -22,6 +24,7 @@ public class PublicSettingsController {
     private static final String DEFAULT_FEE_RATE = "12";
 
     private final SystemSettingRepository repository;
+    private final HeroSettingsService heroSettingsService;
 
     @GetMapping("/fee-rate")
     public ApiResponse<FeeRateResponse> getFeeRate() {
@@ -35,6 +38,12 @@ public class PublicSettingsController {
             parsed = new BigDecimal(DEFAULT_FEE_RATE);
         }
         return ApiResponse.success(new FeeRateResponse(parsed));
+    }
+
+    /** 랜딩 히어로 이미지. 설정이 없으면 {@code { "imageUrl": null }}. */
+    @GetMapping("/hero")
+    public ApiResponse<HeroSettingsResponse> getHero() {
+        return ApiResponse.success(heroSettingsService.getHero());
     }
 
     public record FeeRateResponse(BigDecimal feeRatePercent) {

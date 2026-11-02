@@ -16,6 +16,7 @@ import {
   Globe,
   Check,
   Tag,
+  Image as ImageIcon,
 } from "lucide-react";
 import { Button } from "../ui/button";
 import { cn } from "../ui/utils";
@@ -96,6 +97,7 @@ export default function AdminLayout() {
     { nameKey: "nav.admin.notices", path: "/admin/notices", icon: FileText, roles: ["SUPER_ADMIN"] },
     { nameKey: "nav.admin.products", path: "/admin/products", icon: Tag, roles: ["SUPER_ADMIN"] },
     { nameKey: "nav.admin.exchangeRate", path: "/admin/exchange-rate", icon: TrendingUp, roles: ["SUPER_ADMIN"] },
+    { nameKey: "nav.admin.site", path: "/admin/site", icon: ImageIcon, roles: ["SUPER_ADMIN"] },
     { nameKey: "nav.admin.users", path: "/admin/users", icon: Users, roles: ["SUPER_ADMIN"] },
     { nameKey: "nav.admin.userWallets", path: "/admin/user-wallets", icon: Coins, roles: ["SUPER_ADMIN"] },
     { nameKey: "nav.admin.admins", path: "/admin/admins", icon: Shield, roles: ["SUPER_ADMIN"] },

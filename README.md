@@ -19,7 +19,7 @@
   <img alt="MariaDB 11" src="https://img.shields.io/badge/MariaDB-11-000000?logo=mariadb&logoColor=white">
   <img alt="Docker Compose" src="https://img.shields.io/badge/Docker-Compose-000000?logo=docker&logoColor=white">
   <img alt="i18n ko ru en" src="https://img.shields.io/badge/i18n-ko%20%C2%B7%20ru%20%C2%B7%20en-000000">
-  <img alt="E2E 34 checks" src="https://img.shields.io/badge/E2E-34%20checks-000000?logo=playwright&logoColor=white">
+  <img alt="E2E 38 checks" src="https://img.shields.io/badge/E2E-38%20checks-000000?logo=playwright&logoColor=white">
   <a href="LICENSE"><img alt="License MIT" src="https://img.shields.io/badge/License-MIT-000000"></a>
 </p>
 
@@ -52,7 +52,7 @@
 ## ✨ 왜 Main Proxy인가
 
 - **구매대행에 맞춘 흐름** — 장바구니·결제 대신 *링크 → 요청 → 지갑 차감 → 구매·검수 → 배송*. 상품 페이지와 찜 목록에서 구매 요청 폼이 자동으로 채워집니다.
-- **스토어가 곧 영업 채널** — 관리자가 사진과 함께 상품을 등록하면 즉시 랜딩 쇼케이스·카테고리 패널·카탈로그에 노출됩니다. 셀렉트숍 수준의 흑백 에디토리얼 디자인이 기본값입니다.
+- **스토어가 곧 영업 채널** — 관리자가 사진과 함께 상품을 등록하면 즉시 카테고리 패널·추천 레일·카탈로그에 노출됩니다. 메인 히어로는 서비스를 소개하는 자체 아트워크(서울 → 모스크바 경로 애니메이션)가 기본이고, 관리자 콘솔에서 브랜드 이미지로 바꿀 수 있습니다. 셀렉트숍 수준의 흑백 에디토리얼 디자인이 기본값입니다.
 - **운영에 필요한 것이 다 들어 있음** — 환율(중앙은행 자동 수집 또는 수동), 입금 확인과 불변 원장 기반 지갑, STOMP 실시간 상담, 역할 기반 관리자 콘솔, FCM 푸시, 한·러·영 3개 언어.
 - **하루 안에 띄우는 배포** — Docker Compose 한 번으로 6개 컨테이너가 올라오고, 스키마와 첫 관리자 계정은 스크립트 한 줄로 만듭니다. AWS(EC2 · RDS · S3 · ALB) 참고 구성과 프로비저닝 스크립트도 포함돼 있습니다.
 
@@ -90,7 +90,7 @@ cd front && npm install && npm run dev                           # :3000, /api·
 ### 한 줄로 전체 시나리오 검증
 
 ```bash
-./script/e2e-smoke.sh   # 백엔드(H2) + Vite + Chromium: 상품 등록부터 구매 요청 제출까지 34개 검사
+./script/e2e-smoke.sh   # 백엔드(H2) + Vite + Chromium: 상품 등록부터 구매 요청 제출까지 38개 검사
 ```
 
 ---
@@ -103,7 +103,7 @@ cd front && npm install && npm run dev                           # :3000, /api·
 
 **🛍️ 스토어 (비회원도 이용)**
 
-- 상품 사진이 흐르는 전면 쇼케이스 랜딩
+- 서비스를 소개하는 전면 히어로 랜딩 — 기본 아트워크(서울 → 모스크바 경로 애니메이션) 또는 관리자가 올린 브랜드 이미지
 - 링크 붙여넣기 → 요청 시작 입력창
 - 카테고리 패널 · 추천 상품 · 지금 많이 보는 상품
 - 카탈로그: 카테고리 · 검색 · 정렬(추천/최신/인기/가격) · NEW 표시
@@ -145,7 +145,7 @@ cd front && npm install && npm run dev                           # :3000, /api·
 
 ## 🖼️ 화면
 
-> 목 데이터로 찍은 화면입니다. 상품 사진 자리의 그림은 README용 샘플 일러스트이며, 실제로는 관리자가 올린 사진이 들어갑니다.
+> 목 데이터로 찍은 화면입니다. 상품 사진 자리의 그림은 README용 샘플 일러스트이며, 실제로는 관리자가 올린 사진이 들어갑니다. 메인 히어로는 기본 아트워크 상태입니다.
 
 | 랜딩 (비회원) | 상품 카탈로그 |
 |:--:|:--:|
@@ -225,9 +225,10 @@ flowchart LR
 |----------------|------|
 | 브랜드 이름·워드마크 | `front/src/components/brand/BrandMark.tsx` (텍스트 워드마크 — 로고 이미지가 있으면 여기서 교체) |
 | 색·모서리·서체·타이포 스케일 | `front/src/styles/theme.css` — 토큰 몇 줄로 사용자·관리자 37개 화면이 함께 바뀝니다 |
-| 문구와 언어 | `front/src/i18n/{ko,ru,en}.json` (1,243개 키, 세 언어 동일). 언어를 추가하려면 JSON 하나와 `LOCALES` 한 줄 |
+| 문구와 언어 | `front/src/i18n/{ko,ru,en}.json` (1,265개 키, 세 언어 동일). 언어를 추가하려면 JSON 하나와 `LOCALES` 한 줄 |
 | 상품 카테고리 | 관리자 등록 화면에서 자유 입력 — 카탈로그 칩·메뉴·패널에 자동 반영 |
 | 수수료율 · 환율 | 관리자 콘솔 → 환율 설정 (`system_settings.fee_rate`, 이용 안내 페이지에도 표시) |
+| 메인 히어로 이미지 | 관리자 콘솔 → 사이트 설정 (`/admin/site`) — 업로드·교체·기본 아트워크로 되돌리기. 아트워크 자체는 `front/src/components/landing/HeroArtwork.tsx` |
 | 랜딩 문구·섹션 | `front/src/pages/user/Landing.tsx` + `landing.*` 번역 키 |
 | 입금 검증 방식 | `BankDepositVerificationPort` 구현체 교체 (현재 수동 확인 어댑터) |
 | 파일 저장소 | `STORAGE_TYPE=local` 또는 `s3` — 코드 변경 없음 |
@@ -238,7 +239,7 @@ flowchart LR
 
 - 역할 기반 접근: `SUPER_ADMIN` · `COUNSELOR` · `USER`. 상품·회원·지갑·설정 변경은 SUPER_ADMIN만, 상담은 COUNSELOR도 가능.
 - 비회원에게 열린 것: 랜딩, 상품 조회, 공지, 이용 안내, 환율. 찜·요청·채팅·지갑은 회원 JWT 필수.
-- 업로드 제한: 파일 10MB / 요청 60MB(Nginx·Spring 동일), 상품 이미지는 JPG·PNG·WebP 5MB. 상품 사진은 관리자가 권리를 가진 파일만 올리도록 화면에서 안내하며, 외부 쇼핑몰 이미지를 자동 수집하지 않습니다.
+- 업로드 제한: 파일 10MB / 요청 60MB(Nginx·Spring 동일), 상품 이미지와 메인 히어로 이미지는 JPG·PNG·WebP 5MB. 상품 사진과 히어로 이미지는 관리자가 권리를 가진 파일만 올리도록 화면에서 안내하며, 외부 쇼핑몰 이미지를 자동 수집하지 않습니다. 기본 히어로 아트워크는 이 저장소에서 직접 그린 SVG입니다.
 - 로그인 복귀 경로(`?next=`)는 내부 경로만 허용해 오픈 리다이렉트를 막습니다.
 - 지갑·입금은 덮어쓰기 없는 원장 엔트리로 기록되어 모든 자금 이동에 감사 추적이 남습니다.
 
@@ -251,7 +252,7 @@ flowchart LR
 | 백엔드 단위 | 상품·찜·정렬·JSON 계약, 환율 계산, 푸시 페이로드 등 | `cd back && mvn test` |
 | 프런트 단위 | 포맷·i18n 키 정합성·링크 변환·최근 본 상품 저장소 (32개) | `cd front && npm test` |
 | 타입·빌드 | `tsc` + Vite 빌드 | `cd front && npm run build` |
-| E2E 스모크 | 실제 백엔드(H2) + 브라우저: 관리자 상품 등록(이미지 업로드) → 비회원 탐색·검색·정렬 → 로그인 게이트 → 찜 → 구매 요청 제출(지갑 차감) → 공지 → 상품 숨김 → 로그아웃 (34개 검사) | `./script/e2e-smoke.sh` |
+| E2E 스모크 | 실제 백엔드(H2) + 브라우저: 관리자 상품 등록(이미지 업로드) → 히어로 이미지 설정 → 비회원 탐색·검색·정렬 → 로그인 게이트 → 찜 → 구매 요청 제출(지갑 차감) → 공지 → 상품 숨김 → 로그아웃 (38개 검사) | `./script/e2e-smoke.sh` |
 
 ---
 
@@ -276,6 +277,7 @@ flowchart LR
 - [x] 스토어형 UI와 디자인 시스템, 비회원 랜딩과 로그인 시트
 - [x] 상품 카탈로그 · 찜 → 구매 요청 · 검색 · 정렬 · 조회수
 - [x] 실제 백엔드 E2E 스모크 테스트
+- [x] 서비스 소개 히어로 아트워크 + 관리자 히어로 이미지 설정
 - [ ] 상품 사진 여러 장(갤러리)
 - [ ] 상품 후기(관리자 승인제)
 - [ ] 신상품·재입고 알림(이메일/푸시)
