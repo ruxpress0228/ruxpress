@@ -291,6 +291,31 @@
   font-size: 13px;
 }
 
+/* Wide tables scroll sideways; a fade on the side that still has columns says so. */
+[data-slot="table-shell"]::before,
+[data-slot="table-shell"]::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2.5rem;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 150ms ease;
+}
+[data-slot="table-shell"]::before {
+  left: 0;
+  background: linear-gradient(to right, var(--background), transparent);
+}
+[data-slot="table-shell"]::after {
+  right: 0;
+  background: linear-gradient(to left, var(--background), transparent);
+}
+[data-slot="table-shell"][data-scroll-start="false"]::before,
+[data-slot="table-shell"][data-scroll-end="false"]::after {
+  opacity: 1;
+}
+
 /* City labels in the hero artwork: hidden on short phones, where the headline takes the whole hero. */
 @utility hero-label {
   @media (max-width: 767px) and (max-height: 720px) {

@@ -4,17 +4,49 @@ import * as React from "react";
 
 import { cn } from "./utils";
 
+/**
+ * A table that scrolls sideways when it is wider than its column, with a fade on the side that
+ * still has columns (theme.css reads the data-scroll-* flags), so phones can tell there is more.
+ */
 function Table({ className, ...props }: React.ComponentProps<"table">) {
+  const scrollerRef = React.useRef<HTMLDivElement>(null);
+  const tableRef = React.useRef<HTMLTableElement>(null);
+  const [edges, setEdges] = React.useState({ start: true, end: true });
+
+  React.useEffect(() => {
+    const el = scrollerRef.current;
+    if (!el) return;
+    const update = () => {
+      const max = el.scrollWidth - el.clientWidth;
+      const next = { start: el.scrollLeft <= 1, end: max <= 1 || el.scrollLeft >= max - 1 };
+      setEdges((prev) => (prev.start === next.start && prev.end === next.end ? prev : next));
+    };
+    update();
+    el.addEventListener("scroll", update, { passive: true });
+    const observer = typeof ResizeObserver !== "undefined" ? new ResizeObserver(update) : null;
+    observer?.observe(el);
+    if (tableRef.current) observer?.observe(tableRef.current);
+    return () => {
+      el.removeEventListener("scroll", update);
+      observer?.disconnect();
+    };
+  }, []);
+
   return (
     <div
-      data-slot="table-container"
-      className="relative w-full overflow-x-auto"
+      data-slot="table-shell"
+      data-scroll-start={edges.start}
+      data-scroll-end={edges.end}
+      className="relative w-full"
     >
-      <table
-        data-slot="table"
-        className={cn("w-full caption-bottom text-[13px]", className)}
-        {...props}
-      />
+      <div ref={scrollerRef} data-slot="table-container" className="w-full overflow-x-auto">
+        <table
+          ref={tableRef}
+          data-slot="table"
+          className={cn("w-full caption-bottom text-[13px]", className)}
+          {...props}
+        />
+      </div>
     </div>
   );
 }

@@ -27,6 +27,7 @@
   <a href="#-빠른-시작">빠른 시작</a> ·
   <a href="#-기능">기능</a> ·
   <a href="#%EF%B8%8F-화면">화면</a> ·
+  <a href="#-관리자-콘솔">관리자 콘솔</a> ·
   <a href="#%EF%B8%8F-설정">설정</a> ·
   <a href="#%EF%B8%8F-아키텍처">아키텍처</a> ·
   <a href="#-커스터마이징">커스터마이징</a> ·
@@ -43,7 +44,7 @@
 <summary><b>English summary</b></summary>
 <br>
 
-**Main Proxy** is a purchasing-agent commerce platform for buying from Korean online shops and shipping to Russia. Visitors browse an admin-curated catalogue, paste a shop link to start a request, save products to a wishlist and turn several of them into one request; members pay from a KRW wallet funded by bank transfer, follow each status change with push notifications and talk to staff in a real-time chat. Staff run everything from an admin console: products, exchange rates (CBR feed or manual), deposits, wallets, requests, inquiries, notices and chat. Spring Boot 3 + React 18 + Kafka push service + Android WebView app, in Korean, Russian and English. One `docker compose up` brings up the whole stack; `./script/e2e-smoke.sh` runs 34 browser-driven checks against a real backend.
+**Main Proxy** is a purchasing-agent commerce platform for buying from Korean online shops and shipping to Russia. Visitors browse an admin-curated catalogue, paste a shop link to start a request, save products to a wishlist and turn several of them into one request; members pay from a KRW wallet funded by bank transfer, follow each status change with push notifications and talk to staff in a real-time chat. Staff run everything from an operations-desk console that opens with what needs a hand today, groups its pages by the work (operations, commerce, customers, content) and jumps anywhere with ⌘K: products, exchange rates (CBR feed or manual), deposits, wallets, requests, inquiries, notices and chat, on a phone too. Spring Boot 3 + React 18 + Kafka push service + Android WebView app, in Korean, Russian and English. One `docker compose up` brings up the whole stack; `./script/e2e-smoke.sh` runs 38 browser-driven checks against a real backend.
 
 </details>
 
@@ -54,6 +55,7 @@
 - **구매대행에 맞춘 흐름** — 장바구니·결제 대신 *링크 → 요청 → 지갑 차감 → 구매·검수 → 배송*. 상품 페이지와 찜 목록에서 구매 요청 폼이 자동으로 채워집니다.
 - **스토어가 곧 영업 채널** — 관리자가 사진과 함께 상품을 등록하면 즉시 카테고리 패널·추천 레일·카탈로그에 노출됩니다. 메인 히어로는 서비스를 소개하는 자체 아트워크(서울 → 모스크바 경로 애니메이션)가 기본이고, 관리자 콘솔에서 브랜드 이미지로 바꿀 수 있습니다. 셀렉트숍 수준의 흑백 에디토리얼 디자인이 기본값입니다.
 - **운영에 필요한 것이 다 들어 있음** — 환율(중앙은행 자동 수집 또는 수동), 입금 확인과 불변 원장 기반 지갑, STOMP 실시간 상담, 역할 기반 관리자 콘솔, FCM 푸시, 한·러·영 3개 언어.
+- **운영 데스크처럼 쓰는 콘솔** — 대시보드는 "오늘 처리할 일이 9건 있습니다"라는 한 문장으로 열리고, 메뉴는 운영·상거래·고객·콘텐츠로 묶인 잉크 레일에, 어디든 ⌘K 한 번으로 갑니다. 폰에서도 같은 콘솔이 그대로 열립니다.
 - **하루 안에 띄우는 배포** — Docker Compose 한 번으로 6개 컨테이너가 올라오고, 스키마와 첫 관리자 계정은 스크립트 한 줄로 만듭니다. AWS(EC2 · RDS · S3 · ALB) 참고 구성과 프로비저닝 스크립트도 포함돼 있습니다.
 
 ---
@@ -157,18 +159,35 @@ cd front && npm install && npm run dev                           # :3000, /api·
 |:--:|:--:|
 | ![상품 상세](docs/screenshots/product.png) | ![찜 목록](docs/screenshots/wishlist.png) |
 
-| 회원 홈 | 관리자 대시보드 |
+| 회원 홈 | 모바일 — 랜딩 · 메뉴 · 상품 상세 |
 |:--:|:--:|
-| ![회원 홈](docs/screenshots/home.png) | ![관리자 대시보드](docs/screenshots/admin-dashboard.png) |
+| ![회원 홈](docs/screenshots/home.png) | <img src="docs/screenshots/landing-mobile.png" width="32%" alt="모바일 랜딩"> <img src="docs/screenshots/menu-mobile.png" width="32%" alt="모바일 메뉴"> <img src="docs/screenshots/product-mobile.png" width="32%" alt="모바일 상품 상세"> |
 
-| 관리자 상품 관리 | 관리자 로그인 |
+---
+
+## 🧭 관리자 콘솔
+
+<p align="center">
+  <img src="docs/screenshots/console-showcase.png" alt="Main Proxy 관리자 콘솔 — 데스크톱과 모바일" width="100%">
+</p>
+
+운영자가 하루를 시작하는 화면을 **운영 데스크**로 설계했습니다. 제목 대신 문장으로 열리고, 숫자는 바로 그 일로 이어집니다.
+
+- **한 문장 대시보드** — "오늘 처리할 일이 9건 있습니다." 아래에 답변 대기 문의 · 신규 구매 요청 · 입금 확인 대기 · 오늘 가입이 큐로 놓이고, 각 칸이 해당 화면으로 갑니다. 최근 문의·요청, 오늘의 환율, 바로 가기가 이어집니다.
+- **잉크 레일** — 검은 바탕의 메뉴가 운영 · 상거래 · 고객 · 콘텐츠·설정 네 묶음으로 정리되고, 현재 페이지는 흰 도장처럼 찍힙니다. 버튼 하나로 아이콘 레일로 접힙니다.
+- **⌘K 팔레트** — 페이지 이름 몇 글자로 이동, 스토어 열기, 언어 전환, 로그아웃. 상단 바에는 위치(상거래 › 구매 요청 관리)와 알림, 관리자 칩만 남깁니다.
+- **폰에서도 그대로** — 레일은 시트로, 넓은 표는 옆으로 스크롤되며 더 있는 쪽에 페이드가 생깁니다. 채팅 상담은 목록과 대화가 한 화면씩 번갈아 열립니다.
+- **권한에 맞게** — 상담사(COUNSELOR)로 들어오면 볼 수 없는 메뉴와 숫자는 조용히 빠집니다.
+
+| 상품 관리 | 로그인 |
 |:--:|:--:|
 | ![관리자 상품 관리](docs/screenshots/admin-products.png) | ![관리자 로그인](docs/screenshots/admin-login.png) |
 
 <p align="center">
-  <img src="docs/screenshots/landing-mobile.png" width="30%" alt="모바일 랜딩">
-  <img src="docs/screenshots/menu-mobile.png" width="30%" alt="모바일 메뉴">
-  <img src="docs/screenshots/product-mobile.png" width="30%" alt="모바일 상품 상세">
+  <img src="docs/screenshots/admin-dashboard-mobile.png" width="24%" alt="모바일 대시보드">
+  <img src="docs/screenshots/admin-menu-mobile.png" width="24%" alt="모바일 메뉴">
+  <img src="docs/screenshots/admin-requests-mobile.png" width="24%" alt="모바일 구매 요청 관리">
+  <img src="docs/screenshots/admin-chat-mobile.png" width="24%" alt="모바일 채팅 상담">
 </p>
 
 ---
